@@ -21,6 +21,11 @@ export const navData = [
     icon: icon('ic-analytics'),
   },
   {
+    title: 'Orders',
+    path: '/orders',
+    icon: iconify('solar:clipboard-list-bold-duotone'),
+  },
+  {
     title: 'Users',
     path: '/users',
     icon: icon('ic-user'),

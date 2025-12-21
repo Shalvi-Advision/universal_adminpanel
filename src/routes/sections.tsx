@@ -17,6 +17,7 @@ import { DashboardLayout } from 'src/layouts/dashboard';
 export const DashboardPage = lazy(() => import('src/pages/dashboard'));
 export const SignInPage = lazy(() => import('src/pages/sign-in'));
 export const UsersPage = lazy(() => import('src/pages/users'));
+export const OrdersPage = lazy(() => import('src/pages/orders'));
 export const EcommerceDepartmentsPage = lazy(() => import('src/pages/ecommerce/departments'));
 export const EcommerceCategoriesPage = lazy(() => import('src/pages/ecommerce/categories'));
 export const EcommerceSubcategoriesPage = lazy(() => import('src/pages/ecommerce/subcategories'));
@@ -83,6 +84,7 @@ export const routesSection: RouteObject[] = [
     children: [
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'users', element: <UsersPage /> },
+      { path: 'orders', element: <OrdersPage /> },
       { path: 'ecommerce/departments', element: <EcommerceDepartmentsPage /> },
       { path: 'ecommerce/categories', element: <EcommerceCategoriesPage /> },
       { path: 'ecommerce/subcategories', element: <EcommerceSubcategoriesPage /> },

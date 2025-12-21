@@ -124,24 +124,7 @@ export function OverviewAnalyticsView() {
           />
         </Grid>
 
-        {/* Total Products Card */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <AnalyticsWidgetSummary
-            title="Total Products"
-            percent={
-              overview.products.total > 0
-                ? ((overview.products.active / overview.products.total) * 100 - 100)
-                : 0
-            }
-            total={overview.products.total}
-            color="error"
-            icon={<img alt="Total Products" src="/assets/icons/glass/ic-glass-message.svg" />}
-            chart={{
-              categories: ['Active', 'Out of Stock'],
-              series: [overview.products.active, overview.products.outOfStock],
-            }}
-          />
-        </Grid>
+
 
         {/* Stats Info Grid */}
         <Grid size={{ xs: 12 }}>

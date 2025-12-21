@@ -115,6 +115,13 @@ export const apiClient = {
       body: body ? JSON.stringify(body) : undefined,
     }),
 
+  patch: <T>(endpoint: string, body?: any, options?: RequestInit): Promise<T> =>
+    apiFetch<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: body ? JSON.stringify(body) : undefined,
+    }),
+
   delete: <T>(endpoint: string, options?: RequestInit): Promise<T> =>
     apiFetch<T>(endpoint, { ...options, method: 'DELETE' }),
 };
