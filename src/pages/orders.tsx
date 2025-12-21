@@ -542,17 +542,19 @@ export default function OrdersPage() {
                                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                                     Payment Information
                                 </Typography>
-                                <Typography>Mode: {selectedOrder.payment_info?.payment_mode || 'N/A'}</Typography>
+                                <Typography>Mode: {selectedOrder.payment_info?.payment_mode_name || 'N/A'}</Typography>
                                 <Typography>
                                     Status: <Chip
                                         label={selectedOrder.payment_info?.payment_status}
                                         color={getPaymentStatusColor(selectedOrder.payment_info?.payment_status as PaymentStatus)}
                                         size="small"
-                                        sx={{ textTransform: 'capitalize' }}
+                                        sx={{ ml: 1, textTransform: 'capitalize' }}
                                     />
                                 </Typography>
                                 {selectedOrder.payment_info?.transaction_id && (
-                                    <Typography>Transaction ID: {selectedOrder.payment_info.transaction_id}</Typography>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                        Transaction ID: {selectedOrder.payment_info.transaction_id}
+                                    </Typography>
                                 )}
                             </Box>
                         </Stack>
@@ -561,7 +563,7 @@ export default function OrdersPage() {
                 <DialogActions>
                     <Button onClick={() => setDetailDialogOpen(false)}>Close</Button>
                 </DialogActions>
-            </Dialog>
+            </Dialog >
         </>
     );
 }

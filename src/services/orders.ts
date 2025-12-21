@@ -34,6 +34,7 @@ export interface Order {
     order_status: OrderStatus;
     payment_info: {
         payment_mode: string;
+        payment_mode_name?: string;
         payment_status: PaymentStatus;
         transaction_id?: string;
     };
