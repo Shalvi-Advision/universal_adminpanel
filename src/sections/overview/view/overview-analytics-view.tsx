@@ -17,6 +17,7 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
 import CardHeader from '@mui/material/CardHeader';
 import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -388,12 +389,13 @@ export function OverviewAnalyticsView() {
                   <TableCell>Amount</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Date</TableCell>
+                  <TableCell align="center">Action</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {recentOrders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                       <Typography variant="body2" color="text.secondary">
                         No recent orders
                       </Typography>
@@ -401,7 +403,7 @@ export function OverviewAnalyticsView() {
                   </TableRow>
                 ) : (
                   recentOrders.map((order) => (
-                    <TableRow key={order._id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate('/orders')}>
+                    <TableRow key={order._id} hover>
                       <TableCell>
                         <Typography variant="subtitle2" sx={{ fontFamily: 'monospace' }}>
                           {order.order_number}
@@ -434,6 +436,21 @@ export function OverviewAnalyticsView() {
                         <Typography variant="caption">
                           {formatDate(order.order_placed_at)}
                         </Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          size="small"
+                          onClick={() => navigate(`/orders?highlight=${order._id}`)}
+                          title="View Order"
+                          sx={{
+                            color: 'primary.main',
+                            '&:hover': {
+                              bgcolor: 'primary.lighter',
+                            }
+                          }}
+                        >
+                          <Iconify icon="solar:eye-bold" width={20} />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
                   ))
