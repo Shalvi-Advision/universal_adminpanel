@@ -13,6 +13,13 @@ export interface User {
   favorites?: any[];
   createdAt?: string;
   updatedAt?: string;
+  // Notification insight fields
+  lastActiveAt?: string;
+  fcmToken?: string;
+  pushEnabled?: boolean;
+  platform?: string | null;
+  notificationCount?: number;
+  unreadNotificationCount?: number;
 }
 
 // Pagination metadata
