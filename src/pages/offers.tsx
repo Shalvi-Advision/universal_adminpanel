@@ -1,4 +1,4 @@
-import type { Store } from 'src/types/api';
+import type { Offer } from 'src/types/api';
 
 import { useState, useEffect, useCallback } from 'react';
 
@@ -14,69 +14,61 @@ import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
-import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Pagination from '@mui/material/Pagination';
-import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { CONFIG } from 'src/config-global';
-import { deleteStore, getAllStores } from 'src/services/stores';
+import { deleteOffer, toggleOffer, getAllOffers } from 'src/services/offers';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { PermissionButton } from 'src/components/permission-button/permission-button';
 
-import { StoreDialog } from './components/store-dialog';
-import { DeleteConfirmDialog } from '../dynamic/components/delete-confirm-dialog';
+import { OfferDialog } from './offers/components/offer-dialog';
+import { DeleteConfirmDialog } from './dynamic/components/delete-confirm-dialog';
 
 export default function Page() {
-  const [stores, setStores] = useState<Store[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+  const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
   const [deleteId, setDeleteId] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const limit = 20;
 
-  const fetchStores = useCallback(async () => {
+  const fetchOffers = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
-      const response = await getAllStores({
-        page,
-        limit,
-        search: searchQuery || undefined,
-      });
+      const response = await getAllOffers({ page, limit });
       if (response.success) {
-        setStores(response.data);
-        // Handle both 'pages' and 'totalPages' from backend
+        setOffers(response.data);
         setTotalPages(response.pagination.pages || response.pagination.totalPages || 1);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load stores');
+      setError(err.message || 'Failed to load offers');
     } finally {
       setLoading(false);
     }
-  }, [page, searchQuery]);
+  }, [page]);
 
   useEffect(() => {
-    fetchStores();
-  }, [fetchStores]);
+    fetchOffers();
+  }, [fetchOffers]);
 
   const handleCreate = () => {
-    setSelectedStore(null);
+    setSelectedOffer(null);
     setOpenDialog(true);
   };
 
-  const handleEdit = (store: Store) => {
-    setSelectedStore(store);
+  const handleEdit = (offer: Offer) => {
+    setSelectedOffer(offer);
     setOpenDialog(true);
   };
 
@@ -87,51 +79,67 @@ export default function Page() {
 
   const handleDeleteConfirm = async () => {
     try {
-      await deleteStore(deleteId);
+      await deleteOffer(deleteId);
       setOpenDeleteDialog(false);
       setDeleteId('');
-      fetchStores(); // Refresh list
+      fetchOffers();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete store');
+      setError(err.message || 'Failed to delete offer');
       setOpenDeleteDialog(false);
+    }
+  };
+
+  const handleToggle = async (id: string) => {
+    try {
+      await toggleOffer(id);
+      fetchOffers();
+    } catch (err: any) {
+      setError(err.message || 'Failed to toggle offer status');
     }
   };
 
   const handleDialogClose = () => {
     setOpenDialog(false);
-    setSelectedStore(null);
+    setSelectedOffer(null);
   };
 
-  const handleSaveSuccess = () => {
+  const handleDialogSuccess = () => {
     setOpenDialog(false);
-    setSelectedStore(null);
-    fetchStores(); // Refresh list
-  };
-
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
-    setPage(1); // Reset to first page on search
+    setSelectedOffer(null);
+    fetchOffers();
   };
 
   const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
   };
 
+  const formatDiscount = (item: Offer) => {
+    if (item.discount_type === 'flat') {
+      return `₹${item.discount_amount}`;
+    }
+    return `${item.discount_amount}%`;
+  };
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return 'No Expiry';
+    return new Date(dateStr).toLocaleDateString('en-IN');
+  };
+
   return (
     <>
-      <title>{`Stores - ${CONFIG.appName}`}</title>
+      <title>{`Offers - ${CONFIG.appName}`}</title>
 
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Stack spacing={3}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="h4">Stores</Typography>
-            <PermissionButton section="outlet" action="create">
+            <Typography variant="h4">Offers</Typography>
+            <PermissionButton section="offers" action="create">
               <Button
                 variant="contained"
-                startIcon={<Iconify icon="mingcute:add-line" />}
+                startIcon={<Iconify icon={'solar:tag-price-bold-duotone' as any} />}
                 onClick={handleCreate}
               >
-                Create Store
+                Create Offer
               </Button>
             </PermissionButton>
           </Stack>
@@ -143,106 +151,111 @@ export default function Page() {
           )}
 
           <Card>
-            <Box sx={{ p: 2 }}>
-              <TextField
-                fullWidth
-                placeholder="Search by store code or store name..."
-                value={searchQuery}
-                onChange={handleSearchChange}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
-            </Box>
-
             <Scrollbar>
               <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Store Name</TableCell>
+                      <TableCell>Title</TableCell>
+                      <TableCell>Type</TableCell>
+                      <TableCell>Discount</TableCell>
+                      <TableCell>Min Cart Value</TableCell>
                       <TableCell>Store Code</TableCell>
-                      <TableCell>Pincode</TableCell>
-                      <TableCell>Contact</TableCell>
-                      <TableCell>Email</TableCell>
                       <TableCell>Status</TableCell>
+                      <TableCell>Valid Until</TableCell>
+                      <TableCell>Priority</TableCell>
                       <TableCell align="right">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                        <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
                           <CircularProgress />
                         </TableCell>
                       </TableRow>
-                    ) : stores.length === 0 ? (
+                    ) : offers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                        <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
                           <Typography variant="body2" color="text.secondary">
-                            No stores found
+                            No offers found
                           </Typography>
                         </TableCell>
                       </TableRow>
                     ) : (
-                      stores.map((item) => (
+                      offers.map((item) => (
                         <TableRow key={item._id}>
                           <TableCell>
-                            <Typography variant="subtitle2">
-                              {item.mobile_outlet_name}
-                            </Typography>
-                            {item.store_address && (
+                            <Typography variant="subtitle2">{item.title}</Typography>
+                            {item.description && (
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
                                 sx={{
-                                  maxWidth: 300,
+                                  maxWidth: 250,
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
                                   whiteSpace: 'nowrap',
                                 }}
                               >
-                                {item.store_address}
+                                {item.description}
                               </Typography>
                             )}
                           </TableCell>
                           <TableCell>
-                            <Chip label={item.store_code} size="small" variant="outlined" />
+                            <Chip
+                              label={(item.offer_type || 'cart_discount') === 'product_deal' ? 'Product Deal' : 'Cart Discount'}
+                              color={(item.offer_type || 'cart_discount') === 'product_deal' ? 'warning' : 'primary'}
+                              size="small"
+                              variant="outlined"
+                            />
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2">{item.pincode}</Typography>
+                            {(item.offer_type || 'cart_discount') === 'product_deal' ? (
+                              <Typography variant="body2" color="text.secondary">
+                                {item.deal_products?.length || 0} product(s)
+                              </Typography>
+                            ) : (
+                              <Typography variant="body2">{formatDiscount(item)}</Typography>
+                            )}
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2">{item.contact_number}</Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                maxWidth: 200,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {item.email}
+                            <Typography variant="body2">
+                              ₹{item.min_cart_value.toLocaleString('en-IN')}
                             </Typography>
                           </TableCell>
                           <TableCell>
-                            <Chip
-                              label={item.is_enabled}
-                              color={item.is_enabled === 'Enabled' ? 'success' : 'default'}
-                              size="small"
-                            />
+                            {item.store_codes?.length ? (
+                              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                                {item.store_codes.map((sc: string) => (
+                                  <Chip key={sc} label={sc} size="small" variant="outlined" />
+                                ))}
+                              </Stack>
+                            ) : (
+                              <Chip label="All Stores" size="small" color="info" />
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <PermissionButton section="offers" action="edit" fallback="disable">
+                              <Chip
+                                label={item.is_active ? 'Active' : 'Inactive'}
+                                color={item.is_active ? 'success' : 'default'}
+                                size="small"
+                                onClick={() => handleToggle(item._id)}
+                                sx={{ cursor: 'pointer' }}
+                              />
+                            </PermissionButton>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {formatDate(item.valid_until)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">{item.priority}</Typography>
                           </TableCell>
                           <TableCell align="right">
-                            <PermissionButton section="outlet" action="edit">
+                            <PermissionButton section="offers" action="edit">
                               <IconButton
                                 size="small"
                                 onClick={() => handleEdit(item)}
@@ -251,7 +264,7 @@ export default function Page() {
                                 <Iconify icon="solar:pen-bold" />
                               </IconButton>
                             </PermissionButton>
-                            <PermissionButton section="outlet" action="delete">
+                            <PermissionButton section="offers" action="delete">
                               <IconButton
                                 size="small"
                                 onClick={() => handleDeleteClick(item._id)}
@@ -269,7 +282,7 @@ export default function Page() {
               </TableContainer>
             </Scrollbar>
 
-            {!loading && stores.length > 0 && (
+            {!loading && offers.length > 0 && (
               <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
                 <Pagination
                   count={totalPages}
@@ -285,19 +298,19 @@ export default function Page() {
         </Stack>
       </Container>
 
-      <StoreDialog
+      <OfferDialog
         open={openDialog}
-        store={selectedStore}
+        offer={selectedOffer}
         onClose={handleDialogClose}
-        onSuccess={handleSaveSuccess}
+        onSuccess={handleDialogSuccess}
       />
 
       <DeleteConfirmDialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
         onConfirm={handleDeleteConfirm}
-        title="Delete Store"
-        message="Are you sure you want to delete this store? This action cannot be undone."
+        title="Delete Offer"
+        message="Are you sure you want to delete this offer? This action cannot be undone."
       />
     </>
   );

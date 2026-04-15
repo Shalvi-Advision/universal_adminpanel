@@ -1,5 +1,6 @@
 import type { Breakpoint } from '@mui/material/styles';
 
+import { useMemo } from 'react';
 import { merge } from 'es-toolkit';
 import { useBoolean } from 'minimal-shared/hooks';
 
@@ -7,7 +8,7 @@ import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import { useTheme } from '@mui/material/styles';
 
-import { _notifications } from 'src/_mock';
+import { usePermissions } from 'src/contexts/permissions-context';
 
 import { NavMobile, NavDesktop } from './nav';
 import { layoutClasses } from '../core/classes';
@@ -46,6 +47,17 @@ export function DashboardLayout({
   layoutQuery = 'lg',
 }: DashboardLayoutProps) {
   const theme = useTheme();
+  const { canAccessSection, isSuperAdmin } = usePermissions();
+
+  const filteredNavData = useMemo(
+    () =>
+      navData.filter((item) => {
+        if (item.superAdminOnly) return isSuperAdmin;
+        if (item.permissionSection) return canAccessSection(item.permissionSection);
+        return true;
+      }),
+    [canAccessSection, isSuperAdmin]
+  );
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
@@ -69,7 +81,7 @@ export function DashboardLayout({
             onClick={onOpen}
             sx={{ mr: 1, ml: -1, [theme.breakpoints.up(layoutQuery)]: { display: 'none' } }}
           />
-          <NavMobile data={navData} open={open} onClose={onClose} />
+          <NavMobile data={filteredNavData} open={open} onClose={onClose} />
         </>
       ),
       rightArea: (
@@ -78,7 +90,7 @@ export function DashboardLayout({
           <Searchbar />
 
           {/** @slot Notifications popover */}
-          <NotificationsPopover data={_notifications} />
+          <NotificationsPopover />
 
           {/** @slot Account drawer */}
           <AccountPopover data={_account} />
@@ -112,7 +124,7 @@ export function DashboardLayout({
        * @Sidebar
        *************************************** */
       sidebarSection={
-        <NavDesktop data={navData} layoutQuery={layoutQuery} />
+        <NavDesktop data={filteredNavData} layoutQuery={layoutQuery} />
       }
       /** **************************************
        * @Footer

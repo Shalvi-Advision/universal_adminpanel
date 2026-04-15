@@ -7,7 +7,7 @@ import { varAlpha } from 'minimal-shared/utils';
 import Box from '@mui/material/Box';
 import LinearProgress, { linearProgressClasses } from '@mui/material/LinearProgress';
 
-import { ProtectedRoute } from 'src/routes/components';
+import { ProtectedRoute, PermissionGuard } from 'src/routes/components';
 
 import { AuthLayout } from 'src/layouts/auth';
 import { DashboardLayout } from 'src/layouts/dashboard';
@@ -33,6 +33,8 @@ export const DynamicAdvertisementsPage = lazy(() => import('src/pages/dynamic/ad
 export const DynamicPopularCategoriesPage = lazy(() => import('src/pages/dynamic/popular-categories'));
 export const DynamicBannersPage = lazy(() => import('src/pages/dynamic/banners'));
 export const DynamicSeasonalCategoriesPage = lazy(() => import('src/pages/dynamic/seasonal-categories'));
+export const OffersPage = lazy(() => import('src/pages/offers'));
+export const AdminPermissionsPage = lazy(() => import('src/pages/admin-permissions'));
 export const Page404 = lazy(() => import('src/pages/page-not-found'));
 
 const renderFallback = () => (
@@ -83,24 +85,26 @@ export const routesSection: RouteObject[] = [
       </ProtectedRoute>
     ),
     children: [
-      { path: 'dashboard', element: <DashboardPage /> },
-      { path: 'users', element: <UsersPage /> },
-      { path: 'orders', element: <OrdersPage /> },
-      { path: 'notifications', element: <NotificationsPage /> },
-      { path: 'ecommerce/departments', element: <EcommerceDepartmentsPage /> },
-      { path: 'ecommerce/categories', element: <EcommerceCategoriesPage /> },
-      { path: 'ecommerce/subcategories', element: <EcommerceSubcategoriesPage /> },
-      { path: 'ecommerce/products', element: <EcommerceProductsPage /> },
-      { path: 'outlet/pincodes', element: <OutletPincodesPage /> },
-      { path: 'outlet/stores', element: <OutletStoresPage /> },
-      { path: 'outlet/payment-modes', element: <OutletPaymentModesPage /> },
-      { path: 'outlet/delivery-slots', element: <OutletDeliverySlotsPage /> },
-      { path: 'dynamic/best-sellers', element: <DynamicBestSellersPage /> },
-      { path: 'dynamic/top-sellers', element: <DynamicTopSellersPage /> },
-      { path: 'dynamic/advertisements', element: <DynamicAdvertisementsPage /> },
-      { path: 'dynamic/popular-categories', element: <DynamicPopularCategoriesPage /> },
-      { path: 'dynamic/banners', element: <DynamicBannersPage /> },
-      { path: 'dynamic/seasonal-categories', element: <DynamicSeasonalCategoriesPage /> },
+      { path: 'dashboard', element: <PermissionGuard section="dashboard"><DashboardPage /></PermissionGuard> },
+      { path: 'users', element: <PermissionGuard section="users"><UsersPage /></PermissionGuard> },
+      { path: 'orders', element: <PermissionGuard section="orders"><OrdersPage /></PermissionGuard> },
+      { path: 'notifications', element: <PermissionGuard section="notifications"><NotificationsPage /></PermissionGuard> },
+      { path: 'offers', element: <PermissionGuard section="offers"><OffersPage /></PermissionGuard> },
+      { path: 'ecommerce/departments', element: <PermissionGuard section="ecommerce"><EcommerceDepartmentsPage /></PermissionGuard> },
+      { path: 'ecommerce/categories', element: <PermissionGuard section="ecommerce"><EcommerceCategoriesPage /></PermissionGuard> },
+      { path: 'ecommerce/subcategories', element: <PermissionGuard section="ecommerce"><EcommerceSubcategoriesPage /></PermissionGuard> },
+      { path: 'ecommerce/products', element: <PermissionGuard section="ecommerce"><EcommerceProductsPage /></PermissionGuard> },
+      { path: 'outlet/pincodes', element: <PermissionGuard section="outlet"><OutletPincodesPage /></PermissionGuard> },
+      { path: 'outlet/stores', element: <PermissionGuard section="outlet"><OutletStoresPage /></PermissionGuard> },
+      { path: 'outlet/payment-modes', element: <PermissionGuard section="outlet"><OutletPaymentModesPage /></PermissionGuard> },
+      { path: 'outlet/delivery-slots', element: <PermissionGuard section="outlet"><OutletDeliverySlotsPage /></PermissionGuard> },
+      { path: 'dynamic/best-sellers', element: <PermissionGuard section="dynamicSection"><DynamicBestSellersPage /></PermissionGuard> },
+      { path: 'dynamic/top-sellers', element: <PermissionGuard section="dynamicSection"><DynamicTopSellersPage /></PermissionGuard> },
+      { path: 'dynamic/advertisements', element: <PermissionGuard section="dynamicSection"><DynamicAdvertisementsPage /></PermissionGuard> },
+      { path: 'dynamic/popular-categories', element: <PermissionGuard section="dynamicSection"><DynamicPopularCategoriesPage /></PermissionGuard> },
+      { path: 'dynamic/banners', element: <PermissionGuard section="dynamicSection"><DynamicBannersPage /></PermissionGuard> },
+      { path: 'dynamic/seasonal-categories', element: <PermissionGuard section="dynamicSection"><DynamicSeasonalCategoriesPage /></PermissionGuard> },
+      { path: 'admin-permissions', element: <AdminPermissionsPage /> },
     ],
   },
   {

@@ -1,4 +1,4 @@
-import type { Department, PaginatedResponse, DepartmentsQueryParams } from 'src/types/api';
+import type { Department, ApiResponse, DepartmentPayload, PaginatedResponse, DepartmentsQueryParams } from 'src/types/api';
 
 import { apiClient } from 'src/utils/api-client';
 
@@ -21,4 +21,16 @@ export async function getAllDepartments(
   const endpoint = `/api/admin/categories/departments/all${queryString ? `?${queryString}` : ''}`;
 
   return apiClient.get<PaginatedResponse<Department>>(endpoint);
+}
+
+export async function createDepartment(data: DepartmentPayload): Promise<ApiResponse<Department>> {
+  return apiClient.post<ApiResponse<Department>>('/api/admin/categories/departments', data);
+}
+
+export async function updateDepartment(id: string, data: DepartmentPayload): Promise<ApiResponse<Department>> {
+  return apiClient.put<ApiResponse<Department>>(`/api/admin/categories/departments/${id}`, data);
+}
+
+export async function deleteDepartment(id: string): Promise<ApiResponse<null>> {
+  return apiClient.delete<ApiResponse<null>>(`/api/admin/categories/departments/${id}`);
 }

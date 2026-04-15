@@ -30,6 +30,7 @@ import TablePagination from '@mui/material/TablePagination';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { CONFIG } from 'src/config-global';
+import { usePermissions } from 'src/contexts/permissions-context';
 import { getOrders, updateOrderStatus, updatePaymentStatus } from 'src/services/orders';
 
 import { Iconify } from 'src/components/iconify';
@@ -66,6 +67,9 @@ const getPaymentStatusColor = (status: PaymentStatus): 'default' | 'primary' | '
 };
 
 export default function OrdersPage() {
+    const { hasPermission } = usePermissions();
+    const canEditOrders = hasPermission('orders', 'edit');
+
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>('');
@@ -342,8 +346,8 @@ export default function OrdersPage() {
                                                             label={order.order_status}
                                                             color={getStatusColor(order.order_status)}
                                                             size="small"
-                                                            onClick={() => openStatusDialog(order)}
-                                                            sx={{ cursor: 'pointer', textTransform: 'capitalize' }}
+                                                            onClick={canEditOrders ? () => openStatusDialog(order) : undefined}
+                                                            sx={{ cursor: canEditOrders ? 'pointer' : 'default', textTransform: 'capitalize' }}
                                                         />
                                                     </TableCell>
                                                     <TableCell>
@@ -352,8 +356,8 @@ export default function OrdersPage() {
                                                             color={getPaymentStatusColor(order.payment_info?.payment_status as PaymentStatus)}
                                                             size="small"
                                                             variant="outlined"
-                                                            onClick={() => openPaymentDialog(order)}
-                                                            sx={{ cursor: 'pointer', textTransform: 'capitalize' }}
+                                                            onClick={canEditOrders ? () => openPaymentDialog(order) : undefined}
+                                                            sx={{ cursor: canEditOrders ? 'pointer' : 'default', textTransform: 'capitalize' }}
                                                         />
                                                     </TableCell>
                                                     <TableCell>

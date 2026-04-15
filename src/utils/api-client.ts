@@ -1,6 +1,6 @@
 // API Client utility for making HTTP requests
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5008';
 
 // Get auth token from session storage
 const getAuthToken = (): string | null => sessionStorage.getItem('authToken');

@@ -19,6 +19,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { CONFIG } from 'src/config-global';
+import { usePermissions } from 'src/contexts/permissions-context';
 import {
     sendNotificationToAll,
     getUsersWithFcmTokens,
@@ -28,6 +29,9 @@ import {
 // ----------------------------------------------------------------------
 
 export default function Page() {
+    const { hasPermission } = usePermissions();
+    const canSendNotifications = hasPermission('notifications', 'create');
+
     const [target, setTarget] = useState<'user' | 'all'>('all');
     const [selectedUserId, setSelectedUserId] = useState('');
     const [title, setTitle] = useState('');
@@ -204,7 +208,7 @@ export default function Page() {
                                     >
                                         Clear
                                     </Button>
-                                    <LoadingButton type="submit" variant="contained" loading={loading}>
+                                    <LoadingButton type="submit" variant="contained" loading={loading} disabled={!canSendNotifications}>
                                         Send Notification
                                     </LoadingButton>
                                 </Box>

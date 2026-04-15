@@ -1,4 +1,4 @@
-import type { User, UsersQueryParams, PaginatedResponse } from 'src/types/api';
+import type { User, ApiResponse, UsersQueryParams, PaginatedResponse } from 'src/types/api';
 
 import { apiClient } from 'src/utils/api-client';
 
@@ -19,4 +19,12 @@ export async function getAllUsers(
   const endpoint = `/api/admin/users${queryString ? `?${queryString}` : ''}`;
 
   return apiClient.get<PaginatedResponse<User>>(endpoint);
+}
+
+// Change user role (admin/user)
+export async function changeUserRole(
+  userId: string,
+  role: 'user' | 'admin'
+): Promise<ApiResponse<User>> {
+  return apiClient.patch<ApiResponse<User>>(`/api/admin/users/${userId}/role`, { role });
 }

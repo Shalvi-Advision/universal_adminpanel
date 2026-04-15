@@ -9,12 +9,14 @@ import Alert from '@mui/material/Alert';
 import Table from '@mui/material/Table';
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
+import Button from '@mui/material/Button';
 import TableRow from '@mui/material/TableRow';
 import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Pagination from '@mui/material/Pagination';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -24,17 +26,25 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { fCurrency } from 'src/utils/format-number';
 
 import { CONFIG } from 'src/config-global';
-import { getProductsByStore } from 'src/services/products';
 import { useStoreCode } from 'src/contexts/store-code-context';
+import { deleteProduct, getProductsByStore } from 'src/services/products';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
+import { PermissionButton } from 'src/components/permission-button/permission-button';
+
+import { ProductDialog } from './components/product-dialog';
+import { DeleteConfirmDialog } from '../dynamic/components/delete-confirm-dialog';
 
 export default function Page() {
   const { storeCode } = useStoreCode();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [openDialog, setOpenDialog] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [deleteId, setDeleteId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -79,13 +89,64 @@ export default function Page() {
     setPage(value);
   };
 
+  const handleCreate = () => {
+    setSelectedProduct(null);
+    setOpenDialog(true);
+  };
+
+  const handleEdit = (product: Product) => {
+    setSelectedProduct(product);
+    setOpenDialog(true);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setDeleteId(id);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteProduct(deleteId);
+      setOpenDeleteDialog(false);
+      setDeleteId('');
+      fetchProducts(); // Refresh list
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete product');
+      setOpenDeleteDialog(false);
+    }
+  };
+
+  const handleDialogClose = () => {
+    setOpenDialog(false);
+    setSelectedProduct(null);
+  };
+
+  const handleDialogSuccess = () => {
+    setOpenDialog(false);
+    setSelectedProduct(null);
+    fetchProducts(); // Refresh list
+  };
+
   return (
     <>
       <title>{`Products - ${CONFIG.appName}`}</title>
 
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Stack spacing={3}>
-          <Typography variant="h4">Products</Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="h4">Products</Typography>
+            {storeCode && (
+              <PermissionButton section="ecommerce" action="create">
+                <Button
+                  variant="contained"
+                  startIcon={<Iconify icon={"mingcute:add-line" as any} />}
+                  onClick={handleCreate}
+                >
+                  Create Product
+                </Button>
+              </PermissionButton>
+            )}
+          </Stack>
 
           {!storeCode && (
             <Alert severity="warning">
@@ -132,18 +193,19 @@ export default function Page() {
                         <TableCell align="right">Our Price</TableCell>
                         <TableCell align="right">Stock</TableCell>
                         <TableCell>Status</TableCell>
+                        <TableCell align="right">Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                          <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
                             <CircularProgress />
                           </TableCell>
                         </TableRow>
                       ) : products.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                          <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
                             <Typography variant="body2" color="text.secondary">
                               No products found
                             </Typography>
@@ -211,6 +273,26 @@ export default function Page() {
                                 size="small"
                               />
                             </TableCell>
+                            <TableCell align="right">
+                              <PermissionButton section="ecommerce" action="edit">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleEdit(item)}
+                                  color="primary"
+                                >
+                                  <Iconify icon={"solar:pen-bold" as any} />
+                                </IconButton>
+                              </PermissionButton>
+                              <PermissionButton section="ecommerce" action="delete">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleDeleteClick(item.id)}
+                                  color="error"
+                                >
+                                  <Iconify icon={"solar:trash-bin-trash-bold" as any} />
+                                </IconButton>
+                              </PermissionButton>
+                            </TableCell>
                           </TableRow>
                         ))
                       )}
@@ -235,6 +317,21 @@ export default function Page() {
           )}
         </Stack>
       </Container>
+
+      <ProductDialog
+        open={openDialog}
+        product={selectedProduct}
+        onClose={handleDialogClose}
+        onSuccess={handleDialogSuccess}
+      />
+
+      <DeleteConfirmDialog
+        open={openDeleteDialog}
+        onClose={() => setOpenDeleteDialog(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Product"
+        message="Are you sure you want to delete this product? This action cannot be undone."
+      />
     </>
   );
 }

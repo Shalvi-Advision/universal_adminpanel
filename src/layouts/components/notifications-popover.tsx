@@ -1,6 +1,8 @@
+import type { Socket } from 'socket.io-client';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-import { useState, useCallback } from 'react';
+import { io } from 'socket.io-client';
+import { useRef, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
@@ -16,51 +18,126 @@ import ListItemText from '@mui/material/ListItemText';
 import ListSubheader from '@mui/material/ListSubheader';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
+import CircularProgress from '@mui/material/CircularProgress';
 
 import { fToNow } from 'src/utils/format-time';
+import { apiClient } from 'src/utils/api-client';
+
+import { getToken } from 'src/services/auth';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
 // ----------------------------------------------------------------------
 
-type NotificationItemProps = {
-  id: string;
-  type: string;
+type AdminNotification = {
+  _id: string;
   title: string;
-  isUnRead: boolean;
-  description: string;
-  avatarUrl: string | null;
-  postedAt: string | number | null;
+  body: string;
+  type: 'order' | 'user' | 'system' | 'payment';
+  data?: any;
+  isRead: boolean;
+  createdAt: string;
 };
 
 export type NotificationsPopoverProps = IconButtonProps & {
-  data?: NotificationItemProps[];
+  data?: any[];
 };
 
-export function NotificationsPopover({ data = [], sx, ...other }: NotificationsPopoverProps) {
-  const [notifications, setNotifications] = useState(data);
-
-  const totalUnRead = notifications.filter((item) => item.isUnRead === true).length;
-
+export function NotificationsPopover({ data, sx, ...other }: NotificationsPopoverProps) {
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [openPopover, setOpenPopover] = useState<HTMLButtonElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize audio on mount
+  useEffect(() => {
+    audioRef.current = new Audio('/assets/neworder.mp3');
+    audioRef.current.volume = 0.7;
+  }, []);
+
+  // Play sound when new notifications arrive
+  const playNotificationSound = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => {});
+    }
+  }, []);
+
+  // Fetch initial unread count on mount
+  useEffect(() => {
+    apiClient.get<any>('/api/admin/notifications/admin-alerts/unread-count')
+      .then((res) => {
+        const count = res.data?.count ?? 0;
+        setUnreadCount(count);
+        // Initial count loaded
+      })
+      .catch(() => {});
+  }, []);
+
+  // Connect to socket.io for real-time notifications
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return undefined;
+
+    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5008';
+    const socket = io(apiUrl, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+    });
+
+    socket.on('new-admin-notification', (notification: AdminNotification) => {
+      setNotifications((prev) => [notification, ...prev]);
+      setUnreadCount((prev) => prev + 1);
+      playNotificationSound();
+    });
+
+    socketRef.current = socket;
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [playNotificationSound]);
+
+  // Fetch full notifications when popover opens
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.get<any>('/api/admin/notifications/admin-alerts?limit=10');
+      setNotifications(res.data ?? []);
+      setUnreadCount(res.unreadCount ?? 0);
+    } catch {
+      // Silently fail
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const handleOpenPopover = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     setOpenPopover(event.currentTarget);
-  }, []);
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const handleClosePopover = useCallback(() => {
     setOpenPopover(null);
   }, []);
 
-  const handleMarkAllAsRead = useCallback(() => {
-    const updatedNotifications = notifications.map((notification) => ({
-      ...notification,
-      isUnRead: false,
-    }));
+  const handleMarkAllAsRead = useCallback(async () => {
+    try {
+      await apiClient.put<any>('/api/admin/notifications/admin-alerts/mark-read');
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch {
+      // Silently fail
+    }
+  }, []);
 
-    setNotifications(updatedNotifications);
-  }, [notifications]);
+  const newNotifications = notifications.filter((n) => !n.isRead);
+  const olderNotifications = notifications.filter((n) => n.isRead);
 
   return (
     <>
@@ -70,7 +147,7 @@ export function NotificationsPopover({ data = [], sx, ...other }: NotificationsP
         sx={sx}
         {...other}
       >
-        <Badge badgeContent={totalUnRead} color="error">
+        <Badge badgeContent={unreadCount} color="error">
           <Iconify width={24} icon="solar:bell-bing-bold-duotone" />
         </Badge>
       </IconButton>
@@ -104,12 +181,12 @@ export function NotificationsPopover({ data = [], sx, ...other }: NotificationsP
           <Box sx={{ flexGrow: 1 }}>
             <Typography variant="subtitle1">Notifications</Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              You have {totalUnRead} unread messages
+              You have {unreadCount} unread message{unreadCount !== 1 ? 's' : ''}
             </Typography>
           </Box>
 
-          {totalUnRead > 0 && (
-            <Tooltip title=" Mark all as read">
+          {unreadCount > 0 && (
+            <Tooltip title="Mark all as read">
               <IconButton color="primary" onClick={handleMarkAllAsRead}>
                 <Iconify icon="eva:done-all-fill" />
               </IconButton>
@@ -120,31 +197,49 @@ export function NotificationsPopover({ data = [], sx, ...other }: NotificationsP
         <Divider sx={{ borderStyle: 'dashed' }} />
 
         <Scrollbar fillContent sx={{ minHeight: 240, maxHeight: { xs: 360, sm: 'none' } }}>
-          <List
-            disablePadding
-            subheader={
-              <ListSubheader disableSticky sx={{ py: 1, px: 2.5, typography: 'overline' }}>
-                New
-              </ListSubheader>
-            }
-          >
-            {notifications.slice(0, 2).map((notification) => (
-              <NotificationItem key={notification.id} notification={notification} />
-            ))}
-          </List>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : notifications.length === 0 ? (
+            <Box sx={{ py: 4, textAlign: 'center' }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                No notifications yet
+              </Typography>
+            </Box>
+          ) : (
+            <>
+              {newNotifications.length > 0 && (
+                <List
+                  disablePadding
+                  subheader={
+                    <ListSubheader disableSticky sx={{ py: 1, px: 2.5, typography: 'overline' }}>
+                      New
+                    </ListSubheader>
+                  }
+                >
+                  {newNotifications.map((notification) => (
+                    <NotificationItem key={notification._id} notification={notification} />
+                  ))}
+                </List>
+              )}
 
-          <List
-            disablePadding
-            subheader={
-              <ListSubheader disableSticky sx={{ py: 1, px: 2.5, typography: 'overline' }}>
-                Before that
-              </ListSubheader>
-            }
-          >
-            {notifications.slice(2, 5).map((notification) => (
-              <NotificationItem key={notification.id} notification={notification} />
-            ))}
-          </List>
+              {olderNotifications.length > 0 && (
+                <List
+                  disablePadding
+                  subheader={
+                    <ListSubheader disableSticky sx={{ py: 1, px: 2.5, typography: 'overline' }}>
+                      Earlier
+                    </ListSubheader>
+                  }
+                >
+                  {olderNotifications.map((notification) => (
+                    <NotificationItem key={notification._id} notification={notification} />
+                  ))}
+                </List>
+              )}
+            </>
+          )}
         </Scrollbar>
 
         <Divider sx={{ borderStyle: 'dashed' }} />
@@ -161,7 +256,7 @@ export function NotificationsPopover({ data = [], sx, ...other }: NotificationsP
 
 // ----------------------------------------------------------------------
 
-function NotificationItem({ notification }: { notification: NotificationItemProps }) {
+function NotificationItem({ notification }: { notification: AdminNotification }) {
   const { avatarUrl, title } = renderContent(notification);
 
   return (
@@ -170,7 +265,7 @@ function NotificationItem({ notification }: { notification: NotificationItemProp
         py: 1.5,
         px: 2.5,
         mt: '1px',
-        ...(notification.isUnRead && {
+        ...(!notification.isRead && {
           bgcolor: 'action.selected',
         }),
       }}
@@ -192,7 +287,7 @@ function NotificationItem({ notification }: { notification: NotificationItemProp
             }}
           >
             <Iconify width={14} icon="solar:clock-circle-outline" />
-            {fToNow(notification.postedAt)}
+            {fToNow(notification.createdAt)}
           </Typography>
         }
       />
@@ -202,17 +297,17 @@ function NotificationItem({ notification }: { notification: NotificationItemProp
 
 // ----------------------------------------------------------------------
 
-function renderContent(notification: NotificationItemProps) {
+function renderContent(notification: AdminNotification) {
   const title = (
     <Typography variant="subtitle2">
       {notification.title}
       <Typography component="span" variant="body2" sx={{ color: 'text.secondary' }}>
-        &nbsp; {notification.description}
+        &nbsp; {notification.body}
       </Typography>
     </Typography>
   );
 
-  if (notification.type === 'order-placed') {
+  if (notification.type === 'order') {
     return {
       avatarUrl: (
         <img
@@ -223,7 +318,7 @@ function renderContent(notification: NotificationItemProps) {
       title,
     };
   }
-  if (notification.type === 'order-shipped') {
+  if (notification.type === 'payment') {
     return {
       avatarUrl: (
         <img
@@ -234,15 +329,7 @@ function renderContent(notification: NotificationItemProps) {
       title,
     };
   }
-  if (notification.type === 'mail') {
-    return {
-      avatarUrl: (
-        <img alt={notification.title} src="/assets/icons/notification/ic-notification-mail.svg" />
-      ),
-      title,
-    };
-  }
-  if (notification.type === 'chat-message') {
+  if (notification.type === 'user') {
     return {
       avatarUrl: (
         <img alt={notification.title} src="/assets/icons/notification/ic-notification-chat.svg" />
@@ -251,9 +338,9 @@ function renderContent(notification: NotificationItemProps) {
     };
   }
   return {
-    avatarUrl: notification.avatarUrl ? (
-      <img alt={notification.title} src={notification.avatarUrl} />
-    ) : null,
+    avatarUrl: (
+      <img alt={notification.title} src="/assets/icons/notification/ic-notification-mail.svg" />
+    ),
     title,
   };
 }

@@ -9,6 +9,8 @@ export interface User {
   mobile?: string;
   role?: 'user' | 'admin';
   isVerified?: boolean;
+  isSuperAdmin?: boolean;
+  permissions?: import('./permissions').UserPermissions;
   addresses?: any[];
   favorites?: any[];
   createdAt?: string;
@@ -473,6 +475,28 @@ export interface ProductsQueryParams {
   limit?: number;
 }
 
+// ProductMaster payload for create/update
+export interface ProductMasterPayload {
+  p_code: string;
+  product_name: string;
+  package_size: number;
+  package_unit: string;
+  product_mrp: number;
+  our_price: number;
+  store_code: string;
+  dept_id: string;
+  category_id: string;
+  sub_category_id: string;
+  barcode?: string;
+  product_description?: string;
+  brand_name?: string;
+  pcode_status?: 'Y' | 'N';
+  store_quantity?: number;
+  max_quantity_allowed?: number;
+  pcode_img?: string;
+  search_keyword?: string;
+}
+
 // Category type matching backend model
 export interface Category {
   _id: string;
@@ -485,6 +509,18 @@ export interface Category {
   image_link: string;
   category_bg_color: string;
   __v?: number;
+}
+
+// Category payload for create/update
+export interface CategoryPayload {
+  idcategory_master: string;
+  category_name: string;
+  dept_id: string;
+  sequence_id: number;
+  store_code: string;
+  no_of_col?: string;
+  image_link?: string;
+  category_bg_color?: string;
 }
 
 // Categories query parameters for POST endpoint
@@ -507,6 +543,17 @@ export interface Department {
   __v?: number;
 }
 
+// Department payload for create/update
+export interface DepartmentPayload {
+  department_id: string;
+  department_name: string;
+  dept_type_id: string;
+  sequence_id: number;
+  dept_no_of_col?: number;
+  store_code?: string;
+  image_link?: string;
+}
+
 // Departments query parameters for GET endpoint
 export interface DepartmentsQueryParams {
   page?: number;
@@ -526,6 +573,14 @@ export interface Subcategory {
   category_id: string;
   main_category_name: string;
   __v?: number;
+}
+
+// Subcategory payload for create/update
+export interface SubcategoryPayload {
+  idsub_category_master: string;
+  sub_category_name: string;
+  category_id: string;
+  main_category_name: string;
 }
 
 // Subcategories query parameters for POST endpoint
@@ -767,4 +822,61 @@ export interface SeasonalCategoryPayload {
 export interface StoreCode {
   store_code: string;
   store_name: string;
+}
+
+// ========================================
+// Offer Types
+// ========================================
+
+export interface DealProduct {
+  p_code: string;
+  product_name: string;
+  deal_price: number;
+  original_price: number;
+  pcode_img?: string;
+  max_quantity: number;
+}
+
+export interface Offer {
+  _id: string;
+  offer_type?: 'cart_discount' | 'product_deal';
+  title: string;
+  discount_amount: number;
+  discount_type: 'flat' | 'percentage';
+  min_cart_value: number;
+  max_discount?: number;
+  deal_products?: DealProduct[];
+  store_codes?: string[];
+  is_active: boolean;
+  valid_from: string;
+  valid_until?: string;
+  priority: number;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface OfferPayload {
+  offer_type?: 'cart_discount' | 'product_deal';
+  title: string;
+  discount_amount?: number;
+  discount_type?: 'flat' | 'percentage';
+  min_cart_value: number;
+  max_discount?: number;
+  deal_products?: DealProduct[];
+  store_codes?: string[];
+  is_active?: boolean;
+  valid_from?: string;
+  valid_until?: string;
+  priority?: number;
+  description?: string;
+}
+
+export interface OffersQueryParams {
+  page?: number;
+  limit?: number;
+  store_code?: string;
+  is_active?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }

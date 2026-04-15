@@ -6,6 +6,7 @@ import { usePathname } from 'src/routes/hooks';
 
 import { ThemeProvider } from 'src/theme/theme-provider';
 import { StoreCodeProvider } from 'src/contexts/store-code-context';
+import { PermissionsProvider } from 'src/contexts/permissions-context';
 
 // ----------------------------------------------------------------------
 
@@ -18,9 +19,11 @@ export default function App({ children }: AppProps) {
 
   return (
     <ThemeProvider>
-      <StoreCodeProvider>
-        {children}
-      </StoreCodeProvider>
+      <PermissionsProvider>
+        <StoreCodeProvider>
+          {children}
+        </StoreCodeProvider>
+      </PermissionsProvider>
     </ThemeProvider>
   );
 }

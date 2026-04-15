@@ -24,6 +24,7 @@ import { deleteSeasonalCategory, getAllSeasonalCategories } from 'src/services/s
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
+import { PermissionButton } from 'src/components/permission-button/permission-button';
 
 import { DeleteConfirmDialog } from './components/delete-confirm-dialog';
 import { SeasonalCategoryDialog } from './components/seasonal-category-dialog';
@@ -112,13 +113,15 @@ export default function Page() {
         <Stack spacing={3}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography variant="h4">Seasonal Categories</Typography>
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="mingcute:add-line" />}
-              onClick={handleCreate}
-            >
-              Create Seasonal Category
-            </Button>
+            <PermissionButton section="dynamicSection" action="create">
+              <Button
+                variant="contained"
+                startIcon={<Iconify icon="mingcute:add-line" />}
+                onClick={handleCreate}
+              >
+                Create Seasonal Category
+              </Button>
+            </PermissionButton>
           </Stack>
 
           {error && (
@@ -211,20 +214,24 @@ export default function Page() {
                           <TableCell>{item.end_date ? formatDate(item.end_date) : '-'}</TableCell>
                           <TableCell>{item.sequence}</TableCell>
                           <TableCell align="right">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleEdit(item)}
-                              color="primary"
-                            >
-                              <Iconify icon="solar:pen-bold" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleDeleteClick(item._id)}
-                              color="error"
-                            >
-                              <Iconify icon="solar:trash-bin-trash-bold" />
-                            </IconButton>
+                            <PermissionButton section="dynamicSection" action="edit">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleEdit(item)}
+                                color="primary"
+                              >
+                                <Iconify icon="solar:pen-bold" />
+                              </IconButton>
+                            </PermissionButton>
+                            <PermissionButton section="dynamicSection" action="delete">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDeleteClick(item._id)}
+                                color="error"
+                              >
+                                <Iconify icon="solar:trash-bin-trash-bold" />
+                              </IconButton>
+                            </PermissionButton>
                           </TableCell>
                         </TableRow>
                       ))

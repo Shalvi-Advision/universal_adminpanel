@@ -8,12 +8,14 @@ import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Table from '@mui/material/Table';
 import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
 import Avatar from '@mui/material/Avatar';
 import TableRow from '@mui/material/TableRow';
 import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Pagination from '@mui/material/Pagination';
 import TableContainer from '@mui/material/TableContainer';
@@ -21,9 +23,14 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { CONFIG } from 'src/config-global';
 import { useStoreCode } from 'src/contexts/store-code-context';
-import { getCategoriesByStore } from 'src/services/categories';
+import { deleteCategory, getCategoriesByStore } from 'src/services/categories';
 
+import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
+import { PermissionButton } from 'src/components/permission-button/permission-button';
+
+import { CategoryDialog } from './components/category-dialog';
+import { DeleteConfirmDialog } from '../dynamic/components/delete-confirm-dialog';
 
 export default function Page() {
   const { storeCode } = useStoreCode();
@@ -32,6 +39,10 @@ export default function Page() {
   const [error, setError] = useState<string>('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [deleteId, setDeleteId] = useState('');
   const limit = 20;
 
   const fetchCategories = useCallback(async () => {
@@ -63,6 +74,36 @@ export default function Page() {
     fetchCategories();
   }, [fetchCategories]);
 
+  const handleCreate = () => {
+    setSelectedCategory(null);
+    setOpenDialog(true);
+  };
+
+  const handleEdit = (cat: Category) => {
+    setSelectedCategory(cat);
+    setOpenDialog(true);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setDeleteId(id);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteCategory(deleteId);
+      setOpenDeleteDialog(false);
+      fetchCategories();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete');
+    }
+  };
+
+  const handleDialogSuccess = () => {
+    setOpenDialog(false);
+    fetchCategories();
+  };
+
   const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
   };
@@ -73,7 +114,20 @@ export default function Page() {
 
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Stack spacing={3}>
-          <Typography variant="h4">Categories</Typography>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography variant="h4">Categories</Typography>
+            {storeCode && (
+              <PermissionButton section="ecommerce" action="create">
+                <Button
+                  variant="contained"
+                  startIcon={<Iconify icon="mingcute:add-line" />}
+                  onClick={handleCreate}
+                >
+                  Create Category
+                </Button>
+              </PermissionButton>
+            )}
+          </Stack>
 
           {!storeCode && (
             <Alert severity="warning">
@@ -101,18 +155,19 @@ export default function Page() {
                         <TableCell>Store Code</TableCell>
                         <TableCell align="right">Sequence</TableCell>
                         <TableCell align="right">Columns</TableCell>
+                        <TableCell align="right">Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                          <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                             <CircularProgress />
                           </TableCell>
                         </TableRow>
                       ) : categories.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                          <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                             <Typography variant="body2" color="text.secondary">
                               No categories found
                             </Typography>
@@ -155,6 +210,26 @@ export default function Page() {
                             <TableCell align="right">
                               <Typography variant="body2">{item.no_of_col}</Typography>
                             </TableCell>
+                            <TableCell align="right">
+                              <PermissionButton section="ecommerce" action="edit">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleEdit(item)}
+                                  color="primary"
+                                >
+                                  <Iconify icon="solar:pen-bold" width={20} />
+                                </IconButton>
+                              </PermissionButton>
+                              <PermissionButton section="ecommerce" action="delete">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleDeleteClick(item._id)}
+                                  color="error"
+                                >
+                                  <Iconify icon="solar:trash-bin-trash-bold" width={20} />
+                                </IconButton>
+                              </PermissionButton>
+                            </TableCell>
                           </TableRow>
                         ))
                       )}
@@ -179,6 +254,21 @@ export default function Page() {
           )}
         </Stack>
       </Container>
+
+      <CategoryDialog
+        open={openDialog}
+        category={selectedCategory}
+        onClose={() => setOpenDialog(false)}
+        onSuccess={handleDialogSuccess}
+      />
+
+      <DeleteConfirmDialog
+        open={openDeleteDialog}
+        onClose={() => setOpenDeleteDialog(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Category"
+        message="Are you sure you want to delete this category? This action cannot be undone."
+      />
     </>
   );
 }

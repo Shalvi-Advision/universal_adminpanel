@@ -1,6 +1,6 @@
 import type { User } from 'src/types/api';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -10,46 +10,85 @@ import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import Avatar from '@mui/material/Avatar';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
 import Tooltip from '@mui/material/Tooltip';
 import TableRow from '@mui/material/TableRow';
 import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { CONFIG } from 'src/config-global';
-import { getAllUsers } from 'src/services/users';
+import { getAllUsers, changeUserRole } from 'src/services/users';
+import { usePermissions } from 'src/contexts/permissions-context';
 
+import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
 // ----------------------------------------------------------------------
 
 export default function Page() {
+  const { isSuperAdmin } = usePermissions();
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
+
+  // Role change dialog
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [changingRole, setChangingRole] = useState(false);
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await getAllUsers({ page: 1, limit: 100 });
+      if (response.success) {
+        setUsers(response.data);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        const response = await getAllUsers({ page: 1, limit: 100 });
-        if (response.success) {
-          setUsers(response.data);
-        }
-      } catch (err: any) {
-        setError(err.message || 'Failed to load users');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
+
+  const handleOpenRoleDialog = (user: User) => {
+    setSelectedUser(user);
+    setRoleDialogOpen(true);
+  };
+
+  const handleChangeRole = async () => {
+    if (!selectedUser?._id) return;
+    const newRole = selectedUser.role === 'admin' ? 'user' : 'admin';
+
+    try {
+      setChangingRole(true);
+      setError('');
+      await changeUserRole(selectedUser._id, newRole);
+      setSuccess(`${selectedUser.name || selectedUser.mobile} role changed to ${newRole.toUpperCase()}`);
+      setRoleDialogOpen(false);
+      fetchUsers();
+    } catch (err: any) {
+      setError(err.message || 'Failed to change role');
+    } finally {
+      setChangingRole(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -89,6 +128,11 @@ export default function Page() {
               {error}
             </Alert>
           )}
+          {success && (
+            <Alert severity="success" onClose={() => setSuccess('')}>
+              {success}
+            </Alert>
+          )}
 
           <Card>
             <Scrollbar>
@@ -105,18 +149,19 @@ export default function Page() {
                       <TableCell>Last Active</TableCell>
                       <TableCell align="center">Notifications</TableCell>
                       <TableCell>Created At</TableCell>
+                      {isSuperAdmin && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
+                        <TableCell colSpan={isSuperAdmin ? 10 : 9} align="center" sx={{ py: 8 }}>
                           <CircularProgress />
                         </TableCell>
                       </TableRow>
                     ) : users.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
+                        <TableCell colSpan={isSuperAdmin ? 10 : 9} align="center" sx={{ py: 8 }}>
                           <Typography variant="body2" color="text.secondary">
                             No users found
                           </Typography>
@@ -157,7 +202,7 @@ export default function Page() {
                           <TableCell align="center">
                             <Tooltip title={user.pushEnabled ? 'Push notifications enabled' : 'Push notifications not enabled'}>
                               <Chip
-                                label={user.pushEnabled ? '✓' : '✗'}
+                                label={user.pushEnabled ? '\u2713' : '\u2717'}
                                 color={user.pushEnabled ? 'success' : 'default'}
                                 size="small"
                                 sx={{ minWidth: 32 }}
@@ -197,6 +242,24 @@ export default function Page() {
                           <TableCell>
                             {user.createdAt ? formatDate(user.createdAt) : '-'}
                           </TableCell>
+                          {isSuperAdmin && (
+                            <TableCell align="right">
+                              <Tooltip title={user.role === 'admin' ? 'Demote to User' : 'Promote to Admin'}>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleOpenRoleDialog(user)}
+                                  color={user.role === 'admin' ? 'warning' : 'primary'}
+                                >
+                                  <Iconify
+                                    icon={user.role === 'admin'
+                                      ? ('solar:shield-minus-bold-duotone' as any)
+                                      : ('solar:shield-plus-bold-duotone' as any)}
+                                    width={20}
+                                  />
+                                </IconButton>
+                              </Tooltip>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))
                     )}
@@ -206,8 +269,63 @@ export default function Page() {
             </Scrollbar>
           </Card>
         </Stack>
+
+        {/* Role Change Confirmation Dialog */}
+        <Dialog open={roleDialogOpen} onClose={() => setRoleDialogOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>
+            {selectedUser?.role === 'admin' ? 'Demote to User' : 'Promote to Admin'}
+          </DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ pt: 1 }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Avatar sx={{ bgcolor: selectedUser?.role === 'admin' ? 'primary.main' : 'grey.400' }}>
+                  {(selectedUser?.name || 'U')[0].toUpperCase()}
+                </Avatar>
+                <Box>
+                  <Typography variant="subtitle1">{selectedUser?.name || 'N/A'}</Typography>
+                  <Typography variant="body2" color="text.secondary">{selectedUser?.mobile}</Typography>
+                </Box>
+              </Stack>
+
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
+                <Chip
+                  label={selectedUser?.role?.toUpperCase() || 'USER'}
+                  color={selectedUser?.role === 'admin' ? 'primary' : 'default'}
+                  size="small"
+                />
+                <Iconify icon={'solar:arrow-right-bold' as any} width={16} sx={{ color: 'text.secondary' }} />
+                <Chip
+                  label={selectedUser?.role === 'admin' ? 'USER' : 'ADMIN'}
+                  color={selectedUser?.role === 'admin' ? 'default' : 'primary'}
+                  size="small"
+                />
+              </Stack>
+
+              {selectedUser?.role !== 'admin' && (
+                <Alert severity="info" sx={{ mt: 1 }}>
+                  After promoting to admin, go to <strong>Admin Permissions</strong> to configure their access.
+                </Alert>
+              )}
+              {selectedUser?.role === 'admin' && (
+                <Alert severity="warning" sx={{ mt: 1 }}>
+                  This will remove all admin access and permissions for this user.
+                </Alert>
+              )}
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setRoleDialogOpen(false)}>Cancel</Button>
+            <Button
+              variant="contained"
+              color={selectedUser?.role === 'admin' ? 'warning' : 'primary'}
+              onClick={handleChangeRole}
+              disabled={changingRole}
+            >
+              {changingRole ? 'Changing...' : selectedUser?.role === 'admin' ? 'Demote to User' : 'Promote to Admin'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </>
   );
 }
-

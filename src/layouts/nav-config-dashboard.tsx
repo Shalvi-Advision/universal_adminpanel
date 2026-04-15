@@ -1,3 +1,5 @@
+import type { PermissionSection } from 'src/types/permissions';
+
 import { Iconify } from 'src/components/iconify';
 import { SvgColor } from 'src/components/svg-color';
 
@@ -12,33 +14,46 @@ export type NavItem = {
   icon: React.ReactNode;
   info?: React.ReactNode;
   children?: NavItem[];
+  permissionSection?: PermissionSection;
+  superAdminOnly?: boolean;
 };
 
-export const navData = [
+export const navData: NavItem[] = [
   {
     title: 'Dashboard',
     path: '/dashboard',
     icon: icon('ic-analytics'),
+    permissionSection: 'dashboard',
   },
   {
     title: 'Orders',
     path: '/orders',
     icon: iconify('solar:clipboard-list-bold-duotone'),
+    permissionSection: 'orders',
   },
   {
     title: 'Users',
     path: '/users',
     icon: icon('ic-user'),
+    permissionSection: 'users',
   },
   {
     title: 'Notifications',
     path: '/notifications',
     icon: iconify('solar:bell-bold-duotone'),
+    permissionSection: 'notifications',
+  },
+  {
+    title: 'Offers',
+    path: '/offers',
+    icon: iconify('solar:tag-price-bold-duotone'),
+    permissionSection: 'offers',
   },
   {
     title: 'Ecommerce',
     path: '/ecommerce/departments',
     icon: icon('ic-cart'),
+    permissionSection: 'ecommerce',
     children: [
       {
         title: 'Departments',
@@ -66,6 +81,7 @@ export const navData = [
     title: 'Outlet',
     path: '/outlet/pincodes',
     icon: icon('ic-user'),
+    permissionSection: 'outlet',
     children: [
       {
         title: 'Pincodes',
@@ -93,6 +109,7 @@ export const navData = [
     title: 'Dynamic Section',
     path: '/dynamic/best-sellers',
     icon: icon('ic-blog'),
+    permissionSection: 'dynamicSection',
     children: [
       {
         title: 'Best Sellers',
@@ -125,5 +142,11 @@ export const navData = [
         icon: iconify('solar:snowflake-bold-duotone'),
       },
     ],
+  },
+  {
+    title: 'Admin Permissions',
+    path: '/admin-permissions',
+    icon: iconify('solar:shield-keyhole-bold-duotone'),
+    superAdminOnly: true,
   },
 ];

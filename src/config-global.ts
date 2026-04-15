@@ -11,5 +11,5 @@ export type ConfigValue = {
 export const CONFIG: ConfigValue = {
   appName: 'Shalvi Advision',
   appVersion: packageJson.version,
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5008',
 };
