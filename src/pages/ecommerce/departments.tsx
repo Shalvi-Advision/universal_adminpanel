@@ -15,9 +15,11 @@ import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
+import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Pagination from '@mui/material/Pagination';
+import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
@@ -41,6 +43,7 @@ export default function Page() {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [deleteId, setDeleteId] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const limit = 20;
 
   const fetchDepartments = useCallback(async () => {
@@ -50,6 +53,7 @@ export default function Page() {
       const response = await getAllDepartments({
         page,
         limit,
+        search: searchQuery || undefined,
         sortBy: 'sequence_id',
         sortOrder: 'asc',
       });
@@ -62,11 +66,16 @@ export default function Page() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, searchQuery]);
 
   useEffect(() => {
     fetchDepartments();
   }, [fetchDepartments]);
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
+    setPage(1);
+  };
 
   const handleCreate = () => {
     setSelectedDepartment(null);
@@ -128,6 +137,24 @@ export default function Page() {
           )}
 
           <Card>
+            <Box sx={{ p: 2 }}>
+              <TextField
+                fullWidth
+                placeholder="Search by department name or ID..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+            </Box>
+
             <Scrollbar>
               <TableContainer>
                 <Table>

@@ -15,9 +15,11 @@ import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
+import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Pagination from '@mui/material/Pagination';
+import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
@@ -43,6 +45,7 @@ export default function Page() {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [deleteId, setDeleteId] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const limit = 20;
 
   const fetchCategories = useCallback(async () => {
@@ -58,6 +61,7 @@ export default function Page() {
         store_code: storeCode,
         page,
         limit,
+        search: searchQuery || undefined,
       });
       if (response.success) {
         setCategories(response.data);
@@ -68,11 +72,16 @@ export default function Page() {
     } finally {
       setLoading(false);
     }
-  }, [storeCode, page]);
+  }, [storeCode, page, searchQuery]);
 
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
+    setPage(1);
+  };
 
   const handleCreate = () => {
     setSelectedCategory(null);
@@ -144,6 +153,24 @@ export default function Page() {
 
           {storeCode && (
             <Card>
+              <Box sx={{ p: 2 }}>
+                <TextField
+                  fullWidth
+                  placeholder="Search by category name, ID, or department ID..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  slotProps={{
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+              </Box>
+
               <Scrollbar>
                 <TableContainer>
                   <Table>
@@ -151,6 +178,7 @@ export default function Page() {
                       <TableRow>
                         <TableCell>Category</TableCell>
                         <TableCell>Category ID</TableCell>
+                        <TableCell>Department</TableCell>
                         <TableCell>Department ID</TableCell>
                         <TableCell>Store Code</TableCell>
                         <TableCell align="right">Sequence</TableCell>
@@ -161,13 +189,13 @@ export default function Page() {
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                          <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
                             <CircularProgress />
                           </TableCell>
                         </TableRow>
                       ) : categories.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                          <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
                             <Typography variant="body2" color="text.secondary">
                               No categories found
                             </Typography>
@@ -197,6 +225,11 @@ export default function Page() {
                                 size="small"
                                 variant="outlined"
                               />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {item.department_name || '—'}
+                              </Typography>
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2">{item.dept_id}</Typography>

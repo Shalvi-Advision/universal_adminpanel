@@ -503,6 +503,7 @@ export interface Category {
   idcategory_master: string;
   category_name: string;
   dept_id: string;
+  department_name?: string;
   sequence_id: number;
   store_code: string;
   no_of_col: string;
@@ -528,6 +529,7 @@ export interface CategoriesQueryParams {
   store_code: string;
   page?: number;
   limit?: number;
+  search?: string;
 }
 
 // Department type matching backend model
@@ -572,6 +574,7 @@ export interface Subcategory {
   sub_category_name: string;
   category_id: string;
   main_category_name: string;
+  department_name?: string;
   __v?: number;
 }
 
@@ -588,6 +591,7 @@ export interface SubcategoriesQueryParams {
   store_code: string;
   page?: number;
   limit?: number;
+  search?: string;
 }
 
 // ========================================
