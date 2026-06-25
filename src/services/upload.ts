@@ -12,7 +12,7 @@ export interface UploadImageResponse {
 }
 
 /**
- * Upload a single image to Cloudinary
+ * Upload a single image to VPS media storage (https://pagariyamart.com/media/)
  */
 export async function uploadImage(file: File, folder: string = 'ecommerce'): Promise<UploadImageResponse> {
   const token = getAuthToken();
@@ -47,7 +47,7 @@ export async function uploadImage(file: File, folder: string = 'ecommerce'): Pro
 }
 
 /**
- * Upload multiple images to Cloudinary
+ * Upload multiple images to VPS media storage
  */
 export async function uploadImages(files: File[], folder: string = 'ecommerce'): Promise<UploadImageResponse[]> {
   const token = getAuthToken();
