@@ -1,6 +1,6 @@
 import type { RouteObject } from 'react-router';
 
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 import { varAlpha } from 'minimal-shared/utils';
 
@@ -9,34 +9,36 @@ import LinearProgress, { linearProgressClasses } from '@mui/material/LinearProgr
 
 import { ProtectedRoute, PermissionGuard } from 'src/routes/components';
 
+import { lazyWithRetry } from 'src/utils/lazy-with-retry';
+
 import { AuthLayout } from 'src/layouts/auth';
 import { DashboardLayout } from 'src/layouts/dashboard';
 
 // ----------------------------------------------------------------------
 
-export const DashboardPage = lazy(() => import('src/pages/dashboard'));
-export const SignInPage = lazy(() => import('src/pages/sign-in'));
-export const UsersPage = lazy(() => import('src/pages/users'));
-export const OrdersPage = lazy(() => import('src/pages/orders'));
-export const NotificationsPage = lazy(() => import('src/pages/notifications'));
-export const EcommerceDepartmentsPage = lazy(() => import('src/pages/ecommerce/departments'));
-export const EcommerceCategoriesPage = lazy(() => import('src/pages/ecommerce/categories'));
-export const EcommerceSubcategoriesPage = lazy(() => import('src/pages/ecommerce/subcategories'));
-export const EcommerceProductsPage = lazy(() => import('src/pages/ecommerce/products'));
-export const OutletPincodesPage = lazy(() => import('src/pages/outlet/pincodes'));
-export const OutletStoresPage = lazy(() => import('src/pages/outlet/stores'));
-export const OutletPaymentModesPage = lazy(() => import('src/pages/outlet/payment-modes'));
-export const OutletDeliverySlotsPage = lazy(() => import('src/pages/outlet/delivery-slots'));
-export const OutletDeliveryFeesPage = lazy(() => import('src/pages/outlet/delivery-fees'));
-export const DynamicBestSellersPage = lazy(() => import('src/pages/dynamic/best-sellers'));
-export const DynamicTopSellersPage = lazy(() => import('src/pages/dynamic/top-sellers'));
-export const DynamicAdvertisementsPage = lazy(() => import('src/pages/dynamic/advertisements'));
-export const DynamicPopularCategoriesPage = lazy(() => import('src/pages/dynamic/popular-categories'));
-export const DynamicBannersPage = lazy(() => import('src/pages/dynamic/banners'));
-export const DynamicSeasonalCategoriesPage = lazy(() => import('src/pages/dynamic/seasonal-categories'));
-export const OffersPage = lazy(() => import('src/pages/offers'));
-export const AdminPermissionsPage = lazy(() => import('src/pages/admin-permissions'));
-export const Page404 = lazy(() => import('src/pages/page-not-found'));
+export const DashboardPage = lazyWithRetry(() => import('src/pages/dashboard'));
+export const SignInPage = lazyWithRetry(() => import('src/pages/sign-in'));
+export const UsersPage = lazyWithRetry(() => import('src/pages/users'));
+export const OrdersPage = lazyWithRetry(() => import('src/pages/orders'));
+export const NotificationsPage = lazyWithRetry(() => import('src/pages/notifications'));
+export const EcommerceDepartmentsPage = lazyWithRetry(() => import('src/pages/ecommerce/departments'));
+export const EcommerceCategoriesPage = lazyWithRetry(() => import('src/pages/ecommerce/categories'));
+export const EcommerceSubcategoriesPage = lazyWithRetry(() => import('src/pages/ecommerce/subcategories'));
+export const EcommerceProductsPage = lazyWithRetry(() => import('src/pages/ecommerce/products'));
+export const OutletPincodesPage = lazyWithRetry(() => import('src/pages/outlet/pincodes'));
+export const OutletStoresPage = lazyWithRetry(() => import('src/pages/outlet/stores'));
+export const OutletPaymentModesPage = lazyWithRetry(() => import('src/pages/outlet/payment-modes'));
+export const OutletDeliverySlotsPage = lazyWithRetry(() => import('src/pages/outlet/delivery-slots'));
+export const OutletDeliveryFeesPage = lazyWithRetry(() => import('src/pages/outlet/delivery-fees'));
+export const DynamicBestSellersPage = lazyWithRetry(() => import('src/pages/dynamic/best-sellers'));
+export const DynamicTopSellersPage = lazyWithRetry(() => import('src/pages/dynamic/top-sellers'));
+export const DynamicAdvertisementsPage = lazyWithRetry(() => import('src/pages/dynamic/advertisements'));
+export const DynamicPopularCategoriesPage = lazyWithRetry(() => import('src/pages/dynamic/popular-categories'));
+export const DynamicBannersPage = lazyWithRetry(() => import('src/pages/dynamic/banners'));
+export const DynamicSeasonalCategoriesPage = lazyWithRetry(() => import('src/pages/dynamic/seasonal-categories'));
+export const OffersPage = lazyWithRetry(() => import('src/pages/offers'));
+export const AdminPermissionsPage = lazyWithRetry(() => import('src/pages/admin-permissions'));
+export const Page404 = lazyWithRetry(() => import('src/pages/page-not-found'));
 
 const renderFallback = () => (
   <Box
