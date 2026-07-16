@@ -10,6 +10,7 @@ export interface User {
   role?: 'user' | 'admin';
   isVerified?: boolean;
   isSuperAdmin?: boolean;
+  allowed_project_codes?: string[];
   permissions?: import('./permissions').UserPermissions;
   addresses?: any[];
   favorites?: any[];

@@ -3,6 +3,7 @@ import type { Project } from 'src/services/projects';
 import { useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Select from '@mui/material/Select';
 import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
@@ -25,6 +26,12 @@ export function ProjectSelector() {
         const response = await getProjects();
         if (response.success) {
           setProjects(response.data);
+          // Scoped admins may not have access to the locally remembered
+          // project — snap the selection to a project they're allowed on.
+          const allowed = response.data.map((p) => p.project_code);
+          if (allowed.length && !allowed.includes(projectCode)) {
+            setProjectCode(allowed[0]);
+          }
         }
       } catch (err) {
         console.error('Error fetching projects:', err);
@@ -34,6 +41,7 @@ export function ProjectSelector() {
     };
 
     fetchProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (event: any) => {
@@ -53,6 +61,20 @@ export function ProjectSelector() {
 
   if (!projects.length) {
     return null;
+  }
+
+  // Single-project admins are locked to their client — no switcher
+  if (projects.length === 1) {
+    return (
+      <Tooltip title="Your account is scoped to this client">
+        <Chip
+          color="primary"
+          variant="outlined"
+          label={projects[0].client_name}
+          sx={{ fontWeight: 600 }}
+        />
+      </Tooltip>
+    );
   }
 
   return (
