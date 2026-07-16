@@ -1,5 +1,7 @@
 // API Client utility for making HTTP requests
 
+import { getSelectedProjectCode } from 'src/utils/project-code';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5008';
 
 // Get auth token from session storage
@@ -45,6 +47,13 @@ async function apiFetch<T>(
   // Add Authorization header if token exists
   if (token) {
     headers.Authorization = `Bearer ${token}`;
+  }
+
+  // Bind the request to the selected client/tenant. Auth endpoints are
+  // exempt so admin login always resolves to the backend's default project,
+  // regardless of which client is selected in the UI.
+  if (!endpoint.startsWith('/api/auth')) {
+    headers['X-Project-Code'] = getSelectedProjectCode();
   }
 
   const config: RequestInit = {

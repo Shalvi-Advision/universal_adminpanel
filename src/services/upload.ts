@@ -1,3 +1,5 @@
+import { getSelectedProjectCode } from 'src/utils/project-code';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 // Get auth token from session storage
@@ -29,6 +31,7 @@ export async function uploadImage(file: File, folder: string = 'ecommerce'): Pro
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
+      'X-Project-Code': getSelectedProjectCode(),
     },
     body: formData,
   });
@@ -66,6 +69,7 @@ export async function uploadImages(files: File[], folder: string = 'ecommerce'):
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
+      'X-Project-Code': getSelectedProjectCode(),
     },
     body: formData,
   });
