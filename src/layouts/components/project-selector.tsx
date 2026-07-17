@@ -77,24 +77,24 @@ export function ProjectSelector() {
     );
   }
 
+  // No Tooltip here: it would render over the open dropdown and hide the
+  // first option. The floating "Client / Project" label is context enough.
   return (
-    <Tooltip title="All data shown in the panel belongs to the selected client">
-      <FormControl size="small" sx={{ minWidth: 190 }}>
-        <InputLabel id="project-select-label">Client / Project</InputLabel>
-        <Select
-          labelId="project-select-label"
-          id="project-select"
-          value={projectCode}
-          label="Client / Project"
-          onChange={handleChange}
-        >
-          {projects.map((project) => (
-            <MenuItem key={project.project_code} value={project.project_code}>
-              {project.client_name} ({project.project_code})
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-    </Tooltip>
+    <FormControl size="small" sx={{ minWidth: 190 }}>
+      <InputLabel id="project-select-label">Client / Project</InputLabel>
+      <Select
+        labelId="project-select-label"
+        id="project-select"
+        value={projectCode}
+        label="Client / Project"
+        onChange={handleChange}
+      >
+        {projects.map((project) => (
+          <MenuItem key={project.project_code} value={project.project_code}>
+            {project.client_name} ({project.project_code})
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
   );
 }
