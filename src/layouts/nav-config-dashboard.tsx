@@ -149,6 +149,12 @@ export const navData: NavItem[] = [
     ],
   },
   {
+    title: 'App Branding',
+    path: '/branding',
+    icon: iconify('solar:palette-bold-duotone'),
+    permissionSection: 'dynamicSection',
+  },
+  {
     title: 'Admin Permissions',
     path: '/admin-permissions',
     icon: iconify('solar:shield-keyhole-bold-duotone'),
