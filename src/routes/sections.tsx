@@ -39,6 +39,7 @@ export const DynamicSeasonalCategoriesPage = lazyWithRetry(() => import('src/pag
 export const OffersPage = lazyWithRetry(() => import('src/pages/offers'));
 export const AdminPermissionsPage = lazyWithRetry(() => import('src/pages/admin-permissions'));
 export const BrandingPage = lazyWithRetry(() => import('src/pages/branding'));
+export const DigitalCartPage = lazyWithRetry(() => import('src/pages/digital-cart'));
 export const Page404 = lazyWithRetry(() => import('src/pages/page-not-found'));
 
 const renderFallback = () => (
@@ -110,6 +111,7 @@ export const routesSection: RouteObject[] = [
       { path: 'dynamic/banners', element: <PermissionGuard section="dynamicSection"><DynamicBannersPage /></PermissionGuard> },
       { path: 'dynamic/seasonal-categories', element: <PermissionGuard section="dynamicSection"><DynamicSeasonalCategoriesPage /></PermissionGuard> },
       { path: 'branding', element: <PermissionGuard section="dynamicSection"><BrandingPage /></PermissionGuard> },
+      { path: 'digital-cart', element: <PermissionGuard section="digitalCart"><DigitalCartPage /></PermissionGuard> },
       { path: 'admin-permissions', element: <AdminPermissionsPage /> },
     ],
   },

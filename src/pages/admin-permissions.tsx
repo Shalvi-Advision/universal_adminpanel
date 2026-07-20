@@ -47,6 +47,7 @@ const SECTIONS: { key: PermissionSection; label: string; actions: string[] }[] =
   { key: 'outlet', label: 'Outlet', actions: ['view', 'create', 'edit', 'delete'] },
   { key: 'dynamicSection', label: 'Dynamic Section', actions: ['view', 'create', 'edit', 'delete'] },
   { key: 'offers', label: 'Offers', actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'digitalCart', label: 'Digital Cart', actions: ['view', 'create', 'edit', 'delete'] },
 ];
 
 const ALL_ACTIONS = ['view', 'create', 'edit', 'delete'];

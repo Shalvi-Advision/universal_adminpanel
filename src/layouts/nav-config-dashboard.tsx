@@ -149,6 +149,12 @@ export const navData: NavItem[] = [
     ],
   },
   {
+    title: 'Digital Cart',
+    path: '/digital-cart',
+    icon: iconify('solar:cart-large-bold-duotone'),
+    permissionSection: 'digitalCart',
+  },
+  {
     title: 'App Branding',
     path: '/branding',
     icon: iconify('solar:palette-bold-duotone'),

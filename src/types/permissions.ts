@@ -8,7 +8,8 @@ export type PermissionSection =
   | 'ecommerce'
   | 'outlet'
   | 'dynamicSection'
-  | 'offers';
+  | 'offers'
+  | 'digitalCart';
 
 export type SectionPermissions = {
   view?: boolean;
