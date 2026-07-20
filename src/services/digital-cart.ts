@@ -38,6 +38,34 @@ export interface UploadCsvResponse {
   data: { imported: number; source_file: string };
 }
 
+export interface DigitalCartUiSettings {
+  header_title: string;
+  tagline: string;
+  footer_note: string;
+  primary_color: string;
+  accent_color: string;
+  background_color: string;
+  card_color: string;
+  text_color: string;
+  show_discount_percent: boolean;
+  show_product_code: boolean;
+  show_search: boolean;
+  show_last_updated: boolean;
+}
+
+export async function getDigitalCartUiSettings(): Promise<{
+  success: boolean;
+  data: DigitalCartUiSettings;
+}> {
+  return apiClient.get('/api/admin/digital-cart/settings');
+}
+
+export async function updateDigitalCartUiSettings(
+  settings: Partial<DigitalCartUiSettings>
+): Promise<{ success: boolean; message: string; data: DigitalCartUiSettings }> {
+  return apiClient.put('/api/admin/digital-cart/settings', settings);
+}
+
 export async function getDigitalCart(): Promise<DigitalCartResponse> {
   return apiClient.get<DigitalCartResponse>('/api/admin/digital-cart');
 }

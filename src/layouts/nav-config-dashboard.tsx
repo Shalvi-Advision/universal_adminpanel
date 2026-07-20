@@ -153,6 +153,18 @@ export const navData: NavItem[] = [
     path: '/digital-cart',
     icon: iconify('solar:cart-large-bold-duotone'),
     permissionSection: 'digitalCart',
+    children: [
+      {
+        title: 'Products',
+        path: '/digital-cart',
+        icon: iconify('solar:box-bold-duotone'),
+      },
+      {
+        title: 'Digital Cart UI',
+        path: '/digital-cart/ui',
+        icon: iconify('solar:palette-bold-duotone'),
+      },
+    ],
   },
   {
     title: 'App Branding',
