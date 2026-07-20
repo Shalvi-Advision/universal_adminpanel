@@ -7,6 +7,7 @@ import Card from '@mui/material/Card';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
+import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Switch from '@mui/material/Switch';
 import Container from '@mui/material/Container';
@@ -18,6 +19,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
+import { uploadImage } from 'src/services/upload';
 import {
   getDigitalCartUiSettings,
   updateDigitalCartUiSettings,
@@ -41,6 +43,7 @@ const COLOR_FIELDS: { key: ColorKey; label: string; hint: string }[] = [
 ];
 
 const TOGGLE_FIELDS: { key: keyof DigitalCartUiSettings; label: string }[] = [
+  { key: 'show_logo', label: 'Show logo in header' },
   { key: 'show_discount_percent', label: 'Show "% OFF" chip' },
   { key: 'show_product_code', label: 'Show product code' },
   { key: 'show_search', label: 'Show search bar' },
@@ -118,6 +121,89 @@ function ColorField({ label, hint, value, onChange }: ColorFieldProps) {
         ) : undefined,
       }}
     />
+  );
+}
+
+// ----------------------------------------------------------------------
+
+type LogoFieldProps = {
+  value: string;
+  onChange: (url: string) => void;
+};
+
+function LogoField({ value, onChange }: LogoFieldProps) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      setUploading(true);
+      setUploadError('');
+      const result = await uploadImage(file, 'digital-cart');
+      onChange(result.url);
+    } catch (err: any) {
+      setUploadError(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <Stack spacing={1}>
+      <Stack direction="row" spacing={2} alignItems="center">
+        <Avatar
+          variant="rounded"
+          src={value || undefined}
+          sx={{ width: 64, height: 64, bgcolor: 'background.neutral' }}
+        >
+          <Iconify icon={'solar:gallery-bold-duotone' as any} width={28} />
+        </Avatar>
+        <Stack spacing={0.5} sx={{ flex: 1 }}>
+          <Typography variant="subtitle2">Header logo</Typography>
+          <Stack direction="row" spacing={1}>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+              startIcon={
+                uploading ? (
+                  <CircularProgress size={14} />
+                ) : (
+                  <Iconify icon={'solar:upload-bold' as any} width={16} />
+                )
+              }
+            >
+              {uploading ? 'Uploading…' : 'Upload'}
+            </Button>
+            {value && (
+              <Button size="small" color="inherit" onClick={() => onChange('')}>
+                Remove
+              </Button>
+            )}
+          </Stack>
+        </Stack>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => handleFile(e.target.files?.[0])}
+        />
+      </Stack>
+      <TextField
+        fullWidth
+        size="small"
+        label="Logo URL"
+        placeholder="Project branding logo (default)"
+        helperText="Leave empty to use the logo from App Branding"
+        value={value}
+        onChange={(e) => onChange(e.target.value.trim())}
+      />
+      {uploadError && <Alert severity="error">{uploadError}</Alert>}
+    </Stack>
   );
 }
 
@@ -231,6 +317,16 @@ export default function Page() {
           <Grid size={{ xs: 12, md: 7 }}>
             <Stack spacing={3}>
               <Card>
+                <CardHeader title="Logo" />
+                <CardContent>
+                  <LogoField
+                    value={settings.logo_url}
+                    onChange={(url) => setField('logo_url', url)}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
                 <CardHeader title="Text" />
                 <CardContent>
                   <Stack spacing={2.5}>
@@ -315,12 +411,29 @@ export default function Page() {
                   }}
                 >
                   <Box sx={{ bgcolor: previewColor('primary_color'), color: '#fff', p: 2 }}>
-                    <Typography fontWeight={700}>
-                      {settings.header_title || 'Store Name'}
-                    </Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                      {settings.tagline}
-                    </Typography>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      {settings.show_logo && (
+                        <Avatar
+                          variant="rounded"
+                          src={settings.logo_url || undefined}
+                          sx={{ width: 40, height: 40, bgcolor: '#fff' }}
+                        >
+                          <Iconify
+                            icon={'solar:gallery-bold-duotone' as any}
+                            width={20}
+                            sx={{ color: 'text.disabled' }}
+                          />
+                        </Avatar>
+                      )}
+                      <Box>
+                        <Typography fontWeight={700}>
+                          {settings.header_title || 'Store Name'}
+                        </Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                          {settings.tagline}
+                        </Typography>
+                      </Box>
+                    </Stack>
                     {settings.show_search && (
                       <Box
                         sx={{

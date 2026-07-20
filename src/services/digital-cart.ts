@@ -40,6 +40,8 @@ export interface UploadCsvResponse {
 
 export interface DigitalCartUiSettings {
   header_title: string;
+  logo_url: string;
+  show_logo: boolean;
   tagline: string;
   footer_note: string;
   primary_color: string;
