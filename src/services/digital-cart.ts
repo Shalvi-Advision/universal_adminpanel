@@ -49,6 +49,7 @@ export interface DigitalCartUiSettings {
   background_color: string;
   card_color: string;
   text_color: string;
+  card_radius: number;
   show_discount_percent: boolean;
   show_product_code: boolean;
   show_search: boolean;

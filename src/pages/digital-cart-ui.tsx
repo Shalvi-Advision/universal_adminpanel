@@ -10,6 +10,7 @@ import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Switch from '@mui/material/Switch';
+import Slider from '@mui/material/Slider';
 import Container from '@mui/material/Container';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -371,6 +372,25 @@ export default function Page() {
                         />
                       </Grid>
                     ))}
+                    <Grid size={{ xs: 12 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Card corner radius: {settings.card_radius ?? 14}px
+                      </Typography>
+                      <Slider
+                        value={settings.card_radius ?? 14}
+                        min={0}
+                        max={40}
+                        step={1}
+                        valueLabelDisplay="auto"
+                        marks={[
+                          { value: 0, label: 'Square' },
+                          { value: 14, label: 'Default' },
+                          { value: 40, label: 'Round' },
+                        ]}
+                        onChange={(_, value) => setField('card_radius', value as number)}
+                        sx={{ maxWidth: 420, mx: 1 }}
+                      />
+                    </Grid>
                   </Grid>
                 </CardContent>
               </Card>
@@ -400,132 +420,223 @@ export default function Page() {
           <Grid size={{ xs: 12, md: 5 }}>
             <Card sx={{ position: 'sticky', top: 24 }}>
               <CardHeader title="Live preview" />
-              <CardContent>
+              <CardContent sx={{ display: 'flex', justifyContent: 'center', pb: 4 }}>
+                {/* Phone shell */}
                 <Box
                   sx={{
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: previewColor('background_color'),
+                    width: 310,
+                    bgcolor: '#17171c',
+                    borderRadius: '44px',
+                    p: '11px',
+                    position: 'relative',
+                    boxShadow:
+                      '0 18px 44px rgba(0,0,0,0.35), inset 0 0 0 2px #3c3c46, inset 0 0 0 5px #101014',
                   }}
                 >
-                  <Box sx={{ bgcolor: previewColor('primary_color'), color: '#fff', p: 2 }}>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
-                      {settings.show_logo && (
-                        <Avatar
-                          variant="rounded"
-                          src={settings.logo_url || undefined}
-                          sx={{ width: 40, height: 40, bgcolor: '#fff' }}
-                        >
-                          <Iconify
-                            icon={'solar:gallery-bold-duotone' as any}
-                            width={20}
-                            sx={{ color: 'text.disabled' }}
-                          />
-                        </Avatar>
-                      )}
-                      <Box>
-                        <Typography fontWeight={700}>
-                          {settings.header_title || 'Store Name'}
-                        </Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                          {settings.tagline}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                    {settings.show_search && (
-                      <Box
-                        sx={{
-                          mt: 1.5,
-                          bgcolor: '#fff',
-                          borderRadius: 1.5,
-                          px: 1.5,
-                          py: 0.75,
-                          fontSize: 13,
-                          color: 'text.disabled',
-                        }}
-                      >
-                        Search products or offers…
-                      </Box>
-                    )}
-                  </Box>
+                  {/* Side buttons */}
+                  <Box sx={{ position: 'absolute', right: -3, top: 130, width: 3, height: 62, bgcolor: '#3c3c46', borderRadius: 1 }} />
+                  <Box sx={{ position: 'absolute', left: -3, top: 104, width: 3, height: 26, bgcolor: '#3c3c46', borderRadius: 1 }} />
+                  <Box sx={{ position: 'absolute', left: -3, top: 142, width: 3, height: 44, bgcolor: '#3c3c46', borderRadius: 1 }} />
 
-                  <Box sx={{ p: 2 }}>
+                  {/* Screen */}
+                  <Box
+                    sx={{
+                      borderRadius: '33px',
+                      overflow: 'hidden',
+                      bgcolor: previewColor('background_color'),
+                      height: 590,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      position: 'relative',
+                    }}
+                  >
+                    {/* Dynamic island */}
                     <Box
                       sx={{
-                        bgcolor: previewColor('card_color'),
-                        borderRadius: 2,
-                        p: 2,
-                        boxShadow: '0 1px 4px rgba(20,20,40,0.08)',
+                        position: 'absolute',
+                        top: 9,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 84,
+                        height: 22,
+                        bgcolor: '#000',
+                        borderRadius: 999,
+                        zIndex: 3,
+                      }}
+                    />
+
+                    {/* Status bar */}
+                    <Box
+                      sx={{
+                        bgcolor: previewColor('primary_color'),
+                        color: '#fff',
+                        pt: '12px',
+                        pb: 0.5,
+                        px: 2.75,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
                       }}
                     >
-                      <Box
-                        component="span"
-                        sx={{
-                          display: 'inline-block',
-                          bgcolor: previewColor('accent_color'),
-                          color: '#fff',
-                          fontSize: 11,
-                          fontWeight: 700,
-                          px: 1.25,
-                          py: 0.4,
-                          borderRadius: 999,
-                          mb: 1,
-                        }}
-                      >
-                        ONLY 99/-
-                      </Box>
-                      <Typography
-                        variant="body2"
-                        fontWeight={600}
-                        sx={{ color: previewColor('text_color') }}
-                      >
-                        CHINGS SCHEZAN CHUTNEY 590GM (BOTTLE)
-                      </Typography>
-                      <Stack direction="row" spacing={1} alignItems="baseline" mt={0.75}>
-                        <Typography fontWeight={800} sx={{ color: previewColor('primary_color') }}>
-                          ₹99
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{ textDecoration: 'line-through', color: 'text.disabled' }}
+                      <Typography sx={{ fontSize: 12, fontWeight: 700 }}>9:41</Typography>
+                      <Stack direction="row" spacing={0.75} alignItems="center">
+                        {/* Signal bars */}
+                        <Stack direction="row" spacing="2px" alignItems="flex-end">
+                          {[4, 6, 8, 10].map((h) => (
+                            <Box key={h} sx={{ width: 3, height: h, bgcolor: '#fff', borderRadius: 0.25 }} />
+                          ))}
+                        </Stack>
+                        {/* Battery */}
+                        <Box
+                          sx={{
+                            width: 22,
+                            height: 11,
+                            border: '1.5px solid rgba(255,255,255,0.9)',
+                            borderRadius: '3px',
+                            p: '1.5px',
+                            display: 'flex',
+                          }}
                         >
-                          ₹180
+                          <Box sx={{ width: '70%', bgcolor: '#fff', borderRadius: '1px' }} />
+                        </Box>
+                      </Stack>
+                    </Box>
+
+                    {/* App header */}
+                    <Box sx={{ bgcolor: previewColor('primary_color'), color: '#fff', px: 2, pt: 1, pb: 1.75 }}>
+                      <Stack direction="row" spacing={1.25} alignItems="center">
+                        {settings.show_logo && (
+                          <Avatar
+                            variant="rounded"
+                            src={settings.logo_url || undefined}
+                            sx={{ width: 34, height: 34, bgcolor: '#fff', borderRadius: 1.5 }}
+                          >
+                            <Iconify
+                              icon={'solar:gallery-bold-duotone' as any}
+                              width={18}
+                              sx={{ color: 'text.disabled' }}
+                            />
+                          </Avatar>
+                        )}
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography noWrap sx={{ fontSize: 15, fontWeight: 700, lineHeight: 1.25 }}>
+                            {settings.header_title || 'Store Name'}
+                          </Typography>
+                          {settings.tagline && (
+                            <Typography noWrap sx={{ fontSize: 10.5, opacity: 0.9 }}>
+                              {settings.tagline}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Stack>
+                      {settings.show_search && (
+                        <Box
+                          sx={{
+                            mt: 1.25,
+                            bgcolor: '#fff',
+                            borderRadius: 1.5,
+                            px: 1.5,
+                            py: 0.6,
+                            fontSize: 11.5,
+                            color: 'text.disabled',
+                          }}
+                        >
+                          Search products or offers…
+                        </Box>
+                      )}
+                    </Box>
+
+                    {/* Scrollable offer list */}
+                    <Box sx={{ flex: 1, overflowY: 'auto', px: 1.5, py: 1.5 }}>
+                      {settings.show_last_updated && (
+                        <Typography sx={{ fontSize: 10, color: 'text.disabled', mb: 1 }}>
+                          122 offers · Updated 20 July 2026
                         </Typography>
-                        {settings.show_discount_percent && (
+                      )}
+                      <Stack spacing={1.25}>
+                        {[
+                          { badge: 'ONLY 99/-', name: 'CHINGS SCHEZAN CHUTNEY 590GM (BOTTLE)', price: '₹99', mrp: '₹180', off: '45% OFF', code: '17457' },
+                          { badge: 'BUY1GET1', name: 'D LECTA CHEESE SPREAD 150G', price: '₹49.50', mrp: '₹99', off: '50% OFF', code: '37674' },
+                          { badge: 'ON MRP 81 OFF', name: 'RED LABEL NATURAL TEA 500GM#', price: '₹249', mrp: '₹330', off: '25% OFF', code: '7437' },
+                        ].map((item) => (
                           <Box
-                            component="span"
+                            key={item.code}
                             sx={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              color: '#1b7a2f',
-                              bgcolor: '#e3f6e8',
-                              px: 1,
-                              py: 0.25,
-                              borderRadius: 999,
+                              bgcolor: previewColor('card_color'),
+                              borderRadius: `${settings.card_radius ?? 14}px`,
+                              p: 1.5,
+                              boxShadow: '0 1px 4px rgba(20,20,40,0.08)',
                             }}
                           >
-                            45% OFF
+                            <Box
+                              component="span"
+                              sx={{
+                                display: 'inline-block',
+                                bgcolor: previewColor('accent_color'),
+                                color: '#fff',
+                                fontSize: 9.5,
+                                fontWeight: 700,
+                                px: 1,
+                                py: 0.3,
+                                borderRadius: 999,
+                                mb: 0.75,
+                              }}
+                            >
+                              {item.badge}
+                            </Box>
+                            <Typography
+                              sx={{ fontSize: 12, fontWeight: 600, color: previewColor('text_color'), lineHeight: 1.35 }}
+                            >
+                              {item.name}
+                            </Typography>
+                            <Stack direction="row" spacing={0.75} alignItems="baseline" mt={0.5}>
+                              <Typography sx={{ fontSize: 15, fontWeight: 800, color: previewColor('primary_color') }}>
+                                {item.price}
+                              </Typography>
+                              <Typography
+                                sx={{ fontSize: 10.5, textDecoration: 'line-through', color: 'text.disabled' }}
+                              >
+                                {item.mrp}
+                              </Typography>
+                              {settings.show_discount_percent && (
+                                <Box
+                                  component="span"
+                                  sx={{
+                                    fontSize: 9.5,
+                                    fontWeight: 700,
+                                    color: '#1b7a2f',
+                                    bgcolor: '#e3f6e8',
+                                    px: 0.75,
+                                    py: 0.2,
+                                    borderRadius: 999,
+                                  }}
+                                >
+                                  {item.off}
+                                </Box>
+                              )}
+                            </Stack>
+                            {settings.show_product_code && (
+                              <Typography sx={{ fontSize: 9.5, color: 'text.disabled', mt: 0.4 }}>
+                                Code: {item.code}
+                              </Typography>
+                            )}
                           </Box>
-                        )}
+                        ))}
                       </Stack>
-                      {settings.show_product_code && (
-                        <Typography variant="caption" color="text.disabled" display="block" mt={0.5}>
-                          Code: 17457
+
+                      {settings.footer_note && (
+                        <Typography
+                          sx={{ fontSize: 9.5, color: 'text.disabled', textAlign: 'center', mt: 1.5 }}
+                        >
+                          {settings.footer_note}
                         </Typography>
                       )}
                     </Box>
 
-                    <Typography
-                      variant="caption"
-                      color="text.disabled"
-                      display="block"
-                      textAlign="center"
-                      mt={2}
-                    >
-                      {settings.footer_note}
-                    </Typography>
+                    {/* Home indicator */}
+                    <Box sx={{ py: 0.75, display: 'flex', justifyContent: 'center' }}>
+                      <Box sx={{ width: 104, height: 4, bgcolor: 'rgba(0,0,0,0.35)', borderRadius: 999 }} />
+                    </Box>
                   </Box>
                 </Box>
               </CardContent>
