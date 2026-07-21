@@ -16,9 +16,11 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import CardHeader from '@mui/material/CardHeader';
 import CardContent from '@mui/material/CardContent';
+import ToggleButton from '@mui/material/ToggleButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 import { uploadImage } from 'src/services/upload';
 import {
@@ -36,29 +38,51 @@ const HEX_COLOR = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 type ColorKey = 'primary_color' | 'accent_color' | 'background_color' | 'card_color' | 'text_color';
 
 const COLOR_FIELDS: { key: ColorKey; label: string; hint: string }[] = [
-  { key: 'primary_color', label: 'Primary', hint: 'Header background + offer price' },
-  { key: 'accent_color', label: 'Accent', hint: 'Offer badge color' },
+  { key: 'primary_color', label: 'Primary', hint: 'Logo text + offer price accents' },
+  { key: 'accent_color', label: 'Accent', hint: 'Highlight color' },
   { key: 'background_color', label: 'Background', hint: 'Page background' },
   { key: 'card_color', label: 'Card', hint: 'Product card background' },
-  { key: 'text_color', label: 'Text', hint: 'Product name / body text' },
+  { key: 'text_color', label: 'Text', hint: 'Headings / body text' },
 ];
 
 const TOGGLE_FIELDS: { key: keyof DigitalCartUiSettings; label: string }[] = [
-  { key: 'show_logo', label: 'Show logo in header' },
-  { key: 'show_discount_percent', label: 'Show "% OFF" chip' },
+  { key: 'show_logo', label: 'Show logo on home screen' },
+  { key: 'show_discount_percent', label: 'Show "% OFF" pill on products' },
   { key: 'show_product_code', label: 'Show product code' },
-  { key: 'show_search', label: 'Show search bar' },
+  { key: 'show_search', label: 'Show search icon' },
   { key: 'show_last_updated', label: 'Show "Updated on" date' },
+  { key: 'show_bottom_nav', label: 'Show bottom navigation on offer page' },
 ];
 
 // Empty color = fall back to App Branding / built-in theme on the website
 const PREVIEW_FALLBACKS: Record<ColorKey, string> = {
   primary_color: '#e53935',
   accent_color: '#ff8f00',
-  background_color: '#f7f7f9',
+  background_color: '#faf9f7',
   card_color: '#ffffff',
   text_color: '#1c1c28',
 };
+
+// Mirrors GROUP_STYLES on the public website
+const PREVIEW_TILES: {
+  color: string;
+  label: string;
+  big?: string;
+  mid?: string;
+  words?: string[];
+  ribbon?: string;
+}[] = [
+  { color: '#e53935', label: 'BIG SAVINGS!', big: '%', mid: 'OFF' },
+  { color: '#8e24aa', label: 'LIMITED TIME OFFER!', words: ['BUY 1', 'GET 1'], ribbon: 'FREE' },
+  { color: '#1e88e5', label: 'BEST PRICES!', words: ['SPECIAL', 'PRICES'] },
+  { color: '#00897b', label: 'SHOP MORE SAVE MORE', big: '₹', mid: 'OFF' },
+];
+
+const PREVIEW_PRODUCTS = [
+  { name: 'CHINGS SCHEZWAN CHUTNEY 250G', code: '17457', mrp: '₹180', price: '₹99', off: '45% OFF' },
+  { name: 'D LECTA CHEESE SPREAD 150G', code: '37674', mrp: '₹99', price: '₹49.50', off: '50% OFF' },
+  { name: 'RED LABEL TEA 500GM', code: '7437', mrp: '₹330', price: '₹249', off: '25% OFF' },
+];
 
 type ColorFieldProps = {
   label: string;
@@ -216,6 +240,7 @@ export default function Page() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [previewScreen, setPreviewScreen] = useState<'home' | 'offer'>('home');
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -270,6 +295,419 @@ export default function Page() {
     settings && settings[key] && HEX_COLOR.test(settings[key])
       ? settings[key]
       : PREVIEW_FALLBACKS[key];
+
+  const radius = settings ? `${settings.card_radius ?? 14}px` : '14px';
+
+  const renderStatusBar = () => (
+    <Box
+      sx={{
+        pt: '14px',
+        pb: 0.5,
+        px: 2.75,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        color: previewColor('text_color'),
+      }}
+    >
+      <Typography sx={{ fontSize: 12, fontWeight: 700 }}>9:41</Typography>
+      <Stack direction="row" spacing={0.75} alignItems="center">
+        <Stack direction="row" spacing="2px" alignItems="flex-end">
+          {[4, 6, 8, 10].map((h) => (
+            <Box key={h} sx={{ width: 3, height: h, bgcolor: 'currentColor', borderRadius: 0.25 }} />
+          ))}
+        </Stack>
+        <Box
+          sx={{
+            width: 22,
+            height: 11,
+            border: '1.5px solid currentColor',
+            borderRadius: '3px',
+            p: '1.5px',
+            display: 'flex',
+          }}
+        >
+          <Box sx={{ width: '70%', bgcolor: 'currentColor', borderRadius: '1px' }} />
+        </Box>
+      </Stack>
+    </Box>
+  );
+
+  const renderHomePreview = (s: DigitalCartUiSettings) => (
+    <Box sx={{ flex: 1, overflowY: 'auto', px: 1.5, pb: 1.5 }}>
+      {/* Centered logo */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1, mb: 1.25 }}>
+        {s.show_logo && s.logo_url ? (
+          <Box component="img" src={s.logo_url} sx={{ height: 34, maxWidth: 150, objectFit: 'contain' }} />
+        ) : (
+          <Typography
+            sx={{
+              fontSize: 17,
+              fontWeight: 900,
+              letterSpacing: 0.5,
+              color: previewColor('primary_color'),
+              textTransform: 'uppercase',
+            }}
+          >
+            {s.header_title || 'Store Name'} 🛒
+          </Typography>
+        )}
+      </Box>
+
+      {/* Heading + search icon */}
+      <Stack direction="row" alignItems="flex-start" justifyContent="space-between" sx={{ mb: 1.5 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontSize: 15, fontWeight: 800, color: previewColor('text_color') }}>
+            {s.home_heading || 'Exclusive Offers'}
+          </Typography>
+          {s.tagline && (
+            <Typography noWrap sx={{ fontSize: 10, color: 'text.disabled' }}>
+              {s.tagline}
+            </Typography>
+          )}
+          {s.show_last_updated && (
+            <Typography sx={{ fontSize: 8.5, color: 'text.disabled', opacity: 0.8 }}>
+              Updated 20 July 2026
+            </Typography>
+          )}
+        </Box>
+        {s.show_search && (
+          <Iconify
+            icon="eva:search-fill"
+            width={18}
+            sx={{ color: previewColor('text_color'), mt: 0.25, flexShrink: 0 }}
+          />
+        )}
+      </Stack>
+
+      {/* Offer tiles */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25 }}>
+        {PREVIEW_TILES.map((tile) => (
+          <Box
+            key={tile.color}
+            sx={{
+              position: 'relative',
+              overflow: 'hidden',
+              bgcolor: tile.color,
+              borderRadius: radius,
+              aspectRatio: '4 / 5',
+              p: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              color: '#fff',
+              backgroundImage:
+                'radial-gradient(circle at 50% 20%, rgba(255,255,255,0.22), transparent 65%)',
+            }}
+          >
+            <Box
+              sx={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {tile.big ? (
+                <>
+                  <Typography sx={{ fontSize: 34, fontWeight: 900, lineHeight: 1 }}>
+                    {tile.big}
+                  </Typography>
+                  <Typography sx={{ fontSize: 13, fontWeight: 800, letterSpacing: 2 }}>
+                    {tile.mid}
+                  </Typography>
+                </>
+              ) : (
+                tile.words?.map((word) => (
+                  <Typography key={word} sx={{ fontSize: 14, fontWeight: 900, lineHeight: 1.2 }}>
+                    {word}
+                  </Typography>
+                ))
+              )}
+              {tile.ribbon && (
+                <Box
+                  sx={{
+                    mt: 0.5,
+                    bgcolor: '#ffc928',
+                    color: '#5d3a00',
+                    fontSize: 10,
+                    fontWeight: 900,
+                    px: 1.25,
+                    py: 0.1,
+                    borderRadius: 0.5,
+                    transform: 'skewX(-6deg) rotate(-2deg)',
+                  }}
+                >
+                  {tile.ribbon}
+                </Box>
+              )}
+            </Box>
+            <Box
+              sx={{
+                width: '100%',
+                bgcolor: 'rgba(0,0,0,0.26)',
+                borderRadius: 1,
+                py: 0.5,
+                px: 0.5,
+                fontSize: 6.5,
+                fontWeight: 700,
+                letterSpacing: 0.4,
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {tile.label}
+            </Box>
+          </Box>
+        ))}
+      </Box>
+
+      {/* Info card */}
+      {s.footer_note && (
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ mt: 1.5, bgcolor: '#ecf2fc', borderRadius: radius, p: 1.25 }}
+        >
+          <Iconify
+            icon={'solar:clock-circle-outline' as any}
+            width={16}
+            sx={{ color: '#e53935', flexShrink: 0, mt: '1px' }}
+          />
+          <Box>
+            <Typography sx={{ fontSize: 10, fontWeight: 700, color: previewColor('text_color') }}>
+              {s.footer_note}
+            </Typography>
+            {s.info_sub_text && (
+              <Typography sx={{ fontSize: 9, color: 'text.disabled' }}>{s.info_sub_text}</Typography>
+            )}
+          </Box>
+        </Stack>
+      )}
+    </Box>
+  );
+
+  const renderOfferPreview = (s: DigitalCartUiSettings) => {
+    const offer = '#e53935';
+    return (
+      <>
+        <Box sx={{ flex: 1, overflowY: 'auto', pb: 1 }}>
+          {/* Topbar */}
+          <Stack direction="row" alignItems="center" sx={{ px: 1.5, py: 0.75 }}>
+            <Typography sx={{ fontSize: 16, color: previewColor('text_color') }}>←</Typography>
+            <Typography
+              sx={{ flex: 1, textAlign: 'center', fontSize: 13, fontWeight: 800, color: offer }}
+            >
+              % OFF
+            </Typography>
+            {s.show_search ? (
+              <Iconify icon="eva:search-fill" width={16} sx={{ color: previewColor('text_color') }} />
+            ) : (
+              <Box sx={{ width: 16 }} />
+            )}
+          </Stack>
+
+          {/* Hero */}
+          <Box
+            sx={{
+              position: 'relative',
+              overflow: 'hidden',
+              bgcolor: `${offer}1a`,
+              color: offer,
+              py: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
+            <Box
+              sx={{
+                position: 'absolute',
+                width: 54,
+                height: 54,
+                borderRadius: '50%',
+                bgcolor: offer,
+                opacity: 0.14,
+                top: -18,
+                left: -14,
+              }}
+            />
+            <Box
+              sx={{
+                position: 'absolute',
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                bgcolor: offer,
+                opacity: 0.14,
+                bottom: -14,
+                right: -10,
+              }}
+            />
+            <Typography sx={{ fontSize: 38, fontWeight: 900, lineHeight: 0.95 }}>%</Typography>
+            <Typography sx={{ fontSize: 15, fontWeight: 800, letterSpacing: 2 }}>OFF</Typography>
+            <Box
+              sx={{
+                mt: 1,
+                bgcolor: offer,
+                color: '#fff',
+                fontSize: 9,
+                fontWeight: 800,
+                letterSpacing: 0.6,
+                px: 1.5,
+                py: 0.4,
+              }}
+            >
+              BIG SAVINGS!
+            </Box>
+          </Box>
+
+          <Box sx={{ px: 1.5, pt: 1.25 }}>
+            {/* Valid till */}
+            {(s.valid_till_text || s.show_last_updated) && (
+              <Typography
+                sx={{
+                  textAlign: 'center',
+                  fontSize: 9.5,
+                  fontWeight: 600,
+                  color: offer,
+                  mb: 1,
+                }}
+              >
+                🗓 {s.valid_till_text || 'Offers updated on 20 July 2026'}
+              </Typography>
+            )}
+
+            {/* Section divider */}
+            <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} sx={{ mb: 1.25 }}>
+              <Box sx={{ width: 20, height: 2, borderRadius: 1, bgcolor: offer, opacity: 0.7 }} />
+              <Typography sx={{ fontSize: 11, fontWeight: 800, color: previewColor('text_color') }}>
+                Products on Offer
+              </Typography>
+              <Box sx={{ width: 20, height: 2, borderRadius: 1, bgcolor: offer, opacity: 0.7 }} />
+            </Stack>
+
+            {/* Product cards */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0.75 }}>
+              {PREVIEW_PRODUCTS.map((item) => (
+                <Box
+                  key={item.code}
+                  sx={{
+                    bgcolor: previewColor('card_color'),
+                    borderRadius: radius,
+                    p: 0.75,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    gap: 0.4,
+                    boxShadow: '0 1px 4px rgba(20,20,40,0.07)',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 1,
+                      bgcolor: `${offer}12`,
+                      color: offer,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 13,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {item.name.charAt(0)}
+                  </Box>
+                  <Typography
+                    sx={{
+                      fontSize: 7.5,
+                      fontWeight: 600,
+                      lineHeight: 1.3,
+                      color: previewColor('text_color'),
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {item.name}
+                  </Typography>
+                  {s.show_product_code && (
+                    <Typography sx={{ fontSize: 6.5, color: 'text.disabled' }}>
+                      Code: {item.code}
+                    </Typography>
+                  )}
+                  <Stack direction="row" spacing={0.5} alignItems="baseline">
+                    <Typography
+                      sx={{ fontSize: 7, textDecoration: 'line-through', color: 'text.disabled' }}
+                    >
+                      {item.mrp}
+                    </Typography>
+                    <Typography sx={{ fontSize: 9.5, fontWeight: 800, color: offer }}>
+                      {item.price}
+                    </Typography>
+                  </Stack>
+                  {s.show_discount_percent && (
+                    <Box
+                      sx={{
+                        width: '100%',
+                        bgcolor: `${offer}14`,
+                        color: offer,
+                        fontSize: 6.5,
+                        fontWeight: 700,
+                        py: 0.4,
+                        borderRadius: 0.75,
+                      }}
+                    >
+                      {item.off}
+                    </Box>
+                  )}
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Bottom nav */}
+        {s.show_bottom_nav && (
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-around"
+            sx={{
+              px: 2,
+              py: 0.75,
+              bgcolor: '#fff',
+              borderTop: '1px solid rgba(20,20,40,0.07)',
+            }}
+          >
+            <Typography sx={{ fontSize: 15, color: previewColor('text_color') }}>←</Typography>
+            <Stack alignItems="center" spacing={0.1}>
+              <Iconify icon={'solar:home-2-bold' as any} width={14} sx={{ color: offer }} />
+              <Typography sx={{ fontSize: 7, fontWeight: 700, color: offer }}>Offers</Typography>
+            </Stack>
+            {s.about_url && (
+              <Stack alignItems="center" spacing={0.1}>
+                <Iconify
+                  icon={'solar:info-circle-outline' as any}
+                  width={14}
+                  sx={{ color: 'text.disabled' }}
+                />
+                <Typography sx={{ fontSize: 7, fontWeight: 600, color: 'text.disabled' }}>
+                  About Us
+                </Typography>
+              </Stack>
+            )}
+          </Stack>
+        )}
+      </>
+    );
+  };
 
   return (
     <Container maxWidth="xl">
@@ -334,25 +772,62 @@ export default function Page() {
                     <TextField
                       fullWidth
                       size="small"
-                      label="Header title"
+                      label="Store name"
                       placeholder="Project name (default)"
-                      helperText="Leave empty to show the client name from project branding"
+                      helperText="Shown as the logo text when no logo image is set"
                       value={settings.header_title}
                       onChange={(e) => setField('header_title', e.target.value)}
                     />
                     <TextField
                       fullWidth
                       size="small"
+                      label="Home heading"
+                      placeholder="Exclusive Offers"
+                      helperText="Big heading on the home screen"
+                      value={settings.home_heading ?? ''}
+                      onChange={(e) => setField('home_heading', e.target.value)}
+                    />
+                    <TextField
+                      fullWidth
+                      size="small"
                       label="Tagline"
+                      helperText="Subtitle under the home heading"
                       value={settings.tagline}
                       onChange={(e) => setField('tagline', e.target.value)}
                     />
                     <TextField
                       fullWidth
                       size="small"
-                      label="Footer note"
+                      label="Info card title"
+                      helperText="Bold first line of the info card (also used in the page footer)"
                       value={settings.footer_note}
                       onChange={(e) => setField('footer_note', e.target.value)}
+                    />
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Info card subtitle"
+                      placeholder="Hurry up and grab the best deals."
+                      value={settings.info_sub_text ?? ''}
+                      onChange={(e) => setField('info_sub_text', e.target.value)}
+                    />
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Offer validity text"
+                      placeholder="e.g. Offer valid till 31st July"
+                      helperText='Shown under the offer banner. Empty = "Offers updated on <date>"'
+                      value={settings.valid_till_text ?? ''}
+                      onChange={(e) => setField('valid_till_text', e.target.value)}
+                    />
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="About Us link"
+                      placeholder="https://…"
+                      helperText="Adds an About Us button to the bottom navigation. Empty = hidden"
+                      value={settings.about_url ?? ''}
+                      onChange={(e) => setField('about_url', e.target.value.trim())}
                     />
                   </Stack>
                 </CardContent>
@@ -419,7 +894,20 @@ export default function Page() {
 
           <Grid size={{ xs: 12, md: 5 }}>
             <Card sx={{ position: 'sticky', top: 24 }}>
-              <CardHeader title="Live preview" />
+              <CardHeader
+                title="Live preview"
+                action={
+                  <ToggleButtonGroup
+                    exclusive
+                    size="small"
+                    value={previewScreen}
+                    onChange={(_, value) => value && setPreviewScreen(value)}
+                  >
+                    <ToggleButton value="home">Home</ToggleButton>
+                    <ToggleButton value="offer">Offer page</ToggleButton>
+                  </ToggleButtonGroup>
+                }
+              />
               <CardContent sx={{ display: 'flex', justifyContent: 'center', pb: 4 }}>
                 {/* Phone shell */}
                 <Box
@@ -465,173 +953,11 @@ export default function Page() {
                       }}
                     />
 
-                    {/* Status bar */}
-                    <Box
-                      sx={{
-                        bgcolor: previewColor('primary_color'),
-                        color: '#fff',
-                        pt: '12px',
-                        pb: 0.5,
-                        px: 2.75,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <Typography sx={{ fontSize: 12, fontWeight: 700 }}>9:41</Typography>
-                      <Stack direction="row" spacing={0.75} alignItems="center">
-                        {/* Signal bars */}
-                        <Stack direction="row" spacing="2px" alignItems="flex-end">
-                          {[4, 6, 8, 10].map((h) => (
-                            <Box key={h} sx={{ width: 3, height: h, bgcolor: '#fff', borderRadius: 0.25 }} />
-                          ))}
-                        </Stack>
-                        {/* Battery */}
-                        <Box
-                          sx={{
-                            width: 22,
-                            height: 11,
-                            border: '1.5px solid rgba(255,255,255,0.9)',
-                            borderRadius: '3px',
-                            p: '1.5px',
-                            display: 'flex',
-                          }}
-                        >
-                          <Box sx={{ width: '70%', bgcolor: '#fff', borderRadius: '1px' }} />
-                        </Box>
-                      </Stack>
-                    </Box>
+                    {renderStatusBar()}
 
-                    {/* App header */}
-                    <Box sx={{ bgcolor: previewColor('primary_color'), color: '#fff', px: 2, pt: 1, pb: 1.75 }}>
-                      <Stack direction="row" spacing={1.25} alignItems="center">
-                        {settings.show_logo && (
-                          <Avatar
-                            variant="rounded"
-                            src={settings.logo_url || undefined}
-                            sx={{ width: 34, height: 34, bgcolor: '#fff', borderRadius: 1.5 }}
-                          >
-                            <Iconify
-                              icon={'solar:gallery-bold-duotone' as any}
-                              width={18}
-                              sx={{ color: 'text.disabled' }}
-                            />
-                          </Avatar>
-                        )}
-                        <Box sx={{ minWidth: 0 }}>
-                          <Typography noWrap sx={{ fontSize: 15, fontWeight: 700, lineHeight: 1.25 }}>
-                            {settings.header_title || 'Store Name'}
-                          </Typography>
-                          {settings.tagline && (
-                            <Typography noWrap sx={{ fontSize: 10.5, opacity: 0.9 }}>
-                              {settings.tagline}
-                            </Typography>
-                          )}
-                        </Box>
-                      </Stack>
-                      {settings.show_search && (
-                        <Box
-                          sx={{
-                            mt: 1.25,
-                            bgcolor: '#fff',
-                            borderRadius: 1.5,
-                            px: 1.5,
-                            py: 0.6,
-                            fontSize: 11.5,
-                            color: 'text.disabled',
-                          }}
-                        >
-                          Search products or offers…
-                        </Box>
-                      )}
-                    </Box>
-
-                    {/* Scrollable offer list */}
-                    <Box sx={{ flex: 1, overflowY: 'auto', px: 1.5, py: 1.5 }}>
-                      {settings.show_last_updated && (
-                        <Typography sx={{ fontSize: 10, color: 'text.disabled', mb: 1 }}>
-                          122 offers · Updated 20 July 2026
-                        </Typography>
-                      )}
-                      <Stack spacing={1.25}>
-                        {[
-                          { badge: 'ONLY 99/-', name: 'CHINGS SCHEZAN CHUTNEY 590GM (BOTTLE)', price: '₹99', mrp: '₹180', off: '45% OFF', code: '17457' },
-                          { badge: 'BUY1GET1', name: 'D LECTA CHEESE SPREAD 150G', price: '₹49.50', mrp: '₹99', off: '50% OFF', code: '37674' },
-                          { badge: 'ON MRP 81 OFF', name: 'RED LABEL NATURAL TEA 500GM#', price: '₹249', mrp: '₹330', off: '25% OFF', code: '7437' },
-                        ].map((item) => (
-                          <Box
-                            key={item.code}
-                            sx={{
-                              bgcolor: previewColor('card_color'),
-                              borderRadius: `${settings.card_radius ?? 14}px`,
-                              p: 1.5,
-                              boxShadow: '0 1px 4px rgba(20,20,40,0.08)',
-                            }}
-                          >
-                            <Box
-                              component="span"
-                              sx={{
-                                display: 'inline-block',
-                                bgcolor: previewColor('accent_color'),
-                                color: '#fff',
-                                fontSize: 9.5,
-                                fontWeight: 700,
-                                px: 1,
-                                py: 0.3,
-                                borderRadius: 999,
-                                mb: 0.75,
-                              }}
-                            >
-                              {item.badge}
-                            </Box>
-                            <Typography
-                              sx={{ fontSize: 12, fontWeight: 600, color: previewColor('text_color'), lineHeight: 1.35 }}
-                            >
-                              {item.name}
-                            </Typography>
-                            <Stack direction="row" spacing={0.75} alignItems="baseline" mt={0.5}>
-                              <Typography sx={{ fontSize: 15, fontWeight: 800, color: previewColor('primary_color') }}>
-                                {item.price}
-                              </Typography>
-                              <Typography
-                                sx={{ fontSize: 10.5, textDecoration: 'line-through', color: 'text.disabled' }}
-                              >
-                                {item.mrp}
-                              </Typography>
-                              {settings.show_discount_percent && (
-                                <Box
-                                  component="span"
-                                  sx={{
-                                    fontSize: 9.5,
-                                    fontWeight: 700,
-                                    color: '#1b7a2f',
-                                    bgcolor: '#e3f6e8',
-                                    px: 0.75,
-                                    py: 0.2,
-                                    borderRadius: 999,
-                                  }}
-                                >
-                                  {item.off}
-                                </Box>
-                              )}
-                            </Stack>
-                            {settings.show_product_code && (
-                              <Typography sx={{ fontSize: 9.5, color: 'text.disabled', mt: 0.4 }}>
-                                Code: {item.code}
-                              </Typography>
-                            )}
-                          </Box>
-                        ))}
-                      </Stack>
-
-                      {settings.footer_note && (
-                        <Typography
-                          sx={{ fontSize: 9.5, color: 'text.disabled', textAlign: 'center', mt: 1.5 }}
-                        >
-                          {settings.footer_note}
-                        </Typography>
-                      )}
-                    </Box>
+                    {previewScreen === 'home'
+                      ? renderHomePreview(settings)
+                      : renderOfferPreview(settings)}
 
                     {/* Home indicator */}
                     <Box sx={{ py: 0.75, display: 'flex', justifyContent: 'center' }}>

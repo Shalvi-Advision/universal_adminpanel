@@ -44,6 +44,11 @@ export interface DigitalCartUiSettings {
   show_logo: boolean;
   tagline: string;
   footer_note: string;
+  home_heading: string;
+  info_sub_text: string;
+  valid_till_text: string;
+  about_url: string;
+  show_bottom_nav: boolean;
   primary_color: string;
   accent_color: string;
   background_color: string;
