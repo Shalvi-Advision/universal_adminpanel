@@ -1,4 +1,4 @@
-import type { DigitalCartUiSettings } from 'src/services/digital-cart';
+import type { DigitalCartUiSettings, DigitalCartGroupDefaults } from 'src/services/digital-cart';
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 
@@ -63,36 +63,18 @@ const PREVIEW_FALLBACKS: Record<ColorKey, string> = {
   text_color: '#1c1c28',
 };
 
-// Mirrors GROUP_STYLES on the public website — the built-in defaults for
-// each offer group; admin overrides in settings.group_styles win per field
-const GROUP_DEFS: {
-  slug: string;
-  name: string;
-  defaults: { color: string; label: string; line1: string; line2: string; ribbon: string };
-}[] = [
-  { slug: 'percent_off', name: '% Off', defaults: { color: '#e53935', label: 'BIG SAVINGS!', line1: '%', line2: 'OFF', ribbon: '' } },
-  { slug: 'buy_1_get_1', name: 'Buy 1 Get 1', defaults: { color: '#8e24aa', label: 'LIMITED TIME OFFER!', line1: 'BUY 1', line2: 'GET 1', ribbon: 'FREE' } },
-  { slug: 'buy_2_get_1', name: 'Buy 2 Get 1', defaults: { color: '#43a047', label: "DON'T MISS OUT!", line1: 'BUY 2', line2: 'GET 1', ribbon: 'FREE' } },
-  { slug: 'rs_off', name: 'Rs. Off', defaults: { color: '#00897b', label: 'SHOP MORE SAVE MORE', line1: '₹', line2: 'OFF', ribbon: '' } },
-  { slug: 'special_price', name: 'Special Price', defaults: { color: '#1e88e5', label: 'BEST PRICES!', line1: 'SPECIAL', line2: 'PRICES', ribbon: '' } },
-  { slug: 'other_offers', name: 'Other Offers', defaults: { color: '#fb8c00', label: 'SPECIAL OFFER', line1: 'MEGA', line2: 'OFFERS', ribbon: '' } },
-];
+// Display order of the offer groups. The actual default visuals come from
+// the backend (group_style_defaults in the settings response); this local
+// copy is only a fallback while loading / for older backends.
+const GROUP_ORDER = ['percent_off', 'buy_1_get_1', 'buy_2_get_1', 'rs_off', 'special_price', 'other_offers'];
 
-// Effective (default + override) style for one group
-const mergedGroupStyle = (
-  settings: DigitalCartUiSettings,
-  def: (typeof GROUP_DEFS)[number]
-) => {
-  const over = settings.group_styles?.[def.slug] || {};
-  const line1 = over.line1 || def.defaults.line1;
-  return {
-    color: over.color && HEX_COLOR.test(over.color) ? over.color : def.defaults.color,
-    label: over.label || def.defaults.label,
-    line1,
-    line2: over.line2 || def.defaults.line2,
-    ribbon: over.ribbon || def.defaults.ribbon,
-    numeric: line1.length <= 3,
-  };
+const FALLBACK_GROUP_DEFAULTS: Record<string, DigitalCartGroupDefaults> = {
+  percent_off: { name: '% Off', color: '#e53935', label: 'BIG SAVINGS!', line1: '%', line2: 'OFF', ribbon: '' },
+  buy_1_get_1: { name: 'Buy 1 Get 1', color: '#8e24aa', label: 'LIMITED TIME OFFER!', line1: 'BUY 1', line2: 'GET 1', ribbon: 'FREE' },
+  buy_2_get_1: { name: 'Buy 2 Get 1', color: '#43a047', label: "DON'T MISS OUT!", line1: 'BUY 2', line2: 'GET 1', ribbon: 'FREE' },
+  rs_off: { name: 'Rs. Off', color: '#00897b', label: 'SHOP MORE SAVE MORE', line1: '₹', line2: 'OFF', ribbon: '' },
+  special_price: { name: 'Special Price', color: '#1e88e5', label: 'BEST PRICES!', line1: 'SPECIAL', line2: 'PRICES', ribbon: '' },
+  other_offers: { name: 'Other Offers', color: '#fb8c00', label: 'SPECIAL OFFER', line1: 'MEGA', line2: 'OFFERS', ribbon: '' },
 };
 
 const PREVIEW_PRODUCTS = [
@@ -251,6 +233,70 @@ function LogoField({ value, onChange }: LogoFieldProps) {
 
 // ----------------------------------------------------------------------
 
+type BannerImageFieldProps = {
+  value: string;
+  onChange: (url: string) => void;
+};
+
+function BannerImageField({ value, onChange }: BannerImageFieldProps) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      setUploading(true);
+      setUploadError('');
+      const result = await uploadImage(file, 'digital-cart');
+      onChange(result.url);
+    } catch (err: any) {
+      setUploadError(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <Stack spacing={0.5}>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <TextField
+          fullWidth
+          size="small"
+          label="Banner image"
+          placeholder="Optional — replaces the text banner on the offer page"
+          value={value}
+          onChange={(e) => onChange(e.target.value.trim())}
+        />
+        <Button
+          size="small"
+          variant="outlined"
+          sx={{ flexShrink: 0 }}
+          disabled={uploading}
+          onClick={() => fileRef.current?.click()}
+        >
+          {uploading ? <CircularProgress size={14} /> : 'Upload'}
+        </Button>
+        {value && (
+          <Button size="small" color="inherit" onClick={() => onChange('')}>
+            Clear
+          </Button>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => handleFile(e.target.files?.[0])}
+        />
+      </Stack>
+      {uploadError && <Alert severity="error">{uploadError}</Alert>}
+    </Stack>
+  );
+}
+
+// ----------------------------------------------------------------------
+
 export default function Page() {
   const [settings, setSettings] = useState<DigitalCartUiSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -258,19 +304,43 @@ export default function Page() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [previewScreen, setPreviewScreen] = useState<'home' | 'offer'>('home');
+  const [groupDefaults, setGroupDefaults] =
+    useState<Record<string, DigitalCartGroupDefaults>>(FALLBACK_GROUP_DEFAULTS);
 
   const fetchSettings = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
       const response = await getDigitalCartUiSettings();
-      if (response.success) setSettings(response.data);
+      if (response.success) {
+        setSettings(response.data);
+        if (response.group_style_defaults) {
+          setGroupDefaults({ ...FALLBACK_GROUP_DEFAULTS, ...response.group_style_defaults });
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load settings');
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // Effective (backend default + admin override) style for one offer group
+  const mergedStyle = (s: DigitalCartUiSettings, slug: string) => {
+    const d = groupDefaults[slug] || FALLBACK_GROUP_DEFAULTS[slug];
+    const over = s.group_styles?.[slug] || {};
+    const line1 = over.line1 || d.line1;
+    return {
+      name: d.name,
+      color: over.color && HEX_COLOR.test(over.color) ? over.color : d.color,
+      label: over.label || d.label,
+      line1,
+      line2: over.line2 || d.line2,
+      ribbon: over.ribbon || d.ribbon,
+      banner: over.banner_image_url || '',
+      numeric: line1.length <= 3,
+    };
+  };
 
   useEffect(() => {
     fetchSettings();
@@ -308,12 +378,14 @@ export default function Page() {
       return;
     }
 
-    const invalidGroup = GROUP_DEFS.find((def) => {
-      const color = settings.group_styles?.[def.slug]?.color;
+    const invalidGroup = GROUP_ORDER.find((slug) => {
+      const color = settings.group_styles?.[slug]?.color;
       return color && !HEX_COLOR.test(color);
     });
     if (invalidGroup) {
-      setError(`${invalidGroup.name} tile color must be hex like #RRGGBB`);
+      setError(
+        `${(groupDefaults[invalidGroup] || FALLBACK_GROUP_DEFAULTS[invalidGroup]).name} tile color must be hex like #RRGGBB`
+      );
       return;
     }
 
@@ -422,11 +494,11 @@ export default function Page() {
 
       {/* Offer tiles */}
       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25 }}>
-        {GROUP_DEFS.slice(0, 4).map((def) => {
-          const tile = mergedGroupStyle(s, def);
+        {GROUP_ORDER.slice(0, 4).map((slug) => {
+          const tile = mergedStyle(s, slug);
           return (
           <Box
-            key={def.slug}
+            key={slug}
             sx={{
               position: 'relative',
               overflow: 'hidden',
@@ -534,7 +606,7 @@ export default function Page() {
   );
 
   const renderOfferPreview = (s: DigitalCartUiSettings) => {
-    const offerStyle = mergedGroupStyle(s, GROUP_DEFS[0]);
+    const offerStyle = mergedStyle(s, GROUP_ORDER[0]);
     const offer = offerStyle.color;
     return (
       <>
@@ -545,7 +617,7 @@ export default function Page() {
             <Typography
               sx={{ flex: 1, textAlign: 'center', fontSize: 13, fontWeight: 800, color: offer }}
             >
-              {GROUP_DEFS[0].name.toUpperCase()}
+              {offerStyle.name.toUpperCase()}
             </Typography>
             {s.show_search ? (
               <Iconify icon="eva:search-fill" width={16} sx={{ color: previewColor('text_color') }} />
@@ -554,7 +626,14 @@ export default function Page() {
             )}
           </Stack>
 
-          {/* Hero */}
+          {/* Hero: uploaded banner image wins over the text banner */}
+          {offerStyle.banner ? (
+            <Box
+              component="img"
+              src={offerStyle.banner}
+              sx={{ display: 'block', width: '100%', maxHeight: 110, objectFit: 'cover' }}
+            />
+          ) : (
           <Box
             sx={{
               position: 'relative',
@@ -625,6 +704,7 @@ export default function Page() {
               {offerStyle.label}
             </Box>
           </Box>
+          )}
 
           <Box sx={{ px: 1.5, pt: 1.25 }}>
             {/* Valid till */}
@@ -938,11 +1018,12 @@ export default function Page() {
                 />
                 <CardContent>
                   <Stack spacing={3}>
-                    {GROUP_DEFS.map((def) => {
-                      const over = settings.group_styles?.[def.slug] || {};
-                      const merged = mergedGroupStyle(settings, def);
+                    {GROUP_ORDER.map((slug) => {
+                      const defaults = groupDefaults[slug] || FALLBACK_GROUP_DEFAULTS[slug];
+                      const over = settings.group_styles?.[slug] || {};
+                      const merged = mergedStyle(settings, slug);
                       return (
-                        <Box key={def.slug}>
+                        <Box key={slug}>
                           <Stack direction="row" spacing={1} alignItems="center" mb={1.25}>
                             <Box
                               sx={{
@@ -952,7 +1033,7 @@ export default function Page() {
                                 bgcolor: merged.color,
                               }}
                             />
-                            <Typography variant="subtitle2">{def.name}</Typography>
+                            <Typography variant="subtitle2">{defaults.name}</Typography>
                           </Stack>
                           <Grid container spacing={1.5}>
                             <Grid size={{ xs: 12, sm: 4 }}>
@@ -960,7 +1041,7 @@ export default function Page() {
                                 label="Tile color"
                                 hint=""
                                 value={over.color || ''}
-                                onChange={(value) => setGroupField(def.slug, 'color', value)}
+                                onChange={(value) => setGroupField(slug, 'color', value)}
                               />
                             </Grid>
                             <Grid size={{ xs: 12, sm: 8 }}>
@@ -968,9 +1049,9 @@ export default function Page() {
                                 fullWidth
                                 size="small"
                                 label="Banner label"
-                                placeholder={def.defaults.label}
+                                placeholder={defaults.label}
                                 value={over.label || ''}
-                                onChange={(e) => setGroupField(def.slug, 'label', e.target.value)}
+                                onChange={(e) => setGroupField(slug, 'label', e.target.value)}
                               />
                             </Grid>
                             <Grid size={{ xs: 4 }}>
@@ -978,9 +1059,9 @@ export default function Page() {
                                 fullWidth
                                 size="small"
                                 label="Big text 1"
-                                placeholder={def.defaults.line1}
+                                placeholder={defaults.line1}
                                 value={over.line1 || ''}
-                                onChange={(e) => setGroupField(def.slug, 'line1', e.target.value)}
+                                onChange={(e) => setGroupField(slug, 'line1', e.target.value)}
                               />
                             </Grid>
                             <Grid size={{ xs: 4 }}>
@@ -988,9 +1069,9 @@ export default function Page() {
                                 fullWidth
                                 size="small"
                                 label="Big text 2"
-                                placeholder={def.defaults.line2}
+                                placeholder={defaults.line2}
                                 value={over.line2 || ''}
-                                onChange={(e) => setGroupField(def.slug, 'line2', e.target.value)}
+                                onChange={(e) => setGroupField(slug, 'line2', e.target.value)}
                               />
                             </Grid>
                             <Grid size={{ xs: 4 }}>
@@ -998,9 +1079,15 @@ export default function Page() {
                                 fullWidth
                                 size="small"
                                 label="Ribbon"
-                                placeholder={def.defaults.ribbon || '—'}
+                                placeholder={defaults.ribbon || '—'}
                                 value={over.ribbon || ''}
-                                onChange={(e) => setGroupField(def.slug, 'ribbon', e.target.value)}
+                                onChange={(e) => setGroupField(slug, 'ribbon', e.target.value)}
+                              />
+                            </Grid>
+                            <Grid size={{ xs: 12 }}>
+                              <BannerImageField
+                                value={over.banner_image_url || ''}
+                                onChange={(url) => setGroupField(slug, 'banner_image_url', url)}
                               />
                             </Grid>
                           </Grid>

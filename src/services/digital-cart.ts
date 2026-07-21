@@ -44,6 +44,16 @@ export interface DigitalCartGroupStyle {
   line1?: string;
   line2?: string;
   ribbon?: string;
+  banner_image_url?: string;
+}
+
+export interface DigitalCartGroupDefaults {
+  name: string;
+  color: string;
+  label: string;
+  line1: string;
+  line2: string;
+  ribbon: string;
 }
 
 export interface DigitalCartUiSettings {
@@ -73,6 +83,7 @@ export interface DigitalCartUiSettings {
 export async function getDigitalCartUiSettings(): Promise<{
   success: boolean;
   data: DigitalCartUiSettings;
+  group_style_defaults?: Record<string, DigitalCartGroupDefaults>;
 }> {
   return apiClient.get('/api/admin/digital-cart/settings');
 }
