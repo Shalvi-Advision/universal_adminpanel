@@ -38,7 +38,16 @@ export interface UploadCsvResponse {
   data: { imported: number; source_file: string };
 }
 
+export interface DigitalCartGroupStyle {
+  color?: string;
+  label?: string;
+  line1?: string;
+  line2?: string;
+  ribbon?: string;
+}
+
 export interface DigitalCartUiSettings {
+  group_styles?: Record<string, DigitalCartGroupStyle>;
   header_title: string;
   logo_url: string;
   show_logo: boolean;

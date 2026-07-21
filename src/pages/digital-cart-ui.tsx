@@ -63,20 +63,37 @@ const PREVIEW_FALLBACKS: Record<ColorKey, string> = {
   text_color: '#1c1c28',
 };
 
-// Mirrors GROUP_STYLES on the public website
-const PREVIEW_TILES: {
-  color: string;
-  label: string;
-  big?: string;
-  mid?: string;
-  words?: string[];
-  ribbon?: string;
+// Mirrors GROUP_STYLES on the public website — the built-in defaults for
+// each offer group; admin overrides in settings.group_styles win per field
+const GROUP_DEFS: {
+  slug: string;
+  name: string;
+  defaults: { color: string; label: string; line1: string; line2: string; ribbon: string };
 }[] = [
-  { color: '#e53935', label: 'BIG SAVINGS!', big: '%', mid: 'OFF' },
-  { color: '#8e24aa', label: 'LIMITED TIME OFFER!', words: ['BUY 1', 'GET 1'], ribbon: 'FREE' },
-  { color: '#1e88e5', label: 'BEST PRICES!', words: ['SPECIAL', 'PRICES'] },
-  { color: '#00897b', label: 'SHOP MORE SAVE MORE', big: '₹', mid: 'OFF' },
+  { slug: 'percent_off', name: '% Off', defaults: { color: '#e53935', label: 'BIG SAVINGS!', line1: '%', line2: 'OFF', ribbon: '' } },
+  { slug: 'buy_1_get_1', name: 'Buy 1 Get 1', defaults: { color: '#8e24aa', label: 'LIMITED TIME OFFER!', line1: 'BUY 1', line2: 'GET 1', ribbon: 'FREE' } },
+  { slug: 'buy_2_get_1', name: 'Buy 2 Get 1', defaults: { color: '#43a047', label: "DON'T MISS OUT!", line1: 'BUY 2', line2: 'GET 1', ribbon: 'FREE' } },
+  { slug: 'rs_off', name: 'Rs. Off', defaults: { color: '#00897b', label: 'SHOP MORE SAVE MORE', line1: '₹', line2: 'OFF', ribbon: '' } },
+  { slug: 'special_price', name: 'Special Price', defaults: { color: '#1e88e5', label: 'BEST PRICES!', line1: 'SPECIAL', line2: 'PRICES', ribbon: '' } },
+  { slug: 'other_offers', name: 'Other Offers', defaults: { color: '#fb8c00', label: 'SPECIAL OFFER', line1: 'MEGA', line2: 'OFFERS', ribbon: '' } },
 ];
+
+// Effective (default + override) style for one group
+const mergedGroupStyle = (
+  settings: DigitalCartUiSettings,
+  def: (typeof GROUP_DEFS)[number]
+) => {
+  const over = settings.group_styles?.[def.slug] || {};
+  const line1 = over.line1 || def.defaults.line1;
+  return {
+    color: over.color && HEX_COLOR.test(over.color) ? over.color : def.defaults.color,
+    label: over.label || def.defaults.label,
+    line1,
+    line2: over.line2 || def.defaults.line2,
+    ribbon: over.ribbon || def.defaults.ribbon,
+    numeric: line1.length <= 3,
+  };
+};
 
 const PREVIEW_PRODUCTS = [
   { name: 'CHINGS SCHEZWAN CHUTNEY 250G', code: '17457', mrp: '₹180', price: '₹99', off: '45% OFF' },
@@ -266,6 +283,20 @@ export default function Page() {
     setSettings((prev) => (prev ? { ...prev, [key]: value } : prev));
   };
 
+  const setGroupField = (slug: string, field: string, value: string) => {
+    setSettings((prev) =>
+      prev
+        ? {
+            ...prev,
+            group_styles: {
+              ...prev.group_styles,
+              [slug]: { ...prev.group_styles?.[slug], [field]: value },
+            },
+          }
+        : prev
+    );
+  };
+
   const handleSave = async () => {
     if (!settings) return;
 
@@ -274,6 +305,15 @@ export default function Page() {
     );
     if (invalid) {
       setError(`${invalid.label} color must be hex like #RRGGBB`);
+      return;
+    }
+
+    const invalidGroup = GROUP_DEFS.find((def) => {
+      const color = settings.group_styles?.[def.slug]?.color;
+      return color && !HEX_COLOR.test(color);
+    });
+    if (invalidGroup) {
+      setError(`${invalidGroup.name} tile color must be hex like #RRGGBB`);
       return;
     }
 
@@ -382,9 +422,11 @@ export default function Page() {
 
       {/* Offer tiles */}
       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25 }}>
-        {PREVIEW_TILES.map((tile) => (
+        {GROUP_DEFS.slice(0, 4).map((def) => {
+          const tile = mergedGroupStyle(s, def);
+          return (
           <Box
-            key={tile.color}
+            key={def.slug}
             sx={{
               position: 'relative',
               overflow: 'hidden',
@@ -409,18 +451,18 @@ export default function Page() {
                 justifyContent: 'center',
               }}
             >
-              {tile.big ? (
+              {tile.numeric ? (
                 <>
                   <Typography sx={{ fontSize: 34, fontWeight: 900, lineHeight: 1 }}>
-                    {tile.big}
+                    {tile.line1}
                   </Typography>
                   <Typography sx={{ fontSize: 13, fontWeight: 800, letterSpacing: 2 }}>
-                    {tile.mid}
+                    {tile.line2}
                   </Typography>
                 </>
               ) : (
-                tile.words?.map((word) => (
-                  <Typography key={word} sx={{ fontSize: 14, fontWeight: 900, lineHeight: 1.2 }}>
+                [tile.line1, tile.line2].filter(Boolean).map((word) => (
+                  <Typography key={word} sx={{ fontSize: 14, fontWeight: 900, lineHeight: 1.2, textTransform: 'uppercase' }}>
                     {word}
                   </Typography>
                 ))
@@ -462,7 +504,8 @@ export default function Page() {
               {tile.label}
             </Box>
           </Box>
-        ))}
+          );
+        })}
       </Box>
 
       {/* Info card */}
@@ -491,7 +534,8 @@ export default function Page() {
   );
 
   const renderOfferPreview = (s: DigitalCartUiSettings) => {
-    const offer = '#e53935';
+    const offerStyle = mergedGroupStyle(s, GROUP_DEFS[0]);
+    const offer = offerStyle.color;
     return (
       <>
         <Box sx={{ flex: 1, overflowY: 'auto', pb: 1 }}>
@@ -501,7 +545,7 @@ export default function Page() {
             <Typography
               sx={{ flex: 1, textAlign: 'center', fontSize: 13, fontWeight: 800, color: offer }}
             >
-              % OFF
+              {GROUP_DEFS[0].name.toUpperCase()}
             </Typography>
             {s.show_search ? (
               <Iconify icon="eva:search-fill" width={16} sx={{ color: previewColor('text_color') }} />
@@ -547,8 +591,25 @@ export default function Page() {
                 right: -10,
               }}
             />
-            <Typography sx={{ fontSize: 38, fontWeight: 900, lineHeight: 0.95 }}>%</Typography>
-            <Typography sx={{ fontSize: 15, fontWeight: 800, letterSpacing: 2 }}>OFF</Typography>
+            {offerStyle.numeric ? (
+              <>
+                <Typography sx={{ fontSize: 38, fontWeight: 900, lineHeight: 0.95 }}>
+                  {offerStyle.line1}
+                </Typography>
+                <Typography sx={{ fontSize: 15, fontWeight: 800, letterSpacing: 2 }}>
+                  {offerStyle.line2}
+                </Typography>
+              </>
+            ) : (
+              [offerStyle.line1, offerStyle.line2].filter(Boolean).map((word) => (
+                <Typography
+                  key={word}
+                  sx={{ fontSize: 19, fontWeight: 900, lineHeight: 1.15, textTransform: 'uppercase' }}
+                >
+                  {word}
+                </Typography>
+              ))
+            )}
             <Box
               sx={{
                 mt: 1,
@@ -561,7 +622,7 @@ export default function Page() {
                 py: 0.4,
               }}
             >
-              BIG SAVINGS!
+              {offerStyle.label}
             </Box>
           </Box>
 
@@ -867,6 +928,86 @@ export default function Page() {
                       />
                     </Grid>
                   </Grid>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader
+                  title="Offer group tiles"
+                  subheader="Tile & banner of each offer group on the website. Empty fields use the defaults shown."
+                />
+                <CardContent>
+                  <Stack spacing={3}>
+                    {GROUP_DEFS.map((def) => {
+                      const over = settings.group_styles?.[def.slug] || {};
+                      const merged = mergedGroupStyle(settings, def);
+                      return (
+                        <Box key={def.slug}>
+                          <Stack direction="row" spacing={1} alignItems="center" mb={1.25}>
+                            <Box
+                              sx={{
+                                width: 14,
+                                height: 14,
+                                borderRadius: 0.5,
+                                bgcolor: merged.color,
+                              }}
+                            />
+                            <Typography variant="subtitle2">{def.name}</Typography>
+                          </Stack>
+                          <Grid container spacing={1.5}>
+                            <Grid size={{ xs: 12, sm: 4 }}>
+                              <ColorField
+                                label="Tile color"
+                                hint=""
+                                value={over.color || ''}
+                                onChange={(value) => setGroupField(def.slug, 'color', value)}
+                              />
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 8 }}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label="Banner label"
+                                placeholder={def.defaults.label}
+                                value={over.label || ''}
+                                onChange={(e) => setGroupField(def.slug, 'label', e.target.value)}
+                              />
+                            </Grid>
+                            <Grid size={{ xs: 4 }}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label="Big text 1"
+                                placeholder={def.defaults.line1}
+                                value={over.line1 || ''}
+                                onChange={(e) => setGroupField(def.slug, 'line1', e.target.value)}
+                              />
+                            </Grid>
+                            <Grid size={{ xs: 4 }}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label="Big text 2"
+                                placeholder={def.defaults.line2}
+                                value={over.line2 || ''}
+                                onChange={(e) => setGroupField(def.slug, 'line2', e.target.value)}
+                              />
+                            </Grid>
+                            <Grid size={{ xs: 4 }}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label="Ribbon"
+                                placeholder={def.defaults.ribbon || '—'}
+                                value={over.ribbon || ''}
+                                onChange={(e) => setGroupField(def.slug, 'ribbon', e.target.value)}
+                              />
+                            </Grid>
+                          </Grid>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
                 </CardContent>
               </Card>
 
