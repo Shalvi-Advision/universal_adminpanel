@@ -12,6 +12,7 @@ export interface DigitalCartItem {
   mrp_value: number | null;
   offer_price_value: number | null;
   offer_text: string;
+  image_url: string;
   position: number;
   is_active: boolean;
   source_file: string;
@@ -134,6 +135,13 @@ export async function uploadDigitalCartCsv(file: File): Promise<UploadCsvRespons
 
 export async function toggleDigitalCartItem(id: string): Promise<{ success: boolean; data: DigitalCartItem }> {
   return apiClient.patch(`/api/admin/digital-cart/${id}/toggle`);
+}
+
+export async function setDigitalCartItemImage(
+  id: string,
+  imageUrl: string
+): Promise<{ success: boolean; data: DigitalCartItem }> {
+  return apiClient.patch(`/api/admin/digital-cart/${id}/image`, { image_url: imageUrl });
 }
 
 export async function deleteDigitalCartItem(id: string): Promise<{ success: boolean; message: string }> {

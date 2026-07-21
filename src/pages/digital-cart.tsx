@@ -8,6 +8,7 @@ import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Table from '@mui/material/Table';
 import Stack from '@mui/material/Stack';
+import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import TableRow from '@mui/material/TableRow';
 import Container from '@mui/material/Container';
@@ -21,12 +22,14 @@ import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { uploadImage } from 'src/services/upload';
 import {
   getDigitalCart,
   clearDigitalCart,
   uploadDigitalCartCsv,
   deleteDigitalCartItem,
   toggleDigitalCartItem,
+  setDigitalCartItemImage,
 } from 'src/services/digital-cart';
 
 import { Iconify } from 'src/components/iconify';
@@ -47,6 +50,9 @@ export default function Page() {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openClearDialog, setOpenClearDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const imageItemIdRef = useRef<string>('');
+  const [imageUploadingId, setImageUploadingId] = useState('');
 
   const fetchItems = useCallback(async () => {
     try {
@@ -84,6 +90,41 @@ export default function Page() {
       setError(err.message || 'Failed to upload CSV');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const pickImage = (id: string) => {
+    imageItemIdRef.current = id;
+    imageInputRef.current?.click();
+  };
+
+  const handleImageSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    const id = imageItemIdRef.current;
+    if (!file || !id) return;
+
+    try {
+      setImageUploadingId(id);
+      setError('');
+      const uploaded = await uploadImage(file, 'digital-cart');
+      await setDigitalCartItemImage(id, uploaded.url);
+      setItems((prev) =>
+        prev.map((item) => (item._id === id ? { ...item, image_url: uploaded.url } : item))
+      );
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload product image');
+    } finally {
+      setImageUploadingId('');
+    }
+  };
+
+  const handleImageClear = async (id: string) => {
+    try {
+      await setDigitalCartItemImage(id, '');
+      setItems((prev) => prev.map((item) => (item._id === id ? { ...item, image_url: '' } : item)));
+    } catch (err: any) {
+      setError(err.message || 'Failed to remove product image');
     }
   };
 
@@ -175,9 +216,18 @@ export default function Page() {
         ref={fileInputRef}
         onChange={handleFileSelected}
       />
+      <input
+        hidden
+        type="file"
+        accept="image/*"
+        ref={imageInputRef}
+        onChange={handleImageSelected}
+      />
 
       <Typography variant="body2" color="text.secondary" mb={3}>
-        Upload the offer sheet CSV (columns: P-Code, Product Name, MRP, Offer Price, Offer). Each
+        Upload the offer sheet CSV (columns: P-Code, Product Name, MRP, Offer Price, Offer — plus an
+        optional Image column with photo URLs). Photos can also be uploaded per product below, and
+        products without one borrow the store catalog photo when the P-Code matches. Each
         upload replaces the current list for the selected project, and the public digital cart
         website updates instantly.
         {meta?.source_file && (
@@ -231,6 +281,7 @@ export default function Page() {
                 <TableHead>
                   <TableRow>
                     <TableCell>#</TableCell>
+                    <TableCell>Image</TableCell>
                     <TableCell>P-Code</TableCell>
                     <TableCell>Product Name</TableCell>
                     <TableCell>MRP</TableCell>
@@ -243,7 +294,7 @@ export default function Page() {
                 <TableBody>
                   {filteredItems.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                      <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                         <Typography color="text.secondary">
                           {items.length === 0
                             ? 'No products yet — upload the offer sheet CSV to publish the digital cart.'
@@ -255,6 +306,46 @@ export default function Page() {
                     filteredItems.map((item) => (
                       <TableRow key={item._id} hover>
                         <TableCell>{item.position + 1}</TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={0.5} alignItems="center">
+                            <Avatar
+                              variant="rounded"
+                              src={item.image_url || undefined}
+                              sx={{ width: 36, height: 36, bgcolor: 'background.neutral' }}
+                            >
+                              <Iconify
+                                icon={'solar:gallery-bold-duotone' as any}
+                                width={18}
+                                sx={{ color: 'text.disabled' }}
+                              />
+                            </Avatar>
+                            <PermissionButton section="digitalCart" action="edit">
+                              <IconButton
+                                size="small"
+                                disabled={imageUploadingId === item._id}
+                                onClick={() => pickImage(item._id)}
+                                title="Upload product image"
+                              >
+                                {imageUploadingId === item._id ? (
+                                  <CircularProgress size={14} />
+                                ) : (
+                                  <Iconify icon={'solar:camera-add-bold' as any} width={16} />
+                                )}
+                              </IconButton>
+                            </PermissionButton>
+                            {item.image_url && (
+                              <PermissionButton section="digitalCart" action="edit">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleImageClear(item._id)}
+                                  title="Remove image"
+                                >
+                                  <Iconify icon="mingcute:close-line" width={14} />
+                                </IconButton>
+                              </PermissionButton>
+                            )}
+                          </Stack>
+                        </TableCell>
                         <TableCell>{item.p_code || '—'}</TableCell>
                         <TableCell>{item.product_name}</TableCell>
                         <TableCell>{item.mrp || '—'}</TableCell>

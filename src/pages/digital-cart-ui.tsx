@@ -725,33 +725,33 @@ export default function Page() {
             </Stack>
 
             {/* Product cards */}
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0.75 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
               {PREVIEW_PRODUCTS.map((item) => (
                 <Box
                   key={item.code}
                   sx={{
                     bgcolor: previewColor('card_color'),
                     borderRadius: radius,
-                    p: 0.75,
+                    p: 1,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     textAlign: 'center',
-                    gap: 0.4,
+                    gap: 0.5,
                     boxShadow: '0 1px 4px rgba(20,20,40,0.07)',
                   }}
                 >
                   <Box
                     sx={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: 1,
+                      width: 48,
+                      height: 48,
+                      borderRadius: 1.25,
                       bgcolor: `${offer}12`,
                       color: offer,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 13,
+                      fontSize: 18,
                       fontWeight: 800,
                     }}
                   >
@@ -759,7 +759,7 @@ export default function Page() {
                   </Box>
                   <Typography
                     sx={{
-                      fontSize: 7.5,
+                      fontSize: 8.5,
                       fontWeight: 600,
                       lineHeight: 1.3,
                       color: previewColor('text_color'),
@@ -772,17 +772,17 @@ export default function Page() {
                     {item.name}
                   </Typography>
                   {s.show_product_code && (
-                    <Typography sx={{ fontSize: 6.5, color: 'text.disabled' }}>
+                    <Typography sx={{ fontSize: 7, color: 'text.disabled' }}>
                       Code: {item.code}
                     </Typography>
                   )}
                   <Stack direction="row" spacing={0.5} alignItems="baseline">
                     <Typography
-                      sx={{ fontSize: 7, textDecoration: 'line-through', color: 'text.disabled' }}
+                      sx={{ fontSize: 8, textDecoration: 'line-through', color: 'text.disabled' }}
                     >
                       {item.mrp}
                     </Typography>
-                    <Typography sx={{ fontSize: 9.5, fontWeight: 800, color: offer }}>
+                    <Typography sx={{ fontSize: 11, fontWeight: 800, color: offer }}>
                       {item.price}
                     </Typography>
                   </Stack>
@@ -792,7 +792,7 @@ export default function Page() {
                         width: '100%',
                         bgcolor: `${offer}14`,
                         color: offer,
-                        fontSize: 6.5,
+                        fontSize: 7.5,
                         fontWeight: 700,
                         py: 0.4,
                         borderRadius: 0.75,
