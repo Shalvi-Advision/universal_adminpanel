@@ -47,13 +47,20 @@ export interface DigitalCartGroupStyle {
   banner_image_url?: string;
 }
 
-export interface DigitalCartGroupDefaults {
+// A dynamic offer group (one per distinct Offer value in the uploaded
+// sheet) with its effective style and the derived defaults (placeholders)
+export interface DigitalCartGroup {
+  key: string;
   name: string;
+  count: number;
   color: string;
   label: string;
   line1: string;
   line2: string;
   ribbon: string;
+  banner_image_url: string;
+  numeric: boolean;
+  defaults: { color: string; label: string; line1: string; line2: string; ribbon: string };
 }
 
 export interface DigitalCartUiSettings {
@@ -83,7 +90,7 @@ export interface DigitalCartUiSettings {
 export async function getDigitalCartUiSettings(): Promise<{
   success: boolean;
   data: DigitalCartUiSettings;
-  group_style_defaults?: Record<string, DigitalCartGroupDefaults>;
+  groups?: DigitalCartGroup[];
 }> {
   return apiClient.get('/api/admin/digital-cart/settings');
 }

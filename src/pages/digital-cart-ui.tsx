@@ -1,4 +1,4 @@
-import type { DigitalCartUiSettings, DigitalCartGroupDefaults } from 'src/services/digital-cart';
+import type { DigitalCartGroup, DigitalCartUiSettings } from 'src/services/digital-cart';
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 
@@ -63,19 +63,15 @@ const PREVIEW_FALLBACKS: Record<ColorKey, string> = {
   text_color: '#1c1c28',
 };
 
-// Display order of the offer groups. The actual default visuals come from
-// the backend (group_style_defaults in the settings response); this local
-// copy is only a fallback while loading / for older backends.
-const GROUP_ORDER = ['percent_off', 'buy_1_get_1', 'buy_2_get_1', 'rs_off', 'special_price', 'other_offers'];
-
-const FALLBACK_GROUP_DEFAULTS: Record<string, DigitalCartGroupDefaults> = {
-  percent_off: { name: '% Off', color: '#e53935', label: 'BIG SAVINGS!', line1: '%', line2: 'OFF', ribbon: '' },
-  buy_1_get_1: { name: 'Buy 1 Get 1', color: '#8e24aa', label: 'LIMITED TIME OFFER!', line1: 'BUY 1', line2: 'GET 1', ribbon: 'FREE' },
-  buy_2_get_1: { name: 'Buy 2 Get 1', color: '#43a047', label: "DON'T MISS OUT!", line1: 'BUY 2', line2: 'GET 1', ribbon: 'FREE' },
-  rs_off: { name: 'Rs. Off', color: '#00897b', label: 'SHOP MORE SAVE MORE', line1: '₹', line2: 'OFF', ribbon: '' },
-  special_price: { name: 'Special Price', color: '#1e88e5', label: 'BEST PRICES!', line1: 'SPECIAL', line2: 'PRICES', ribbon: '' },
-  other_offers: { name: 'Other Offers', color: '#fb8c00', label: 'SPECIAL OFFER', line1: 'MEGA', line2: 'OFFERS', ribbon: '' },
-};
+// Groups are dynamic — one per distinct Offer value in the uploaded sheet.
+// They arrive from the settings endpoint with derived defaults; these
+// samples are only used in the preview when no sheet is uploaded yet.
+const SAMPLE_GROUPS: DigitalCartGroup[] = [
+  { key: 'sample_pct', name: 'ON MRP 20% OFF', count: 12, color: '#e53935', label: 'BIG SAVINGS!', line1: '20%', line2: 'OFF', ribbon: '', banner_image_url: '', numeric: true, defaults: { color: '#e53935', label: 'BIG SAVINGS!', line1: '20%', line2: 'OFF', ribbon: '' } },
+  { key: 'sample_b1g1', name: 'B1G1', count: 29, color: '#8e24aa', label: 'LIMITED TIME OFFER!', line1: 'BUY 1', line2: 'GET 1', ribbon: 'FREE', banner_image_url: '', numeric: false, defaults: { color: '#8e24aa', label: 'LIMITED TIME OFFER!', line1: 'BUY 1', line2: 'GET 1', ribbon: 'FREE' } },
+  { key: 'sample_only', name: 'ONLY 99/-', count: 8, color: '#1e88e5', label: 'BEST PRICES!', line1: 'ONLY', line2: '99/-', ribbon: '', banner_image_url: '', numeric: false, defaults: { color: '#1e88e5', label: 'BEST PRICES!', line1: 'ONLY', line2: '99/-', ribbon: '' } },
+  { key: 'sample_rs', name: 'ON MRP 81 OFF', count: 5, color: '#00897b', label: 'SHOP MORE SAVE MORE', line1: '₹81', line2: 'OFF', ribbon: '', banner_image_url: '', numeric: true, defaults: { color: '#00897b', label: 'SHOP MORE SAVE MORE', line1: '₹81', line2: 'OFF', ribbon: '' } },
+];
 
 const PREVIEW_PRODUCTS = [
   { name: 'CHINGS SCHEZWAN CHUTNEY 250G', code: '17457', mrp: '₹180', price: '₹99', off: '45% OFF' },
@@ -304,8 +300,7 @@ export default function Page() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [previewScreen, setPreviewScreen] = useState<'home' | 'offer'>('home');
-  const [groupDefaults, setGroupDefaults] =
-    useState<Record<string, DigitalCartGroupDefaults>>(FALLBACK_GROUP_DEFAULTS);
+  const [groups, setGroups] = useState<DigitalCartGroup[]>([]);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -314,9 +309,7 @@ export default function Page() {
       const response = await getDigitalCartUiSettings();
       if (response.success) {
         setSettings(response.data);
-        if (response.group_style_defaults) {
-          setGroupDefaults({ ...FALLBACK_GROUP_DEFAULTS, ...response.group_style_defaults });
-        }
+        setGroups(response.groups || []);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load settings');
@@ -325,22 +318,24 @@ export default function Page() {
     }
   }, []);
 
-  // Effective (backend default + admin override) style for one offer group
-  const mergedStyle = (s: DigitalCartUiSettings, slug: string) => {
-    const d = groupDefaults[slug] || FALLBACK_GROUP_DEFAULTS[slug];
-    const over = s.group_styles?.[slug] || {};
-    const line1 = over.line1 || d.line1;
+  // Live effective style for a group: derived defaults + the (possibly
+  // unsaved) overrides currently in the form
+  const liveStyle = (s: DigitalCartUiSettings, group: DigitalCartGroup) => {
+    const over = s.group_styles?.[group.key] || {};
+    const line1 = over.line1 || group.defaults.line1;
     return {
-      name: d.name,
-      color: over.color && HEX_COLOR.test(over.color) ? over.color : d.color,
-      label: over.label || d.label,
+      name: group.name,
+      color: over.color && HEX_COLOR.test(over.color) ? over.color : group.defaults.color,
+      label: over.label || group.defaults.label,
       line1,
-      line2: over.line2 || d.line2,
-      ribbon: over.ribbon || d.ribbon,
+      line2: over.line2 || group.defaults.line2,
+      ribbon: over.ribbon || group.defaults.ribbon,
       banner: over.banner_image_url || '',
-      numeric: line1.length <= 3,
+      numeric: line1.length > 0 && line1.length <= 4,
     };
   };
+
+  const previewGroups = groups.length > 0 ? groups : SAMPLE_GROUPS;
 
   useEffect(() => {
     fetchSettings();
@@ -378,14 +373,12 @@ export default function Page() {
       return;
     }
 
-    const invalidGroup = GROUP_ORDER.find((slug) => {
-      const color = settings.group_styles?.[slug]?.color;
-      return color && !HEX_COLOR.test(color);
-    });
+    const invalidGroup = Object.entries(settings.group_styles || {}).find(
+      ([, style]) => style?.color && !HEX_COLOR.test(style.color)
+    );
     if (invalidGroup) {
-      setError(
-        `${(groupDefaults[invalidGroup] || FALLBACK_GROUP_DEFAULTS[invalidGroup]).name} tile color must be hex like #RRGGBB`
-      );
+      const groupName = groups.find((g) => g.key === invalidGroup[0])?.name || invalidGroup[0];
+      setError(`${groupName} tile color must be hex like #RRGGBB`);
       return;
     }
 
@@ -494,11 +487,11 @@ export default function Page() {
 
       {/* Offer tiles */}
       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25 }}>
-        {GROUP_ORDER.slice(0, 4).map((slug) => {
-          const tile = mergedStyle(s, slug);
+        {previewGroups.slice(0, 4).map((group) => {
+          const tile = liveStyle(s, group);
           return (
           <Box
-            key={slug}
+            key={group.key}
             sx={{
               position: 'relative',
               overflow: 'hidden',
@@ -606,7 +599,7 @@ export default function Page() {
   );
 
   const renderOfferPreview = (s: DigitalCartUiSettings) => {
-    const offerStyle = mergedStyle(s, GROUP_ORDER[0]);
+    const offerStyle = liveStyle(s, previewGroups[0]);
     const offer = offerStyle.color;
     return (
       <>
@@ -1013,17 +1006,22 @@ export default function Page() {
 
               <Card>
                 <CardHeader
-                  title="Offer group tiles"
-                  subheader="Tile & banner of each offer group on the website. Empty fields use the defaults shown."
+                  title="Offer tiles & banners"
+                  subheader="One entry per distinct Offer in the uploaded sheet. Empty fields use the auto-derived defaults shown as placeholders."
                 />
                 <CardContent>
+                  {groups.length === 0 && (
+                    <Alert severity="info">
+                      Upload an offer sheet in Digital Cart → Products to see its offer groups
+                      here.
+                    </Alert>
+                  )}
                   <Stack spacing={3}>
-                    {GROUP_ORDER.map((slug) => {
-                      const defaults = groupDefaults[slug] || FALLBACK_GROUP_DEFAULTS[slug];
-                      const over = settings.group_styles?.[slug] || {};
-                      const merged = mergedStyle(settings, slug);
+                    {groups.map((group) => {
+                      const over = settings.group_styles?.[group.key] || {};
+                      const merged = liveStyle(settings, group);
                       return (
-                        <Box key={slug}>
+                        <Box key={group.key}>
                           <Stack direction="row" spacing={1} alignItems="center" mb={1.25}>
                             <Box
                               sx={{
@@ -1033,7 +1031,10 @@ export default function Page() {
                                 bgcolor: merged.color,
                               }}
                             />
-                            <Typography variant="subtitle2">{defaults.name}</Typography>
+                            <Typography variant="subtitle2">{group.name}</Typography>
+                            <Typography variant="caption" color="text.disabled">
+                              {group.count} products
+                            </Typography>
                           </Stack>
                           <Grid container spacing={1.5}>
                             <Grid size={{ xs: 12, sm: 4 }}>
@@ -1041,7 +1042,7 @@ export default function Page() {
                                 label="Tile color"
                                 hint=""
                                 value={over.color || ''}
-                                onChange={(value) => setGroupField(slug, 'color', value)}
+                                onChange={(value) => setGroupField(group.key, 'color', value)}
                               />
                             </Grid>
                             <Grid size={{ xs: 12, sm: 8 }}>
@@ -1049,9 +1050,9 @@ export default function Page() {
                                 fullWidth
                                 size="small"
                                 label="Banner label"
-                                placeholder={defaults.label}
+                                placeholder={group.defaults.label}
                                 value={over.label || ''}
-                                onChange={(e) => setGroupField(slug, 'label', e.target.value)}
+                                onChange={(e) => setGroupField(group.key, 'label', e.target.value)}
                               />
                             </Grid>
                             <Grid size={{ xs: 4 }}>
@@ -1059,9 +1060,9 @@ export default function Page() {
                                 fullWidth
                                 size="small"
                                 label="Big text 1"
-                                placeholder={defaults.line1}
+                                placeholder={group.defaults.line1}
                                 value={over.line1 || ''}
-                                onChange={(e) => setGroupField(slug, 'line1', e.target.value)}
+                                onChange={(e) => setGroupField(group.key, 'line1', e.target.value)}
                               />
                             </Grid>
                             <Grid size={{ xs: 4 }}>
@@ -1069,9 +1070,9 @@ export default function Page() {
                                 fullWidth
                                 size="small"
                                 label="Big text 2"
-                                placeholder={defaults.line2}
+                                placeholder={group.defaults.line2}
                                 value={over.line2 || ''}
-                                onChange={(e) => setGroupField(slug, 'line2', e.target.value)}
+                                onChange={(e) => setGroupField(group.key, 'line2', e.target.value)}
                               />
                             </Grid>
                             <Grid size={{ xs: 4 }}>
@@ -1079,15 +1080,15 @@ export default function Page() {
                                 fullWidth
                                 size="small"
                                 label="Ribbon"
-                                placeholder={defaults.ribbon || '—'}
+                                placeholder={group.defaults.ribbon || '—'}
                                 value={over.ribbon || ''}
-                                onChange={(e) => setGroupField(slug, 'ribbon', e.target.value)}
+                                onChange={(e) => setGroupField(group.key, 'ribbon', e.target.value)}
                               />
                             </Grid>
                             <Grid size={{ xs: 12 }}>
                               <BannerImageField
                                 value={over.banner_image_url || ''}
-                                onChange={(url) => setGroupField(slug, 'banner_image_url', url)}
+                                onChange={(url) => setGroupField(group.key, 'banner_image_url', url)}
                               />
                             </Grid>
                           </Grid>
