@@ -24,6 +24,16 @@ export interface ProjectSettingsConfig {
   android_store_url: string;
   ios_store_url: string;
   force_update_message: string;
+
+  // Splash screen — edited on the Mobile App > App Settings page.
+  splash_logo_size: string;
+  splash_background_color: string;
+  splash_background_image_url: string;
+  splash_tagline: string;
+  splash_tagline_color: string;
+  splash_animation: string;
+  splash_duration_ms: string;
+  splash_show_loader: string;
 }
 
 export interface ProjectSettingsResponse {

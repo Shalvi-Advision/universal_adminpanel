@@ -167,10 +167,22 @@ export const navData: NavItem[] = [
     ],
   },
   {
-    title: 'App Branding',
+    title: 'Mobile App',
     path: '/branding',
-    icon: iconify('solar:palette-bold-duotone'),
+    icon: iconify('solar:smartphone-bold-duotone'),
     permissionSection: 'dynamicSection',
+    children: [
+      {
+        title: 'App Branding',
+        path: '/branding',
+        icon: iconify('solar:palette-bold-duotone'),
+      },
+      {
+        title: 'App Settings',
+        path: '/app-settings',
+        icon: iconify('solar:settings-bold-duotone'),
+      },
+    ],
   },
   {
     title: 'Admin Permissions',
