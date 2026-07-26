@@ -191,6 +191,11 @@ export const navData: NavItem[] = [
             icon: iconify('solar:stars-bold-duotone'),
           },
           {
+            title: 'Home',
+            path: '/screens/home',
+            icon: iconify('solar:home-2-bold-duotone'),
+          },
+          {
             title: 'Onboarding',
             path: '/screens/onboarding',
             icon: iconify('solar:slider-horizontal-bold-duotone'),

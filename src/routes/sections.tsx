@@ -55,6 +55,7 @@ export const AdminPermissionsPage = lazyWithRetry(() => import('src/pages/admin-
 export const BrandingPage = lazyWithRetry(() => import('src/pages/branding'));
 export const SplashScreenPage = lazyWithRetry(() => import('src/pages/screens/splash'));
 export const OnboardingScreenPage = lazyWithRetry(() => import('src/pages/screens/onboarding'));
+export const HomeScreenPage = lazyWithRetry(() => import('src/pages/screens/home'));
 export const AppConfigPage = lazyWithRetry(() => import('src/pages/app-config'));
 export const IntegrationsPage = lazyWithRetry(() => import('src/pages/integrations'));
 export const DigitalCartPage = lazyWithRetry(() => import('src/pages/digital-cart'));
@@ -282,6 +283,14 @@ export const routesSection: RouteObject[] = [
         element: (
           <PermissionGuard section="dynamicSection">
             <SplashScreenPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'screens/home',
+        element: (
+          <PermissionGuard section="dynamicSection">
+            <HomeScreenPage />
           </PermissionGuard>
         ),
       },
