@@ -166,6 +166,9 @@ export const navData: NavItem[] = [
       },
     ],
   },
+  // Grouped by what a setting *is*, not by which screen shows it: theme
+  // tokens apply to every screen at once, screen content is per-screen, and
+  // integration keys are a different audience and blast radius entirely.
   {
     title: 'Mobile App',
     path: '/branding',
@@ -173,14 +176,37 @@ export const navData: NavItem[] = [
     permissionSection: 'dynamicSection',
     children: [
       {
-        title: 'App Branding',
+        title: 'Theme',
         path: '/branding',
         icon: iconify('solar:palette-bold-duotone'),
       },
       {
-        title: 'App Settings',
-        path: '/app-settings',
+        title: 'Screens',
+        path: '/screens/splash',
+        icon: iconify('solar:widget-4-bold-duotone'),
+        children: [
+          {
+            title: 'Splash',
+            path: '/screens/splash',
+            icon: iconify('solar:stars-bold-duotone'),
+          },
+          {
+            title: 'Onboarding',
+            path: '/screens/onboarding',
+            icon: iconify('solar:slider-horizontal-bold-duotone'),
+          },
+        ],
+      },
+      {
+        title: 'App Config',
+        path: '/app-config',
         icon: iconify('solar:settings-bold-duotone'),
+      },
+      {
+        title: 'Integrations',
+        path: '/integrations',
+        icon: iconify('solar:key-bold-duotone'),
+        superAdminOnly: true,
       },
     ],
   },

@@ -50,15 +50,21 @@ export function DashboardLayout({
   const theme = useTheme();
   const { canAccessSection, isSuperAdmin } = usePermissions();
 
-  const filteredNavData = useMemo(
-    () =>
-      navData.filter((item) => {
-        if (item.superAdminOnly) return isSuperAdmin;
-        if (item.permissionSection) return canAccessSection(item.permissionSection);
-        return true;
-      }),
-    [canAccessSection, isSuperAdmin]
-  );
+  const filteredNavData = useMemo(() => {
+    // Recursive: a superAdminOnly or permission-gated entry nested under a
+    // group has to be filtered too, otherwise restricted pages stay visible in
+    // the sidebar as soon as they move under one.
+    const filter = (items: typeof navData): typeof navData =>
+      items
+        .filter((item) => {
+          if (item.superAdminOnly) return isSuperAdmin;
+          if (item.permissionSection) return canAccessSection(item.permissionSection);
+          return true;
+        })
+        .map((item) => (item.children ? { ...item, children: filter(item.children) } : item));
+
+    return filter(navData);
+  }, [canAccessSection, isSuperAdmin]);
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 

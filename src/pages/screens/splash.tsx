@@ -95,10 +95,10 @@ export default function Page() {
     <Container maxWidth="lg">
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
         <Box>
-          <Typography variant="h4">App Settings</Typography>
+          <Typography variant="h4">Splash Screen</Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {clientName} ({projectCode}) — splash screen shown while the mobile app starts up.
-            Changes apply on the app&apos;s next launch, no rebuild needed.
+            {clientName} ({projectCode}) — shown while the mobile app starts up. Changes apply on
+            the app&apos;s next launch, no rebuild needed.
           </Typography>
         </Box>
         <PermissionButton section="dynamicSection" action="edit" fallback="disable">
