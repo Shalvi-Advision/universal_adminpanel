@@ -44,6 +44,7 @@ export default function Page() {
     saving,
     error,
     saved,
+    set,
     setText,
     save,
     dismissSaved,
