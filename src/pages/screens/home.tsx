@@ -1,4 +1,10 @@
-import type { HomeSection, SourceOption, HomeSectionInput } from 'src/services/home-sections';
+import type { StoreCode } from 'src/types/api';
+import type {
+  HomeSection,
+  FeedSection,
+  SourceOption,
+  HomeSectionInput,
+} from 'src/services/home-sections';
 
 import { useState, useEffect, useCallback } from 'react';
 
@@ -23,7 +29,9 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { getStoreCodes } from 'src/services/store-codes';
 import {
+  previewHomeFeed,
   getHomeSections,
   createHomeSection,
   deleteHomeSection,
@@ -114,6 +122,14 @@ export default function Page() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
 
+  // Preview state. The feed is store-scoped, so the preview needs a store to
+  // ask about — a section can be limited to some stores and absent from others.
+  const [stores, setStores] = useState<StoreCode[]>([]);
+  const [previewStore, setPreviewStore] = useState('');
+  const [feed, setFeed] = useState<FeedSection[]>([]);
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [feedError, setFeedError] = useState('');
+
   const [editing, setEditing] = useState<HomeSection | null>(null);
   const [draft, setDraft] = useState<HomeSectionInput>(emptyDraft());
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -138,11 +154,64 @@ export default function Page() {
     fetchSections();
   }, [fetchSections]);
 
+  useEffect(() => {
+    let cancelled = false;
+    getStoreCodes()
+      .then((response) => {
+        if (cancelled) return;
+        const list = response.data ?? [];
+        setStores(list);
+        // Default to the first store rather than "all": the feed for no store
+        // is not what any shopper sees.
+        setPreviewStore((current) => current || list[0]?.store_code || '');
+      })
+      .catch(() => {
+        // A missing store list only costs the selector; the preview still works
+        // against the tenant-wide feed.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const loadPreview = useCallback(async (storeCode: string) => {
+    try {
+      setFeedLoading(true);
+      setFeedError('');
+      const response = await previewHomeFeed(storeCode);
+      setFeed(response.success ? response.data : []);
+    } catch (err: any) {
+      setFeed([]);
+      setFeedError(err.message || 'Could not load the preview');
+    } finally {
+      setFeedLoading(false);
+    }
+  }, []);
+
+  // `sections` changes after every save, reorder and toggle, so the preview
+  // follows edits without a manual refresh.
+  useEffect(() => {
+    loadPreview(previewStore);
+  }, [loadPreview, previewStore, sections]);
+
   const isPersonalized = (type?: string) => Boolean(type && meta.personalized_types.includes(type));
 
   // Switched-off sections are absent from the feed, so the preview drops them.
+  // What the app would actually receive, keyed by section id. A layout row
+  // absent from the feed is one whose source is empty or out of window — worth
+  // showing differently from one that simply has no items yet.
+  const feedById = new Map(feed.map((section) => [section.id, section]));
+
   const visibleSections = sections.filter((s) => s.is_active);
   const hiddenCount = sections.length - visibleSections.length;
+
+  // Active rows the feed did not return: the source was deleted, deactivated,
+  // or has nothing for this store. Silent in the app, so worth surfacing here.
+  const emptySections = feed.length
+    ? visibleSections
+        .filter((s) => !isPersonalized(s.type) && !feedById.has(s._id))
+        .map((s) => s.title || TYPE_LABELS[s.type] || s.type)
+    : [];
 
   const sourceCollectionFor = (type?: string, current?: string) => {
     if (!type) return 'none';
@@ -447,10 +516,44 @@ export default function Page() {
               <Typography variant="h6" sx={{ mb: 0.5 }}>
                 Preview
               </Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
-                Order and shape only — the app draws the real content from each section&apos;s
-                source.
+              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                The real feed for this store, exactly as the app receives it.
               </Typography>
+
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                <TextField
+                  select
+                  fullWidth
+                  size="small"
+                  label="Preview store"
+                  value={previewStore}
+                  onChange={(e) => setPreviewStore(e.target.value)}
+                >
+                  {stores.length === 0 && <MenuItem value="">All stores</MenuItem>}
+                  {stores.map((store) => (
+                    <MenuItem key={store.store_code} value={store.store_code}>
+                      {store.store_name || store.store_code}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <Tooltip title="Reload the preview">
+                  <span>
+                    <IconButton disabled={feedLoading} onClick={() => loadPreview(previewStore)}>
+                      {feedLoading ? (
+                        <CircularProgress size={18} />
+                      ) : (
+                        <Iconify icon={'solar:refresh-bold' as any} />
+                      )}
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Stack>
+
+              {feedError && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  {feedError} — showing shapes only.
+                </Alert>
+              )}
 
               <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                 <PhonePreview bgcolor="#f6f7f9">
@@ -506,18 +609,31 @@ export default function Page() {
                         </Typography>
                       </Stack>
                     ) : (
-                      visibleSections.map((section) => (
-                        <HomeSectionBlock
-                          key={section._id}
-                          label={TYPE_LABELS[section.type] || section.type}
-                          section={section}
-                          personalized={isPersonalized(section.type)}
-                        />
-                      ))
+                      visibleSections.map((section) => {
+                        const live = feedById.get(section._id);
+                        return (
+                          <HomeSectionBlock
+                            key={section._id}
+                            label={TYPE_LABELS[section.type] || section.type}
+                            section={section}
+                            personalized={isPersonalized(section.type)}
+                            items={live?.items}
+                            resolvedTitle={live?.title}
+                          />
+                        );
+                      })
                     )}
                   </Box>
                 </PhonePreview>
               </Box>
+
+              {emptySections.length > 0 && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  {emptySections.length} section
+                  {emptySections.length > 1 ? 's have' : ' has'} no content for this store and will
+                  not appear: {emptySections.join(', ')}.
+                </Alert>
+              )}
 
               {hiddenCount > 0 && (
                 <Typography

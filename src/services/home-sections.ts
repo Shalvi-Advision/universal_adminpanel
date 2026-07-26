@@ -83,3 +83,35 @@ export async function adoptCurrentLayout() {
     {}
   );
 }
+
+// ----------------------------------------------------------------------
+// Preview
+//
+// The panel calls the same public endpoint the mobile app calls, so the
+// preview shows what the app will actually draw — real banners, real category
+// tiles, real products — rather than a guess assembled in the browser.
+
+export interface FeedSection {
+  id: string;
+  type: string;
+  slot: number;
+  title: string;
+  style: { background_color?: string };
+  personalized: boolean;
+  ends_at: string | null;
+  audience: string;
+  config: Record<string, unknown>;
+  items: Record<string, any>[];
+}
+
+export interface HomeFeedResponse {
+  success: boolean;
+  schema_version: number;
+  count: number;
+  data: FeedSection[];
+}
+
+/** The feed for one store, exactly as the app receives it. */
+export async function previewHomeFeed(storeCode: string): Promise<HomeFeedResponse> {
+  return apiClient.post<HomeFeedResponse>('/api/home/feed', { store_code: storeCode });
+}

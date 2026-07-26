@@ -1,35 +1,224 @@
-import type { HomeSection } from 'src/services/home-sections';
-
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 // ----------------------------------------------------------------------
 
-// A wireframe of one home section as the app lays it out. Deliberately grey:
-// it shows shape and order, not content — the real items come from whatever
-// collection the section points at, which this page doesn't load.
+// One home section as the app lays it out.
+//
+// When the caller supplies `items` — the same payload the app receives from
+// /api/home/feed — the block renders the real images and labels, so the
+// preview answers "what will shoppers see" rather than "roughly what shape".
+// Without them it falls back to a grey wireframe, which is still the right
+// answer for a personalised slot or a section whose source is empty.
 
 const TINT = 'rgba(0,0,0,0.08)';
 const TINT_STRONG = 'rgba(0,0,0,0.14)';
 
+/**
+ * Just enough of a section to draw it. Structural rather than tied to
+ * HomeSection, so both a layout row and a feed section satisfy it — the
+ * preview draws the feed, which is what the app actually receives.
+ */
+type PreviewableSection = {
+  type: string;
+  title?: string;
+  style?: { background_color?: string };
+};
+
 type Props = {
-  section: HomeSection;
+  section: PreviewableSection;
   /** Personalised sections arrive empty and are filled on the device. */
   personalized: boolean;
   label: string;
+  /** Live items from the feed; omit to draw the wireframe instead. */
+  items?: Record<string, any>[];
+  /** Title the feed resolved, which may come from the source document. */
+  resolvedTitle?: string;
 };
 
-export function HomeSectionBlock({ section, personalized, label }: Props) {
+export function HomeSectionBlock({ section, personalized, label, items, resolvedTitle }: Props) {
   const background = section.style?.background_color || 'transparent';
-  const heading = section.title || label;
+  const heading = section.title || resolvedTitle || label;
+  const live = !personalized && items && items.length > 0;
 
   return (
     <Box sx={{ px: 1.5, py: 1.25, bgcolor: background }}>
       {heading && <SectionHeading title={heading} />}
-      {personalized ? <PersonalizedBody label={label} /> : <SectionBody type={section.type} />}
+      {personalized ? (
+        <PersonalizedBody label={label} />
+      ) : live ? (
+        <LiveBody type={section.type} items={items} />
+      ) : (
+        <SectionBody type={section.type} />
+      )}
     </Box>
   );
+}
+
+// ----------------------------------------------------------------------
+// Live content
+
+/** First usable image on a feed item, whatever shape the section uses. */
+function imageOf(item: Record<string, any>): string {
+  const assets = item?.banner_urls;
+  if (assets && typeof assets === 'object') {
+    for (const asset of Object.values<any>(assets)) {
+      if (asset && typeof asset === 'object') {
+        const url = asset.mobile || asset.desktop;
+        if (url) return String(url);
+      }
+    }
+  }
+  return String(
+    item?.image_link ||
+      item?.image_url ||
+      item?.product_details?.pcode_img ||
+      item?.product_details?.image_url ||
+      ''
+  );
+}
+
+/** Label for a tile: subcategory name, category name or product name. */
+function labelOf(item: Record<string, any>): string {
+  return String(
+    item?.subcategory_details?.sub_category_name ||
+      item?.category_details?.category_name ||
+      item?.product_details?.product_name ||
+      item?.title ||
+      ''
+  );
+}
+
+function priceOf(item: Record<string, any>): string {
+  const price = item?.product_details?.our_price;
+  const numeric = Number(price);
+  return Number.isFinite(numeric) && numeric > 0 ? `₹${Math.round(numeric)}` : '';
+}
+
+function Thumb({ src, height, radius = 1 }: { src: string; height: number; radius?: number }) {
+  if (!src) {
+    return <Box sx={{ height, borderRadius: radius, bgcolor: TINT_STRONG }} />;
+  }
+  return (
+    <Box
+      component="img"
+      src={src}
+      alt=""
+      loading="lazy"
+      sx={{
+        width: 1,
+        height,
+        borderRadius: radius,
+        objectFit: 'cover',
+        bgcolor: TINT,
+        display: 'block',
+      }}
+    />
+  );
+}
+
+function TileLabel({ text }: { text: string }) {
+  return (
+    <Typography
+      sx={{
+        fontSize: 7.5,
+        lineHeight: 1.25,
+        textAlign: 'center',
+        color: 'rgba(0,0,0,0.66)',
+        overflow: 'hidden',
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+      }}
+    >
+      {text}
+    </Typography>
+  );
+}
+
+function LiveBody({ type, items }: { type: string; items: Record<string, any>[] }) {
+  switch (type) {
+    case 'hero_carousel':
+      return (
+        <Box>
+          <Thumb src={imageOf(items[0])} height={74} radius={1.5} />
+          <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'center', mt: 0.75 }}>
+            {items.slice(0, 4).map((item, i) => (
+              <Box
+                key={item.id ?? i}
+                sx={{
+                  width: i === 0 ? 12 : 4,
+                  height: 4,
+                  borderRadius: 999,
+                  bgcolor: i === 0 ? 'rgba(0,0,0,0.45)' : TINT_STRONG,
+                }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      );
+
+    case 'category_strip':
+    case 'brand_strip':
+      return (
+        <Stack direction="row" spacing={1}>
+          {items.slice(0, 5).map((item, i) => (
+            <Stack key={i} spacing={0.5} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
+              <Box
+                component={imageOf(item) ? 'img' : 'div'}
+                src={imageOf(item) || undefined}
+                alt=""
+                loading="lazy"
+                sx={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  bgcolor: TINT_STRONG,
+                }}
+              />
+              <TileLabel text={labelOf(item)} />
+            </Stack>
+          ))}
+        </Stack>
+      );
+
+    case 'category_grid':
+      return (
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0.75 }}>
+          {items.slice(0, 8).map((item, i) => (
+            <Stack key={i} spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
+              <Thumb src={imageOf(item)} height={30} />
+              <TileLabel text={labelOf(item)} />
+            </Stack>
+          ))}
+        </Box>
+      );
+
+    case 'product_rail':
+    case 'seasonal_picks':
+    case 'flash_sale':
+    case 'deal_of_day':
+      return (
+        <Stack direction="row" spacing={1}>
+          {items.slice(0, 3).map((item, i) => (
+            <Stack key={i} spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+              <Thumb src={imageOf(item)} height={52} />
+              <TileLabel text={labelOf(item)} />
+              {priceOf(item) && (
+                <Typography sx={{ fontSize: 8, fontWeight: 700, color: 'rgba(0,0,0,0.75)' }}>
+                  {priceOf(item)}
+                </Typography>
+              )}
+            </Stack>
+          ))}
+        </Stack>
+      );
+
+    default:
+      return <SectionBody type={type} />;
+  }
 }
 
 // ----------------------------------------------------------------------
