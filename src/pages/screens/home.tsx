@@ -317,6 +317,9 @@ export default function Page() {
     try {
       setBusy(true);
       await reorderHomeSections(reordered.map((s) => s._id));
+      // The optimistic reorder already fired a preview load against the
+      // pre-save order; reload now the server has the new one.
+      await loadPreview(previewStore);
     } catch (err: any) {
       setError(err.message || 'Failed to reorder');
       await fetchSections();
@@ -365,139 +368,133 @@ export default function Page() {
   }
 
   const renderPreview = () => (
-          <Grid size={{ xs: 12, md: 5 }}>
-            <Card sx={{ p: 3, position: 'sticky', top: 24 }}>
-              <Typography variant="h6" sx={{ mb: 0.5 }}>
-                Preview
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-                The real feed for this store, exactly as the app receives it.
-              </Typography>
+    <Grid size={{ xs: 12, md: 5 }}>
+      <Card sx={{ p: 3, position: 'sticky', top: 24 }}>
+        <Typography variant="h6" sx={{ mb: 0.5 }}>
+          Preview
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+          The real feed for this store, exactly as the app receives it.
+        </Typography>
 
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                <TextField
-                  select
-                  fullWidth
-                  size="small"
-                  label="Preview store"
-                  value={previewStore}
-                  onChange={(e) => setPreviewStore(e.target.value)}
-                >
-                  {stores.length === 0 && <MenuItem value="">All stores</MenuItem>}
-                  {stores.map((store) => (
-                    <MenuItem key={store.store_code} value={store.store_code}>
-                      {store.store_name || store.store_code}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <Tooltip title="Reload the preview">
-                  <span>
-                    <IconButton disabled={feedLoading} onClick={() => loadPreview(previewStore)}>
-                      {feedLoading ? (
-                        <CircularProgress size={18} />
-                      ) : (
-                        <Iconify icon={'solar:refresh-bold' as any} />
-                      )}
-                    </IconButton>
-                  </span>
-                </Tooltip>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+          <TextField
+            select
+            fullWidth
+            size="small"
+            label="Preview store"
+            value={previewStore}
+            onChange={(e) => setPreviewStore(e.target.value)}
+          >
+            {stores.length === 0 && <MenuItem value="">All stores</MenuItem>}
+            {stores.map((store) => (
+              <MenuItem key={store.store_code} value={store.store_code}>
+                {store.store_name || store.store_code}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Tooltip title="Reload the preview">
+            <span>
+              <IconButton disabled={feedLoading} onClick={() => loadPreview(previewStore)}>
+                {feedLoading ? (
+                  <CircularProgress size={18} />
+                ) : (
+                  <Iconify icon={'solar:refresh-bold' as any} />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Stack>
+
+        {feedError && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {feedError} — showing shapes only.
+          </Alert>
+        )}
+
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <PhonePreview bgcolor="#f6f7f9">
+            {/* App header */}
+            <Stack spacing={1} sx={{ px: 1.5, pt: 0.5, pb: 1, bgcolor: '#fff' }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Box
+                  sx={{
+                    width: 64,
+                    height: 12,
+                    borderRadius: 999,
+                    bgcolor: 'rgba(0,0,0,0.14)',
+                  }}
+                />
+                <Box
+                  sx={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: '50%',
+                    bgcolor: 'rgba(0,0,0,0.1)',
+                  }}
+                />
               </Stack>
-
-              {feedError && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  {feedError} — showing shapes only.
-                </Alert>
-              )}
-
-              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <PhonePreview bgcolor="#f6f7f9">
-                  {/* App header */}
-                  <Stack spacing={1} sx={{ px: 1.5, pt: 0.5, pb: 1, bgcolor: '#fff' }}>
-                    <Stack direction="row" alignItems="center" justifyContent="space-between">
-                      <Box
-                        sx={{
-                          width: 64,
-                          height: 12,
-                          borderRadius: 999,
-                          bgcolor: 'rgba(0,0,0,0.14)',
-                        }}
-                      />
-                      <Box
-                        sx={{
-                          width: 18,
-                          height: 18,
-                          borderRadius: '50%',
-                          bgcolor: 'rgba(0,0,0,0.1)',
-                        }}
-                      />
-                    </Stack>
-                    <Box
-                      sx={{
-                        height: 22,
-                        borderRadius: 999,
-                        bgcolor: 'rgba(0,0,0,0.06)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        px: 1,
-                      }}
-                    >
-                      <Typography sx={{ fontSize: 9, color: 'rgba(0,0,0,0.35)' }}>
-                        Search for products
-                      </Typography>
-                    </Box>
-                  </Stack>
-
-                  <Box sx={{ flex: 1, overflowY: 'auto' }}>
-                    {feed.length === 0 ? (
-                      <Stack
-                        spacing={1}
-                        sx={{ py: 6, px: 3, alignItems: 'center', textAlign: 'center' }}
-                      >
-                        <Iconify
-                          icon={'solar:eye-closed-bold-duotone' as any}
-                          width={36}
-                          sx={{ color: 'text.disabled' }}
-                        />
-                        <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
-                          {feedLoading
-                            ? 'Loading the feed…'
-                            : 'Nothing to show — every section is switched off or has no content for this store.'}
-                        </Typography>
-                      </Stack>
-                    ) : (
-                      feed.map((section) => (
-                        <HomeSectionBlock
-                          key={section.id}
-                          label={TYPE_LABELS[section.type] || section.type}
-                          section={section}
-                          personalized={section.personalized}
-                          items={section.items}
-                          resolvedTitle={section.title}
-                        />
-                      ))
-                    )}
-                  </Box>
-                </PhonePreview>
-              </Box>
-
-              {emptySections.length > 0 && (
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  {emptySections.length} section
-                  {emptySections.length > 1 ? 's have' : ' has'} no content for this store and will
-                  not appear: {emptySections.join(', ')}.
-                </Alert>
-              )}
-
-              {hiddenCount > 0 && (
-                <Typography
-                  variant="caption"
-                  sx={{ display: 'block', mt: 2, color: 'text.secondary' }}
-                >
-                  {hiddenCount} switched-off section{hiddenCount > 1 ? 's are' : ' is'} not shown.
+              <Box
+                sx={{
+                  height: 22,
+                  borderRadius: 999,
+                  bgcolor: 'rgba(0,0,0,0.06)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  px: 1,
+                }}
+              >
+                <Typography sx={{ fontSize: 9, color: 'rgba(0,0,0,0.35)' }}>
+                  Search for products
                 </Typography>
+              </Box>
+            </Stack>
+
+            <Box sx={{ flex: 1, overflowY: 'auto' }}>
+              {feed.length === 0 ? (
+                <Stack spacing={1} sx={{ py: 6, px: 3, alignItems: 'center', textAlign: 'center' }}>
+                  <Iconify
+                    icon={'solar:eye-closed-bold-duotone' as any}
+                    width={36}
+                    sx={{ color: 'text.disabled' }}
+                  />
+                  <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
+                    {feedLoading
+                      ? 'Loading the feed…'
+                      : 'Nothing to show — every section is switched off or has no content for this store.'}
+                  </Typography>
+                </Stack>
+              ) : (
+                feed.map((section) => (
+                  <HomeSectionBlock
+                    key={section.id}
+                    label={TYPE_LABELS[section.type] || section.type}
+                    section={section}
+                    personalized={section.personalized}
+                    items={section.items}
+                    resolvedTitle={section.title}
+                  />
+                ))
               )}
-            </Card>
-          </Grid>
+            </Box>
+          </PhonePreview>
+        </Box>
+
+        {emptySections.length > 0 && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            {emptySections.length} section
+            {emptySections.length > 1 ? 's have' : ' has'} no content for this store and will not
+            appear: {emptySections.join(', ')}.
+          </Alert>
+        )}
+
+        {hiddenCount > 0 && (
+          <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary' }}>
+            {hiddenCount} switched-off section{hiddenCount > 1 ? 's are' : ' is'} not shown.
+          </Typography>
+        )}
+      </Card>
+    </Grid>
   );
 
   return (
@@ -533,27 +530,27 @@ export default function Page() {
       {sections.length === 0 ? (
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 7 }}>
-        <Card sx={{ p: 6, textAlign: 'center' }}>
-          <Iconify
-            icon={'solar:widget-4-bold-duotone' as any}
-            width={64}
-            sx={{ color: 'text.disabled', mb: 2 }}
-          />
-          <Typography variant="h6">This project uses the built-in layout</Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: 'text.secondary', mb: 3, maxWidth: 520, mx: 'auto' }}
-          >
-            The app is showing its default arrangement. Adopt it to turn those sections into rows
-            you can reorder, schedule and switch off. Nothing changes for shoppers until you edit
-            something — and deleting every row hands control back to the app.
-          </Typography>
-          <PermissionButton section="dynamicSection" action="create" fallback="disable">
-            <Button variant="contained" disabled={busy} onClick={handleAdopt}>
-              Adopt the current layout
-            </Button>
-          </PermissionButton>
-        </Card>
+            <Card sx={{ p: 6, textAlign: 'center' }}>
+              <Iconify
+                icon={'solar:widget-4-bold-duotone' as any}
+                width={64}
+                sx={{ color: 'text.disabled', mb: 2 }}
+              />
+              <Typography variant="h6">This project uses the built-in layout</Typography>
+              <Typography
+                variant="body2"
+                sx={{ color: 'text.secondary', mb: 3, maxWidth: 520, mx: 'auto' }}
+              >
+                The app is showing its default arrangement. Adopt it to turn those sections into
+                rows you can reorder, schedule and switch off. Nothing changes for shoppers until
+                you edit something — and deleting every row hands control back to the app.
+              </Typography>
+              <PermissionButton section="dynamicSection" action="create" fallback="disable">
+                <Button variant="contained" disabled={busy} onClick={handleAdopt}>
+                  Adopt the current layout
+                </Button>
+              </PermissionButton>
+            </Card>
           </Grid>
           {renderPreview()}
         </Grid>
@@ -651,7 +648,7 @@ export default function Page() {
               ))}
             </Stack>
           </Grid>
-
+          {renderPreview()}
         </Grid>
       )}
 
