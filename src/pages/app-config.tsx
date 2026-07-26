@@ -6,10 +6,12 @@ import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
+import Switch from '@mui/material/Switch';
 import Snackbar from '@mui/material/Snackbar';
 import Container from '@mui/material/Container';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from 'src/components/iconify';
@@ -28,6 +30,7 @@ const CONFIG_FIELDS: (keyof ProjectSettingsConfig)[] = [
   'force_update_message',
   'contact_email',
   'contact_phone',
+  'home_feed_enabled',
 ];
 
 // ----------------------------------------------------------------------
@@ -166,6 +169,27 @@ export default function Page() {
                 onChange={setText('contact_phone')}
               />
             </Stack>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 0.5 }}>
+              Home Screen
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+              With this on, the home screen&apos;s sections and their order come from the server
+              instead of being fixed in the app. Turning it off restores the built-in layout on the
+              app&apos;s next launch — no release needed either way.
+            </Typography>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.home_feed_enabled === 'true'}
+                  onChange={(e) => set('home_feed_enabled')(e.target.checked ? 'true' : 'false')}
+                />
+              }
+              label="Server-driven home layout"
+            />
           </Card>
         </Grid>
       </Grid>

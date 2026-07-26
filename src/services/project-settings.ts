@@ -34,6 +34,9 @@ export interface ProjectSettingsConfig {
   splash_animation: string;
   splash_duration_ms: string;
   splash_show_loader: string;
+
+  // Home screen rollout switch — 'true' renders home from the server feed.
+  home_feed_enabled: string;
 }
 
 export interface ProjectSettingsResponse {
