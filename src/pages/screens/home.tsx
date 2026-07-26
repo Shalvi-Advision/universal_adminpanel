@@ -25,15 +25,17 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import {
   getHomeSections,
-  adoptCurrentLayout,
   createHomeSection,
   deleteHomeSection,
   updateHomeSection,
+  adoptCurrentLayout,
   reorderHomeSections,
 } from 'src/services/home-sections';
 
 import { Iconify } from 'src/components/iconify';
 import { ColorField } from 'src/components/project-settings/color-field';
+import { PhonePreview } from 'src/components/phone-preview/phone-preview';
+import { HomeSectionBlock } from 'src/components/phone-preview/home-section-block';
 import { PermissionButton } from 'src/components/permission-button/permission-button';
 
 // ----------------------------------------------------------------------
@@ -137,6 +139,10 @@ export default function Page() {
   }, [fetchSections]);
 
   const isPersonalized = (type?: string) => Boolean(type && meta.personalized_types.includes(type));
+
+  // Switched-off sections are absent from the feed, so the preview drops them.
+  const visibleSections = sections.filter((s) => s.is_active);
+  const hiddenCount = sections.length - visibleSections.length;
 
   const sourceCollectionFor = (type?: string, current?: string) => {
     if (!type) return 'none';
@@ -342,92 +348,188 @@ export default function Page() {
           </PermissionButton>
         </Card>
       ) : (
-        <Stack spacing={1.5}>
-          {sections.map((section, index) => (
-            <Card key={section._id} sx={{ p: 2, opacity: section.is_active ? 1 : 0.55 }}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Stack>
-                  <IconButton
-                    size="small"
-                    disabled={busy || index === 0}
-                    onClick={() => move(index, -1)}
-                  >
-                    <Iconify icon={'eva:arrow-ios-upward-fill' as any} />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    disabled={busy || index === sections.length - 1}
-                    onClick={() => move(index, 1)}
-                  >
-                    <Iconify icon={'eva:arrow-ios-downward-fill' as any} />
-                  </IconButton>
-                </Stack>
-
-                <Box
-                  sx={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 1.5,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    bgcolor: section.style?.background_color || 'background.neutral',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                  }}
-                >
-                  <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                    {index + 1}
-                  </Typography>
-                </Box>
-
-                <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
-                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                    <Typography variant="subtitle1" noWrap>
-                      {section.title || TYPE_LABELS[section.type] || section.type}
-                    </Typography>
-                    <Chip size="small" label={TYPE_LABELS[section.type] || section.type} />
-                    {isPersonalized(section.type) && (
-                      <Tooltip title="Built on the device, so the feed stays cacheable">
-                        <Chip size="small" color="info" label="Personalised" />
-                      </Tooltip>
-                    )}
-                    {section.audience !== 'all' && (
-                      <Chip
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, md: 7 }}>
+            <Stack spacing={1.5}>
+              {sections.map((section, index) => (
+                <Card key={section._id} sx={{ p: 2, opacity: section.is_active ? 1 : 0.55 }}>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Stack>
+                      <IconButton
                         size="small"
-                        color="warning"
-                        label={AUDIENCE_LABELS[section.audience]}
-                      />
-                    )}
-                    {!section.is_active && <Chip size="small" label="Hidden" />}
+                        disabled={busy || index === 0}
+                        onClick={() => move(index, -1)}
+                      >
+                        <Iconify icon={'eva:arrow-ios-upward-fill' as any} />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        disabled={busy || index === sections.length - 1}
+                        onClick={() => move(index, 1)}
+                      >
+                        <Iconify icon={'eva:arrow-ios-downward-fill' as any} />
+                      </IconButton>
+                    </Stack>
+
+                    <Box
+                      sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 1.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: section.style?.background_color || 'background.neutral',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
+                      <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                        {index + 1}
+                      </Typography>
+                    </Box>
+
+                    <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+                      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                        <Typography variant="subtitle1" noWrap>
+                          {section.title || TYPE_LABELS[section.type] || section.type}
+                        </Typography>
+                        <Chip size="small" label={TYPE_LABELS[section.type] || section.type} />
+                        {isPersonalized(section.type) && (
+                          <Tooltip title="Built on the device, so the feed stays cacheable">
+                            <Chip size="small" color="info" label="Personalised" />
+                          </Tooltip>
+                        )}
+                        {section.audience !== 'all' && (
+                          <Chip
+                            size="small"
+                            color="warning"
+                            label={AUDIENCE_LABELS[section.audience]}
+                          />
+                        )}
+                        {!section.is_active && <Chip size="small" label="Hidden" />}
+                      </Stack>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        {describeSource(section)}
+                        {scheduleLabel(section) ? ` · ${scheduleLabel(section)}` : ''}
+                      </Typography>
+                    </Stack>
+
+                    <Switch
+                      checked={section.is_active}
+                      disabled={busy}
+                      onChange={() => handleToggle(section)}
+                    />
+
+                    <PermissionButton section="dynamicSection" action="edit" fallback="disable">
+                      <IconButton disabled={busy} onClick={() => openEdit(section)}>
+                        <Iconify icon={'solar:pen-bold' as any} />
+                      </IconButton>
+                    </PermissionButton>
+
+                    <PermissionButton section="dynamicSection" action="delete" fallback="disable">
+                      <IconButton
+                        color="error"
+                        disabled={busy}
+                        onClick={() => handleDelete(section)}
+                      >
+                        <Iconify icon={'solar:trash-bin-trash-bold' as any} />
+                      </IconButton>
+                    </PermissionButton>
                   </Stack>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {describeSource(section)}
-                    {scheduleLabel(section) ? ` · ${scheduleLabel(section)}` : ''}
-                  </Typography>
-                </Stack>
+                </Card>
+              ))}
+            </Stack>
+          </Grid>
 
-                <Switch
-                  checked={section.is_active}
-                  disabled={busy}
-                  onChange={() => handleToggle(section)}
-                />
+          <Grid size={{ xs: 12, md: 5 }}>
+            <Card sx={{ p: 3, position: 'sticky', top: 24 }}>
+              <Typography variant="h6" sx={{ mb: 0.5 }}>
+                Preview
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+                Order and shape only — the app draws the real content from each section&apos;s
+                source.
+              </Typography>
 
-                <PermissionButton section="dynamicSection" action="edit" fallback="disable">
-                  <IconButton disabled={busy} onClick={() => openEdit(section)}>
-                    <Iconify icon={'solar:pen-bold' as any} />
-                  </IconButton>
-                </PermissionButton>
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <PhonePreview bgcolor="#f6f7f9">
+                  {/* App header */}
+                  <Stack spacing={1} sx={{ px: 1.5, pt: 0.5, pb: 1, bgcolor: '#fff' }}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between">
+                      <Box
+                        sx={{
+                          width: 64,
+                          height: 12,
+                          borderRadius: 999,
+                          bgcolor: 'rgba(0,0,0,0.14)',
+                        }}
+                      />
+                      <Box
+                        sx={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          bgcolor: 'rgba(0,0,0,0.1)',
+                        }}
+                      />
+                    </Stack>
+                    <Box
+                      sx={{
+                        height: 22,
+                        borderRadius: 999,
+                        bgcolor: 'rgba(0,0,0,0.06)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        px: 1,
+                      }}
+                    >
+                      <Typography sx={{ fontSize: 9, color: 'rgba(0,0,0,0.35)' }}>
+                        Search for products
+                      </Typography>
+                    </Box>
+                  </Stack>
 
-                <PermissionButton section="dynamicSection" action="delete" fallback="disable">
-                  <IconButton color="error" disabled={busy} onClick={() => handleDelete(section)}>
-                    <Iconify icon={'solar:trash-bin-trash-bold' as any} />
-                  </IconButton>
-                </PermissionButton>
-              </Stack>
+                  <Box sx={{ flex: 1, overflowY: 'auto' }}>
+                    {visibleSections.length === 0 ? (
+                      <Stack
+                        spacing={1}
+                        sx={{ py: 6, px: 3, alignItems: 'center', textAlign: 'center' }}
+                      >
+                        <Iconify
+                          icon={'solar:eye-closed-bold-duotone' as any}
+                          width={36}
+                          sx={{ color: 'text.disabled' }}
+                        />
+                        <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
+                          Every section is switched off — shoppers see an empty home screen.
+                        </Typography>
+                      </Stack>
+                    ) : (
+                      visibleSections.map((section) => (
+                        <HomeSectionBlock
+                          key={section._id}
+                          label={TYPE_LABELS[section.type] || section.type}
+                          section={section}
+                          personalized={isPersonalized(section.type)}
+                        />
+                      ))
+                    )}
+                  </Box>
+                </PhonePreview>
+              </Box>
+
+              {hiddenCount > 0 && (
+                <Typography
+                  variant="caption"
+                  sx={{ display: 'block', mt: 2, color: 'text.secondary' }}
+                >
+                  {hiddenCount} switched-off section{hiddenCount > 1 ? 's are' : ' is'} not shown.
+                </Typography>
+              )}
             </Card>
-          ))}
-        </Stack>
+          </Grid>
+        </Grid>
       )}
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">

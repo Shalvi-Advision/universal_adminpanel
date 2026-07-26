@@ -20,6 +20,7 @@ import { Iconify } from 'src/components/iconify';
 import { ColorField } from 'src/components/project-settings/color-field';
 import { ImageField } from 'src/components/project-settings/image-field';
 import { PermissionButton } from 'src/components/permission-button/permission-button';
+import { PhonePreview, statusColorFor } from 'src/components/phone-preview/phone-preview';
 import { useProjectSettings } from 'src/components/project-settings/use-project-settings';
 
 // ----------------------------------------------------------------------
@@ -250,58 +251,48 @@ export default function Page() {
               Approximate — the device renders at its own scale.
             </Typography>
 
-            <Box
-              sx={{
-                width: 1,
-                aspectRatio: '9 / 16',
-                maxHeight: 520,
-                mx: 'auto',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 3,
-                bgcolor: config.splash_background_color || 'background.neutral',
-                backgroundImage: config.splash_background_image_url
-                  ? `url(${config.splash_background_image_url})`
-                  : 'none',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            >
-              {config.splash_logo_url ? (
-                <Box
-                  component="img"
-                  alt="Splash logo"
-                  src={config.splash_logo_url}
-                  sx={{ maxWidth: '70%', height: previewLogoSize / 3, objectFit: 'contain' }}
-                />
-              ) : (
-                <Iconify
-                  icon={'solar:gallery-bold-duotone' as any}
-                  width={64}
-                  sx={{ color: 'text.disabled' }}
-                />
-              )}
-
-              {config.splash_tagline && (
-                <Typography
-                  variant="body2"
-                  sx={{
-                    px: 3,
-                    textAlign: 'center',
-                    color: config.splash_tagline_color || 'text.secondary',
-                  }}
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <PhonePreview
+                bgcolor={config.splash_background_color || '#ffffff'}
+                statusColor={statusColorFor(config.splash_background_color)}
+                backgroundImage={config.splash_background_image_url || undefined}
+              >
+                <Stack
+                  spacing={3}
+                  sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', px: 3 }}
                 >
-                  {config.splash_tagline}
-                </Typography>
-              )}
+                  {config.splash_logo_url ? (
+                    <Box
+                      component="img"
+                      alt="Splash logo"
+                      src={config.splash_logo_url}
+                      sx={{ maxWidth: '70%', height: previewLogoSize / 3, objectFit: 'contain' }}
+                    />
+                  ) : (
+                    <Iconify
+                      icon={'solar:gallery-bold-duotone' as any}
+                      width={64}
+                      sx={{ color: 'text.disabled' }}
+                    />
+                  )}
 
-              {(config.splash_show_loader ?? 'true') !== 'false' && <CircularProgress size={24} />}
+                  {config.splash_tagline && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        textAlign: 'center',
+                        color: config.splash_tagline_color || 'text.secondary',
+                      }}
+                    >
+                      {config.splash_tagline}
+                    </Typography>
+                  )}
+
+                  {(config.splash_show_loader ?? 'true') !== 'false' && (
+                    <CircularProgress size={24} />
+                  )}
+                </Stack>
+              </PhonePreview>
             </Box>
 
             <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary' }}>

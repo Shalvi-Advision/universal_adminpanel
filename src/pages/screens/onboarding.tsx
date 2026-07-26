@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
+import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
@@ -31,6 +32,7 @@ import {
 
 import { Iconify } from 'src/components/iconify';
 import { ImageField } from 'src/components/project-settings/image-field';
+import { PhonePreview } from 'src/components/phone-preview/phone-preview';
 import { PermissionButton } from 'src/components/permission-button/permission-button';
 
 // ----------------------------------------------------------------------
@@ -63,6 +65,7 @@ export default function Page() {
   const [editing, setEditing] = useState<OnboardingSlide | null>(null);
   const [draft, setDraft] = useState<DraftSlide>(EMPTY_DRAFT);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
 
   const fetchSlides = useCallback(async () => {
     try {
@@ -169,7 +172,13 @@ export default function Page() {
     }
   };
 
-  const activeCount = slides.filter((s) => s.is_active).length;
+  // The app only ever shows active slides, so the preview walks those.
+  const activeSlides = slides.filter((s) => s.is_active);
+  const activeCount = activeSlides.length;
+
+  // Hiding or deleting a slide can strand the index past the end.
+  const clampedIndex = Math.min(previewIndex, Math.max(activeSlides.length - 1, 0));
+  const currentSlide = activeSlides[clampedIndex];
 
   if (loading) {
     return (
@@ -227,76 +236,200 @@ export default function Page() {
           </PermissionButton>
         </Card>
       ) : (
-        <Stack spacing={2}>
-          {slides.map((slide, index) => (
-            <Card key={slide._id} sx={{ p: 2, opacity: slide.is_active ? 1 : 0.55 }}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Stack>
-                  <IconButton
-                    size="small"
-                    disabled={busy || index === 0}
-                    onClick={() => move(index, -1)}
-                  >
-                    <Iconify icon={'eva:arrow-ios-upward-fill' as any} />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    disabled={busy || index === slides.length - 1}
-                    onClick={() => move(index, 1)}
-                  >
-                    <Iconify icon={'eva:arrow-ios-downward-fill' as any} />
-                  </IconButton>
-                </Stack>
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, md: 7 }}>
+            <Stack spacing={2}>
+              {slides.map((slide, index) => (
+                <Card key={slide._id} sx={{ p: 2, opacity: slide.is_active ? 1 : 0.55 }}>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Stack>
+                      <IconButton
+                        size="small"
+                        disabled={busy || index === 0}
+                        onClick={() => move(index, -1)}
+                      >
+                        <Iconify icon={'eva:arrow-ios-upward-fill' as any} />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        disabled={busy || index === slides.length - 1}
+                        onClick={() => move(index, 1)}
+                      >
+                        <Iconify icon={'eva:arrow-ios-downward-fill' as any} />
+                      </IconButton>
+                    </Stack>
 
-                <Box
-                  component="img"
-                  alt={slide.title}
-                  src={slide.image_url}
-                  sx={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: 1.5,
-                    objectFit: 'cover',
-                    bgcolor: 'background.neutral',
-                  }}
-                />
+                    <Box
+                      component="img"
+                      alt={slide.title}
+                      src={slide.image_url}
+                      sx={{
+                        width: 72,
+                        height: 72,
+                        borderRadius: 1.5,
+                        objectFit: 'cover',
+                        bgcolor: 'background.neutral',
+                      }}
+                    />
 
-                <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="subtitle1" noWrap>
-                      {slide.title}
-                    </Typography>
-                    <Chip size="small" label={`#${index + 1}`} />
-                    {!slide.is_active && <Chip size="small" color="default" label="Hidden" />}
+                    <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="subtitle1" noWrap>
+                          {slide.title}
+                        </Typography>
+                        <Chip size="small" label={`#${index + 1}`} />
+                        {!slide.is_active && <Chip size="small" color="default" label="Hidden" />}
+                      </Stack>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        {slide.description || <em>No description</em>}
+                      </Typography>
+                    </Stack>
+
+                    <Tooltip title={slide.is_active ? 'Shown in the app' : 'Hidden from the app'}>
+                      <Switch
+                        checked={slide.is_active}
+                        disabled={busy}
+                        onChange={() => handleToggleActive(slide)}
+                      />
+                    </Tooltip>
+
+                    <PermissionButton section="dynamicSection" action="edit" fallback="disable">
+                      <IconButton disabled={busy} onClick={() => openEdit(slide)}>
+                        <Iconify icon={'solar:pen-bold' as any} />
+                      </IconButton>
+                    </PermissionButton>
+
+                    <PermissionButton section="dynamicSection" action="delete" fallback="disable">
+                      <IconButton color="error" disabled={busy} onClick={() => handleDelete(slide)}>
+                        <Iconify icon={'solar:trash-bin-trash-bold' as any} />
+                      </IconButton>
+                    </PermissionButton>
                   </Stack>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {slide.description || <em>No description</em>}
-                  </Typography>
-                </Stack>
+                </Card>
+              ))}
+            </Stack>
+          </Grid>
 
-                <Tooltip title={slide.is_active ? 'Shown in the app' : 'Hidden from the app'}>
-                  <Switch
-                    checked={slide.is_active}
-                    disabled={busy}
-                    onChange={() => handleToggleActive(slide)}
-                  />
-                </Tooltip>
-
-                <PermissionButton section="dynamicSection" action="edit" fallback="disable">
-                  <IconButton disabled={busy} onClick={() => openEdit(slide)}>
-                    <Iconify icon={'solar:pen-bold' as any} />
-                  </IconButton>
-                </PermissionButton>
-
-                <PermissionButton section="dynamicSection" action="delete" fallback="disable">
-                  <IconButton color="error" disabled={busy} onClick={() => handleDelete(slide)}>
-                    <Iconify icon={'solar:trash-bin-trash-bold' as any} />
-                  </IconButton>
-                </PermissionButton>
+          <Grid size={{ xs: 12, md: 5 }}>
+            <Card sx={{ p: 3, position: 'sticky', top: 24 }}>
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                sx={{ mb: 0.5 }}
+              >
+                <Typography variant="h6">Preview</Typography>
+                {activeSlides.length > 1 && (
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <IconButton
+                      size="small"
+                      disabled={clampedIndex === 0}
+                      onClick={() => setPreviewIndex(clampedIndex - 1)}
+                    >
+                      <Iconify icon={'eva:arrow-ios-back-fill' as any} />
+                    </IconButton>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      {clampedIndex + 1} / {activeSlides.length}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      disabled={clampedIndex >= activeSlides.length - 1}
+                      onClick={() => setPreviewIndex(clampedIndex + 1)}
+                    >
+                      <Iconify icon={'eva:arrow-ios-forward-fill' as any} />
+                    </IconButton>
+                  </Stack>
+                )}
               </Stack>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+                {activeSlides.length === 0
+                  ? 'Every slide is hidden, so the app skips onboarding.'
+                  : 'Approximate — the device renders at its own scale.'}
+              </Typography>
+
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <PhonePreview>
+                  {currentSlide ? (
+                    <Stack sx={{ flex: 1, minHeight: 0 }}>
+                      <Box
+                        sx={{
+                          flex: 1,
+                          minHeight: 0,
+                          backgroundImage: `url(${currentSlide.image_url})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          bgcolor: 'background.neutral',
+                        }}
+                      />
+
+                      <Stack spacing={1} sx={{ px: 3, pt: 2.5, textAlign: 'center' }}>
+                        <Typography sx={{ fontSize: 18, fontWeight: 700, color: '#111' }}>
+                          {currentSlide.title}
+                        </Typography>
+                        {currentSlide.description && (
+                          <Typography sx={{ fontSize: 13, color: 'rgba(0,0,0,0.6)' }}>
+                            {currentSlide.description}
+                          </Typography>
+                        )}
+                      </Stack>
+
+                      {/* Pager dots */}
+                      <Stack
+                        direction="row"
+                        spacing={0.75}
+                        sx={{ justifyContent: 'center', pt: 2.5 }}
+                      >
+                        {activeSlides.map((slide, i) => (
+                          <Box
+                            key={slide._id}
+                            sx={{
+                              width: i === clampedIndex ? 18 : 6,
+                              height: 6,
+                              borderRadius: 999,
+                              bgcolor: i === clampedIndex ? '#111' : 'rgba(0,0,0,0.2)',
+                            }}
+                          />
+                        ))}
+                      </Stack>
+
+                      <Box sx={{ px: 3, pt: 2.5, pb: 1 }}>
+                        <Box
+                          sx={{
+                            py: 1.25,
+                            borderRadius: 999,
+                            bgcolor: '#111',
+                            color: '#fff',
+                            fontSize: 14,
+                            fontWeight: 600,
+                            textAlign: 'center',
+                          }}
+                        >
+                          {clampedIndex === activeSlides.length - 1 ? 'Get started' : 'Next'}
+                        </Box>
+                      </Box>
+                    </Stack>
+                  ) : (
+                    <Stack
+                      spacing={1.5}
+                      sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', px: 4 }}
+                    >
+                      <Iconify
+                        icon={'solar:slider-horizontal-bold-duotone' as any}
+                        width={48}
+                        sx={{ color: 'text.disabled' }}
+                      />
+                      <Typography
+                        sx={{ fontSize: 13, color: 'text.secondary', textAlign: 'center' }}
+                      >
+                        Onboarding is skipped — the app opens straight to Home.
+                      </Typography>
+                    </Stack>
+                  )}
+                </PhonePreview>
+              </Box>
             </Card>
-          ))}
-        </Stack>
+          </Grid>
+        </Grid>
       )}
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
