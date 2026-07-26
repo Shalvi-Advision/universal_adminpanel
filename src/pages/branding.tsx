@@ -69,20 +69,13 @@ const COLOR_FIELDS: { key: ColorKey; label: string; hint: string }[] = [
   { key: 'info_color', label: 'Info', hint: 'Informational states' },
 ];
 
-// The splash keys are deliberately absent — they belong to the App Settings
-// page, and a save only sends the fields listed here.
+// Theme tokens only. Splash content belongs to Screens > Splash, release and
+// contact details to App Config, and a save sends just the keys listed here.
 const BRANDING_FIELDS: (keyof ProjectSettingsConfig)[] = [
   'app_name',
   'font_family',
   'logo_url',
   ...COLOR_FIELDS.map(({ key }) => key),
-  'contact_email',
-  'contact_phone',
-  'min_app_version',
-  'latest_app_version',
-  'android_store_url',
-  'ios_store_url',
-  'force_update_message',
 ];
 
 // ----------------------------------------------------------------------
@@ -119,10 +112,10 @@ export default function Page() {
     <Container maxWidth="lg">
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
         <Box>
-          <Typography variant="h4">App Branding</Typography>
+          <Typography variant="h4">Theme</Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {clientName} ({projectCode}) — changes apply to the mobile app on next launch, no
-            rebuild needed
+            {clientName} ({projectCode}) — design tokens applied across every screen of the mobile
+            app. Changes land on next launch, no rebuild needed.
           </Typography>
         </Box>
         <PermissionButton section="dynamicSection" action="edit" fallback="disable">
@@ -214,80 +207,6 @@ export default function Page() {
                 </Grid>
               ))}
             </Grid>
-          </Card>
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Contact
-            </Typography>
-            <Stack spacing={3}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Contact Email"
-                value={config.contact_email ?? ''}
-                onChange={setText('contact_email')}
-              />
-              <TextField
-                fullWidth
-                size="small"
-                label="Contact Phone"
-                value={config.contact_phone ?? ''}
-                onChange={setText('contact_phone')}
-              />
-            </Stack>
-          </Card>
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              App Updates
-            </Typography>
-            <Stack spacing={3}>
-              <Stack direction="row" spacing={2}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Minimum Version"
-                  helperText="Older installs are forced to update"
-                  value={config.min_app_version ?? ''}
-                  onChange={setText('min_app_version')}
-                />
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Latest Version"
-                  value={config.latest_app_version ?? ''}
-                  onChange={setText('latest_app_version')}
-                />
-              </Stack>
-              <TextField
-                fullWidth
-                size="small"
-                label="Android Store URL"
-                value={config.android_store_url ?? ''}
-                onChange={setText('android_store_url')}
-              />
-              <TextField
-                fullWidth
-                size="small"
-                label="iOS Store URL"
-                value={config.ios_store_url ?? ''}
-                onChange={setText('ios_store_url')}
-              />
-              <TextField
-                fullWidth
-                size="small"
-                multiline
-                minRows={2}
-                label="Force Update Message"
-                value={config.force_update_message ?? ''}
-                onChange={setText('force_update_message')}
-              />
-            </Stack>
           </Card>
         </Grid>
       </Grid>

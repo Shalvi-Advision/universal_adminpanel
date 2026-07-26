@@ -36,9 +36,7 @@ export async function getOnboardingSlides(): Promise<ListResponse> {
   return apiClient.get<ListResponse>('/api/admin/onboarding');
 }
 
-export async function createOnboardingSlide(
-  slide: OnboardingSlideInput
-): Promise<MutateResponse> {
+export async function createOnboardingSlide(slide: OnboardingSlideInput): Promise<MutateResponse> {
   return apiClient.post<MutateResponse>('/api/admin/onboarding', slide);
 }
 

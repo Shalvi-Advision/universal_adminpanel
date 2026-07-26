@@ -133,9 +133,7 @@ export function DashboardLayout({
       /** **************************************
        * @Sidebar
        *************************************** */
-      sidebarSection={
-        <NavDesktop data={filteredNavData} layoutQuery={layoutQuery} />
-      }
+      sidebarSection={<NavDesktop data={filteredNavData} layoutQuery={layoutQuery} />}
       /** **************************************
        * @Footer
        *************************************** */

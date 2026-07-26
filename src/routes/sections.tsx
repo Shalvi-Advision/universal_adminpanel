@@ -21,25 +21,42 @@ export const SignInPage = lazyWithRetry(() => import('src/pages/sign-in'));
 export const UsersPage = lazyWithRetry(() => import('src/pages/users'));
 export const OrdersPage = lazyWithRetry(() => import('src/pages/orders'));
 export const NotificationsPage = lazyWithRetry(() => import('src/pages/notifications'));
-export const EcommerceDepartmentsPage = lazyWithRetry(() => import('src/pages/ecommerce/departments'));
-export const EcommerceCategoriesPage = lazyWithRetry(() => import('src/pages/ecommerce/categories'));
-export const EcommerceSubcategoriesPage = lazyWithRetry(() => import('src/pages/ecommerce/subcategories'));
+export const EcommerceDepartmentsPage = lazyWithRetry(
+  () => import('src/pages/ecommerce/departments')
+);
+export const EcommerceCategoriesPage = lazyWithRetry(
+  () => import('src/pages/ecommerce/categories')
+);
+export const EcommerceSubcategoriesPage = lazyWithRetry(
+  () => import('src/pages/ecommerce/subcategories')
+);
 export const EcommerceProductsPage = lazyWithRetry(() => import('src/pages/ecommerce/products'));
 export const OutletPincodesPage = lazyWithRetry(() => import('src/pages/outlet/pincodes'));
 export const OutletStoresPage = lazyWithRetry(() => import('src/pages/outlet/stores'));
 export const OutletPaymentModesPage = lazyWithRetry(() => import('src/pages/outlet/payment-modes'));
-export const OutletDeliverySlotsPage = lazyWithRetry(() => import('src/pages/outlet/delivery-slots'));
+export const OutletDeliverySlotsPage = lazyWithRetry(
+  () => import('src/pages/outlet/delivery-slots')
+);
 export const OutletDeliveryFeesPage = lazyWithRetry(() => import('src/pages/outlet/delivery-fees'));
 export const DynamicBestSellersPage = lazyWithRetry(() => import('src/pages/dynamic/best-sellers'));
 export const DynamicTopSellersPage = lazyWithRetry(() => import('src/pages/dynamic/top-sellers'));
-export const DynamicAdvertisementsPage = lazyWithRetry(() => import('src/pages/dynamic/advertisements'));
-export const DynamicPopularCategoriesPage = lazyWithRetry(() => import('src/pages/dynamic/popular-categories'));
+export const DynamicAdvertisementsPage = lazyWithRetry(
+  () => import('src/pages/dynamic/advertisements')
+);
+export const DynamicPopularCategoriesPage = lazyWithRetry(
+  () => import('src/pages/dynamic/popular-categories')
+);
 export const DynamicBannersPage = lazyWithRetry(() => import('src/pages/dynamic/banners'));
-export const DynamicSeasonalCategoriesPage = lazyWithRetry(() => import('src/pages/dynamic/seasonal-categories'));
+export const DynamicSeasonalCategoriesPage = lazyWithRetry(
+  () => import('src/pages/dynamic/seasonal-categories')
+);
 export const OffersPage = lazyWithRetry(() => import('src/pages/offers'));
 export const AdminPermissionsPage = lazyWithRetry(() => import('src/pages/admin-permissions'));
 export const BrandingPage = lazyWithRetry(() => import('src/pages/branding'));
-export const AppSettingsPage = lazyWithRetry(() => import('src/pages/app-settings'));
+export const SplashScreenPage = lazyWithRetry(() => import('src/pages/screens/splash'));
+export const OnboardingScreenPage = lazyWithRetry(() => import('src/pages/screens/onboarding'));
+export const AppConfigPage = lazyWithRetry(() => import('src/pages/app-config'));
+export const IntegrationsPage = lazyWithRetry(() => import('src/pages/integrations'));
 export const DigitalCartPage = lazyWithRetry(() => import('src/pages/digital-cart'));
 export const DigitalCartUiPage = lazyWithRetry(() => import('src/pages/digital-cart-ui'));
 export const Page404 = lazyWithRetry(() => import('src/pages/page-not-found'));
@@ -92,30 +109,216 @@ export const routesSection: RouteObject[] = [
       </ProtectedRoute>
     ),
     children: [
-      { path: 'dashboard', element: <PermissionGuard section="dashboard"><DashboardPage /></PermissionGuard> },
-      { path: 'users', element: <PermissionGuard section="users"><UsersPage /></PermissionGuard> },
-      { path: 'orders', element: <PermissionGuard section="orders"><OrdersPage /></PermissionGuard> },
-      { path: 'notifications', element: <PermissionGuard section="notifications"><NotificationsPage /></PermissionGuard> },
-      { path: 'offers', element: <PermissionGuard section="offers"><OffersPage /></PermissionGuard> },
-      { path: 'ecommerce/departments', element: <PermissionGuard section="ecommerce"><EcommerceDepartmentsPage /></PermissionGuard> },
-      { path: 'ecommerce/categories', element: <PermissionGuard section="ecommerce"><EcommerceCategoriesPage /></PermissionGuard> },
-      { path: 'ecommerce/subcategories', element: <PermissionGuard section="ecommerce"><EcommerceSubcategoriesPage /></PermissionGuard> },
-      { path: 'ecommerce/products', element: <PermissionGuard section="ecommerce"><EcommerceProductsPage /></PermissionGuard> },
-      { path: 'outlet/pincodes', element: <PermissionGuard section="outlet"><OutletPincodesPage /></PermissionGuard> },
-      { path: 'outlet/stores', element: <PermissionGuard section="outlet"><OutletStoresPage /></PermissionGuard> },
-      { path: 'outlet/payment-modes', element: <PermissionGuard section="outlet"><OutletPaymentModesPage /></PermissionGuard> },
-      { path: 'outlet/delivery-slots', element: <PermissionGuard section="outlet"><OutletDeliverySlotsPage /></PermissionGuard> },
-      { path: 'outlet/delivery-fees', element: <PermissionGuard section="outlet"><OutletDeliveryFeesPage /></PermissionGuard> },
-      { path: 'dynamic/best-sellers', element: <PermissionGuard section="dynamicSection"><DynamicBestSellersPage /></PermissionGuard> },
-      { path: 'dynamic/top-sellers', element: <PermissionGuard section="dynamicSection"><DynamicTopSellersPage /></PermissionGuard> },
-      { path: 'dynamic/advertisements', element: <PermissionGuard section="dynamicSection"><DynamicAdvertisementsPage /></PermissionGuard> },
-      { path: 'dynamic/popular-categories', element: <PermissionGuard section="dynamicSection"><DynamicPopularCategoriesPage /></PermissionGuard> },
-      { path: 'dynamic/banners', element: <PermissionGuard section="dynamicSection"><DynamicBannersPage /></PermissionGuard> },
-      { path: 'dynamic/seasonal-categories', element: <PermissionGuard section="dynamicSection"><DynamicSeasonalCategoriesPage /></PermissionGuard> },
-      { path: 'branding', element: <PermissionGuard section="dynamicSection"><BrandingPage /></PermissionGuard> },
-      { path: 'app-settings', element: <PermissionGuard section="dynamicSection"><AppSettingsPage /></PermissionGuard> },
-      { path: 'digital-cart', element: <PermissionGuard section="digitalCart"><DigitalCartPage /></PermissionGuard> },
-      { path: 'digital-cart/ui', element: <PermissionGuard section="digitalCart"><DigitalCartUiPage /></PermissionGuard> },
+      {
+        path: 'dashboard',
+        element: (
+          <PermissionGuard section="dashboard">
+            <DashboardPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'users',
+        element: (
+          <PermissionGuard section="users">
+            <UsersPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'orders',
+        element: (
+          <PermissionGuard section="orders">
+            <OrdersPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'notifications',
+        element: (
+          <PermissionGuard section="notifications">
+            <NotificationsPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'offers',
+        element: (
+          <PermissionGuard section="offers">
+            <OffersPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'ecommerce/departments',
+        element: (
+          <PermissionGuard section="ecommerce">
+            <EcommerceDepartmentsPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'ecommerce/categories',
+        element: (
+          <PermissionGuard section="ecommerce">
+            <EcommerceCategoriesPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'ecommerce/subcategories',
+        element: (
+          <PermissionGuard section="ecommerce">
+            <EcommerceSubcategoriesPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'ecommerce/products',
+        element: (
+          <PermissionGuard section="ecommerce">
+            <EcommerceProductsPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'outlet/pincodes',
+        element: (
+          <PermissionGuard section="outlet">
+            <OutletPincodesPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'outlet/stores',
+        element: (
+          <PermissionGuard section="outlet">
+            <OutletStoresPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'outlet/payment-modes',
+        element: (
+          <PermissionGuard section="outlet">
+            <OutletPaymentModesPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'outlet/delivery-slots',
+        element: (
+          <PermissionGuard section="outlet">
+            <OutletDeliverySlotsPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'outlet/delivery-fees',
+        element: (
+          <PermissionGuard section="outlet">
+            <OutletDeliveryFeesPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'dynamic/best-sellers',
+        element: (
+          <PermissionGuard section="dynamicSection">
+            <DynamicBestSellersPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'dynamic/top-sellers',
+        element: (
+          <PermissionGuard section="dynamicSection">
+            <DynamicTopSellersPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'dynamic/advertisements',
+        element: (
+          <PermissionGuard section="dynamicSection">
+            <DynamicAdvertisementsPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'dynamic/popular-categories',
+        element: (
+          <PermissionGuard section="dynamicSection">
+            <DynamicPopularCategoriesPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'dynamic/banners',
+        element: (
+          <PermissionGuard section="dynamicSection">
+            <DynamicBannersPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'dynamic/seasonal-categories',
+        element: (
+          <PermissionGuard section="dynamicSection">
+            <DynamicSeasonalCategoriesPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'branding',
+        element: (
+          <PermissionGuard section="dynamicSection">
+            <BrandingPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'screens/splash',
+        element: (
+          <PermissionGuard section="dynamicSection">
+            <SplashScreenPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'screens/onboarding',
+        element: (
+          <PermissionGuard section="dynamicSection">
+            <OnboardingScreenPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'app-config',
+        element: (
+          <PermissionGuard section="dynamicSection">
+            <AppConfigPage />
+          </PermissionGuard>
+        ),
+      },
+      // Integrations is super-admin only; the backend enforces it too.
+      { path: 'integrations', element: <IntegrationsPage /> },
+      {
+        path: 'digital-cart',
+        element: (
+          <PermissionGuard section="digitalCart">
+            <DigitalCartPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'digital-cart/ui',
+        element: (
+          <PermissionGuard section="digitalCart">
+            <DigitalCartUiPage />
+          </PermissionGuard>
+        ),
+      },
       { path: 'admin-permissions', element: <AdminPermissionsPage /> },
     ],
   },

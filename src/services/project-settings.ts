@@ -55,3 +55,44 @@ export async function updateProjectSettings(
 ): Promise<ProjectSettingsResponse> {
   return apiClient.put<ProjectSettingsResponse>('/api/admin/project-settings', config);
 }
+
+// ----------------------------------------------------------------------
+// Integrations. Split from the branding/config endpoints because these are
+// super-admin only: a wrong payment key id breaks checkout for everyone.
+
+export interface IntegrationValues {
+  razorpay_key_id: string;
+  currency: string;
+  google_maps_api_key: string;
+}
+
+export interface IntegrationsResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    project_code: string;
+    integrations: Partial<IntegrationValues>;
+    // Presence only — secret values are never returned by the API.
+    secrets_set?: Record<string, boolean>;
+  };
+}
+
+export async function getIntegrations(): Promise<IntegrationsResponse> {
+  return apiClient.get<IntegrationsResponse>('/api/admin/project-settings/integrations');
+}
+
+export async function updateIntegrations(
+  values: Partial<IntegrationValues>
+): Promise<IntegrationsResponse> {
+  return apiClient.put<IntegrationsResponse>('/api/admin/project-settings/integrations', values);
+}
+
+/** Write-only: nothing is echoed back. Sending '' clears a secret. */
+export async function updateSecrets(
+  secrets: Record<string, string>
+): Promise<{ success: boolean; message?: string }> {
+  return apiClient.put<{ success: boolean; message?: string }>(
+    '/api/admin/project-settings/secrets',
+    secrets
+  );
+}
