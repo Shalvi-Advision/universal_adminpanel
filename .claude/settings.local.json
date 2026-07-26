@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yarn lint:*)",
+      "Bash(npx tsc:*)",
+      "Bash(cat:*)",
+      "Bash(yarn tsc:*)",
+      "Bash(yarn lint:fix:*)",
+      "Bash(yarn build:*)",
+      "Bash(source:*)",
+      "Bash(nvm use:*)",
+      "Bash(node --version)",
+      "Read(//Users/gauravpawar/Desktop/Ecomapi/EcommerceAPI_Web/docs/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
