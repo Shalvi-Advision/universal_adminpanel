@@ -126,19 +126,13 @@ export function useFlutterPreview({
       [post]
     ),
     setDevice: useCallback((device: unknown) => post(Inbound.setDevice, device), [post]),
-    setClock: useCallback(
-      (instant: string | null) => post(Inbound.setClock, { instant }),
-      [post]
-    ),
+    setClock: useCallback((instant: string | null) => post(Inbound.setClock, { instant }), [post]),
     setNetwork: useCallback((id: string) => post(Inbound.setNetwork, { id }), [post]),
     setDebug: useCallback(
       (flags: Record<string, boolean>) => post(Inbound.setDebug, flags),
       [post]
     ),
-    selectSection: useCallback(
-      (id: string | null) => post(Inbound.selectSection, { id }),
-      [post]
-    ),
+    selectSection: useCallback((id: string | null) => post(Inbound.selectSection, { id }), [post]),
     refresh: useCallback(() => post(Inbound.refresh), [post]),
   };
 }

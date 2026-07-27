@@ -40,13 +40,7 @@ interface Props {
  * approximation can never promise: the moment a rail's padding changes in
  * Dart, an HTML twin is wrong and nothing tells you.
  */
-export function FlutterPreview({
-  previewOrigin,
-  feed,
-  storeCode,
-  selectedId,
-  onSelect,
-}: Props) {
+export function FlutterPreview({ previewOrigin, feed, storeCode, selectedId, onSelect }: Props) {
   const [device, setDevice] = useState(DEFAULT_DEVICE.id);
   const [network, setNetwork] = useState('wifi');
   const [tier, setTier] = useState<PreviewContextInput['user_tier']>('guest');
@@ -209,15 +203,12 @@ export function FlutterPreview({
               label={`slowest ${slowest.id} · ${(slowest.build_micros / 1000).toFixed(1)}ms`}
             />
           )}
-          {lastRoute && (
-            <Chip size="small" variant="outlined" label={`last tap → ${lastRoute}`} />
-          )}
+          {lastRoute && <Chip size="small" variant="outlined" label={`last tap → ${lastRoute}`} />}
         </Stack>
       )}
 
       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-        Rendered by the app&apos;s own Flutter widgets, from the same feed the phone
-        receives.
+        Rendered by the app&apos;s own Flutter widgets, from the same feed the phone receives.
       </Typography>
     </Stack>
   );

@@ -28,6 +28,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
+import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { getStoreCodes } from 'src/services/store-codes';
 import {
@@ -40,7 +41,10 @@ import {
   reorderHomeSections,
 } from 'src/services/home-sections';
 
+import { CONFIG } from 'src/config-global';
+
 import { Iconify } from 'src/components/iconify';
+import { FlutterPreview } from 'src/components/flutter-preview/flutter-preview';
 import { ColorField } from 'src/components/project-settings/color-field';
 import { PhonePreview } from 'src/components/phone-preview/phone-preview';
 import { HomeSectionBlock } from 'src/components/phone-preview/home-section-block';
@@ -237,6 +241,10 @@ export default function Page() {
   const [stores, setStores] = useState<StoreCode[]>([]);
   const [previewStore, setPreviewStore] = useState('');
   const [feed, setFeed] = useState<FeedSection[]>([]);
+  const [liveMode, setLiveMode] = useState(false);
+  // Two-way selection: tapping in the preview highlights the row, and
+  // selecting a row scrolls the preview to it.
+  const [selectedPreviewId, setSelectedPreviewId] = useState<string | null>(null);
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedError, setFeedError] = useState('');
 
@@ -618,129 +626,127 @@ export default function Page() {
 
   const renderWireframePreview = () => (
     <>
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+        <TextField
+          select
+          fullWidth
+          size="small"
+          label="Preview store"
+          value={previewStore}
+          onChange={(e) => setPreviewStore(e.target.value)}
+        >
+          {stores.length === 0 && <MenuItem value="">All stores</MenuItem>}
+          {stores.map((store) => (
+            <MenuItem key={store.store_code} value={store.store_code}>
+              {store.store_name || store.store_code}
+            </MenuItem>
+          ))}
+        </TextField>
+        <Tooltip title="Reload the preview">
+          <span>
+            <IconButton disabled={feedLoading} onClick={() => loadPreview(previewStore)}>
+              {feedLoading ? (
+                <CircularProgress size={18} />
+              ) : (
+                <Iconify icon={'solar:refresh-bold' as any} />
+              )}
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Stack>
 
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-          <TextField
-            select
-            fullWidth
-            size="small"
-            label="Preview store"
-            value={previewStore}
-            onChange={(e) => setPreviewStore(e.target.value)}
-          >
-            {stores.length === 0 && <MenuItem value="">All stores</MenuItem>}
-            {stores.map((store) => (
-              <MenuItem key={store.store_code} value={store.store_code}>
-                {store.store_name || store.store_code}
-              </MenuItem>
-            ))}
-          </TextField>
-          <Tooltip title="Reload the preview">
-            <span>
-              <IconButton disabled={feedLoading} onClick={() => loadPreview(previewStore)}>
-                {feedLoading ? (
-                  <CircularProgress size={18} />
-                ) : (
-                  <Iconify icon={'solar:refresh-bold' as any} />
-                )}
-              </IconButton>
-            </span>
-          </Tooltip>
-        </Stack>
+      {feedError && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          {feedError} — showing shapes only.
+        </Alert>
+      )}
 
-        {feedError && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            {feedError} — showing shapes only.
-          </Alert>
-        )}
-
-        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-          <PhonePreview bgcolor="#f6f7f9">
-            {/* App header */}
-            <Stack spacing={1} sx={{ px: 1.5, pt: 0.5, pb: 1, bgcolor: '#fff' }}>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box
-                  sx={{
-                    width: 64,
-                    height: 12,
-                    borderRadius: 999,
-                    bgcolor: 'rgba(0,0,0,0.14)',
-                  }}
-                />
-                <Box
-                  sx={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: '50%',
-                    bgcolor: 'rgba(0,0,0,0.1)',
-                  }}
-                />
-              </Stack>
+      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+        <PhonePreview bgcolor="#f6f7f9">
+          {/* App header */}
+          <Stack spacing={1} sx={{ px: 1.5, pt: 0.5, pb: 1, bgcolor: '#fff' }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
               <Box
                 sx={{
-                  height: 22,
+                  width: 64,
+                  height: 12,
                   borderRadius: 999,
-                  bgcolor: 'rgba(0,0,0,0.06)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  px: 1,
+                  bgcolor: 'rgba(0,0,0,0.14)',
                 }}
-              >
-                <Typography sx={{ fontSize: 9, color: 'rgba(0,0,0,0.35)' }}>
-                  Search for products
-                </Typography>
-              </Box>
+              />
+              <Box
+                sx={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  bgcolor: 'rgba(0,0,0,0.1)',
+                }}
+              />
             </Stack>
-
-            <Box sx={{ flex: 1, overflowY: 'auto' }}>
-              {feed.length === 0 ? (
-                <Stack spacing={1} sx={{ py: 6, px: 3, alignItems: 'center', textAlign: 'center' }}>
-                  <Iconify
-                    icon={'solar:eye-closed-bold-duotone' as any}
-                    width={36}
-                    sx={{ color: 'text.disabled' }}
-                  />
-                  <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
-                    {feedLoading
-                      ? 'Loading the feed…'
-                      : 'Nothing to show — every section is switched off or has no content for this store.'}
-                  </Typography>
-                </Stack>
-              ) : (
-                feed.map((section) => (
-                  <HomeSectionBlock
-                    key={section.id}
-                    label={TYPE_LABELS[section.type] || section.type}
-                    section={section}
-                    personalized={section.personalized}
-                    items={section.items}
-                    resolvedTitle={section.title}
-                  />
-                ))
-              )}
+            <Box
+              sx={{
+                height: 22,
+                borderRadius: 999,
+                bgcolor: 'rgba(0,0,0,0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                px: 1,
+              }}
+            >
+              <Typography sx={{ fontSize: 9, color: 'rgba(0,0,0,0.35)' }}>
+                Search for products
+              </Typography>
             </Box>
-          </PhonePreview>
-        </Box>
+          </Stack>
 
-        {emptySections.length > 0 && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            {emptySections.length} section{emptySections.length > 1 ? 's' : ''} will not appear in
-            the app:
-            <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5 }}>
-              {emptySections.map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </Box>
-          </Alert>
-        )}
+          <Box sx={{ flex: 1, overflowY: 'auto' }}>
+            {feed.length === 0 ? (
+              <Stack spacing={1} sx={{ py: 6, px: 3, alignItems: 'center', textAlign: 'center' }}>
+                <Iconify
+                  icon={'solar:eye-closed-bold-duotone' as any}
+                  width={36}
+                  sx={{ color: 'text.disabled' }}
+                />
+                <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
+                  {feedLoading
+                    ? 'Loading the feed…'
+                    : 'Nothing to show — every section is switched off or has no content for this store.'}
+                </Typography>
+              </Stack>
+            ) : (
+              feed.map((section) => (
+                <HomeSectionBlock
+                  key={section.id}
+                  label={TYPE_LABELS[section.type] || section.type}
+                  section={section}
+                  personalized={section.personalized}
+                  items={section.items}
+                  resolvedTitle={section.title}
+                />
+              ))
+            )}
+          </Box>
+        </PhonePreview>
+      </Box>
 
-        {hiddenCount > 0 && (
-          <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary' }}>
-            {hiddenCount} switched-off section{hiddenCount > 1 ? 's are' : ' is'} not shown.
-          </Typography>
-        )}
-      </Card>
-    </Grid>
+      {emptySections.length > 0 && (
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          {emptySections.length} section{emptySections.length > 1 ? 's' : ''} will not appear in the
+          app:
+          <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5 }}>
+            {emptySections.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </Box>
+        </Alert>
+      )}
+
+      {hiddenCount > 0 && (
+        <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary' }}>
+          {hiddenCount} switched-off section{hiddenCount > 1 ? 's are' : ' is'} not shown.
+        </Typography>
+      )}
+    </>
   );
 
   return (
