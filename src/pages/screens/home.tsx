@@ -567,15 +567,57 @@ export default function Page() {
     );
   }
 
+  // The live preview runs the app's own Flutter widgets; the wireframe is the
+  // fallback for deployments that have not published that build yet.
+  const livePreviewAvailable = Boolean(CONFIG.previewOrigin);
+
   const renderPreview = () => (
     <Grid size={{ xs: 12, md: 5 }}>
       <Card sx={{ p: 3, position: 'sticky', top: 24 }}>
-        <Typography variant="h6" sx={{ mb: 0.5 }}>
-          Preview
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-          The real feed for this store, exactly as the app receives it.
-        </Typography>
+        <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
+          <Box>
+            <Typography variant="h6" sx={{ mb: 0.5 }}>
+              Preview
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+              {liveMode
+                ? "Drawn by the app's own widgets, from the feed the phone receives."
+                : 'The real feed for this store, exactly as the app receives it.'}
+            </Typography>
+          </Box>
+
+          {livePreviewAvailable && (
+            <FormControlLabel
+              sx={{ mr: 0 }}
+              control={
+                <Switch
+                  size="small"
+                  checked={liveMode}
+                  onChange={(e) => setLiveMode(e.target.checked)}
+                />
+              }
+              label={<Typography variant="caption">Live app</Typography>}
+            />
+          )}
+        </Stack>
+
+        {liveMode && livePreviewAvailable ? (
+          <FlutterPreview
+            previewOrigin={CONFIG.previewOrigin}
+            feed={{ schema_version: 1, data: feed }}
+            storeCode={previewStore}
+            selectedId={selectedPreviewId}
+            onSelect={setSelectedPreviewId}
+          />
+        ) : (
+          renderWireframePreview()
+        )}
+      </Card>
+    </Grid>
+  );
+
+  const renderWireframePreview = () => (
+    <>
 
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
           <TextField
