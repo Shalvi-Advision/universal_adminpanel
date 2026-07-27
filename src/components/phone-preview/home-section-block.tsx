@@ -87,6 +87,8 @@ function labelOf(item: Record<string, any>): string {
     item?.subcategory_details?.sub_category_name ||
       item?.category_details?.category_name ||
       item?.product_details?.product_name ||
+      // A brand tile carries only its name.
+      item?.brand_name ||
       item?.title ||
       ''
   );
@@ -141,6 +143,31 @@ function TileLabel({ text }: { text: string }) {
 
 function LiveBody({ type, items }: { type: string; items: Record<string, any>[] }) {
   switch (type) {
+    case 'coupon_strip':
+      return (
+        <Stack direction="row" spacing={0.75}>
+          {items.slice(0, 2).map((item, i) => (
+            <Box
+              key={item.id ?? i}
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                p: 0.75,
+                borderRadius: 1,
+                border: '1px solid rgba(0,0,0,0.18)',
+              }}
+            >
+              <Typography sx={{ fontSize: 8, fontWeight: 700 }}>
+                {item.discount_type === 'percentage'
+                  ? `${Math.round(Number(item.discount_amount) || 0)}% off`
+                  : `₹${Math.round(Number(item.discount_amount) || 0)} off`}
+              </Typography>
+              <TileLabel text={String(item.title ?? '')} />
+            </Box>
+          ))}
+        </Stack>
+      );
+
     // A banner placement or an advertisement category: one wide image, or
     // several that scroll.
     case 'banner_strip':

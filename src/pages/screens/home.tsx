@@ -91,6 +91,14 @@ const BANNER_PLACEMENTS = [
   { value: 'home_middle', label: 'Home — mid-page strip' },
 ];
 
+const SOURCELESS_TYPES = [
+  'hero_carousel',
+  'banner_strip',
+  'coupon_strip',
+  'brand_strip',
+  'usp_strip',
+];
+
 const AUDIENCE_LABELS: Record<string, string> = {
   all: 'Everyone',
   new: 'New users',
@@ -109,6 +117,10 @@ const emptyDraft = (): HomeSectionInput => ({
   source: { collection_name: 'best_sellers', sequence: null },
 });
 
+/** Short, readable date for the "why is this not showing" notice. */
+const fmtDate = (date: Date) =>
+  date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
 /** Datetime-local inputs want `YYYY-MM-DDTHH:mm`, not an ISO string with a zone. */
 const toLocalInput = (iso: string | null | undefined) => {
   if (!iso) return '';
@@ -117,6 +129,92 @@ const toLocalInput = (iso: string | null | undefined) => {
   const pad = (n: number) => `${n}`.padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
+
+// ----------------------------------------------------------------------
+
+// ----------------------------------------------------------------------
+
+/** One trust badge as the app reads it. */
+type TrustBadge = { label: string };
+
+const readBadges = (config: Record<string, unknown> | undefined): TrustBadge[] => {
+  const raw = config?.items;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+    .map((item) => ({ label: String(item.label ?? '') }));
+};
+
+/**
+ * Editor for the trust-badge strip.
+ *
+ * The app has always rendered `config.items[].label`, but nothing could write
+ * that array, so the section was selectable and then drew nothing.
+ */
+function TrustBadgeEditor({
+  draft,
+  setDraft,
+}: {
+  draft: HomeSectionInput;
+  setDraft: React.Dispatch<React.SetStateAction<HomeSectionInput>>;
+}) {
+  const badges = readBadges(draft.config);
+
+  const write = (next: TrustBadge[]) =>
+    setDraft((prev) => ({ ...prev, config: { ...prev.config, items: next } }));
+
+  return (
+    <Box>
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+        Badges
+      </Typography>
+
+      <Stack spacing={1}>
+        {badges.map((badge, index) => (
+          // Index is the identity here: badges have no id, and reordering is
+          // done by editing the text rather than dragging.
+          <Stack key={index} direction="row" spacing={1} alignItems="center">
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="e.g. Free delivery over ₹500"
+              value={badge.label}
+              onChange={(e) => {
+                const next = [...badges];
+                next[index] = { label: e.target.value };
+                write(next);
+              }}
+            />
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => write(badges.filter((_, i) => i !== index))}
+            >
+              <Iconify icon={'solar:trash-bin-trash-bold' as any} />
+            </IconButton>
+          </Stack>
+        ))}
+      </Stack>
+
+      <Button
+        size="small"
+        sx={{ mt: 1 }}
+        // Four across a phone is already tight; more would truncate.
+        disabled={badges.length >= 4}
+        startIcon={<Iconify icon={'mingcute:add-line' as any} />}
+        onClick={() => write([...badges, { label: '' }])}
+      >
+        Add badge
+      </Button>
+
+      <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary' }}>
+        {badges.length === 0
+          ? 'Add at least one badge — the strip is hidden while this is empty.'
+          : 'Shown in a row across the width of the screen.'}
+      </Typography>
+    </Box>
+  );
+}
 
 // ----------------------------------------------------------------------
 
@@ -217,12 +315,62 @@ export default function Page() {
   const visibleSections = sections.filter((s) => s.is_active);
   const hiddenCount = sections.length - visibleSections.length;
 
-  // Active rows the feed did not return: the source was deleted, deactivated,
-  // or has nothing for this store. Silent in the app, so worth surfacing here.
+  // Active rows the feed did not return. The app drops these silently — a
+  // heading with nothing under it is worse than no section — so this page is
+  // the only place the reason can surface.
+  //
+  // Naming the cause matters: "no content" sent people to re-check content
+  // that was already correct, when the real answer was usually a schedule that
+  // had quietly run out.
+  const describeEmpty = (section: HomeSection): string => {
+    const label = section.title || TYPE_LABELS[section.type] || section.type;
+    const now = new Date();
+
+    const starts = section.starts_at ? new Date(section.starts_at) : null;
+    const ends = section.ends_at ? new Date(section.ends_at) : null;
+
+    if (ends && !Number.isNaN(ends.getTime()) && ends < now) {
+      return `${label} — this row's schedule ended ${fmtDate(ends)}`;
+    }
+    if (starts && !Number.isNaN(starts.getTime()) && starts > now) {
+      return `${label} — this row starts ${fmtDate(starts)}`;
+    }
+
+    if (section.type === 'coupon_strip') {
+      return `${label} — no cart-discount offer is active, in date, and available to this store (check Offers)`;
+    }
+    if (section.type === 'brand_strip') {
+      return `${label} — no product in this store has a brand name set`;
+    }
+    if (section.type === 'usp_strip') {
+      return `${label} — no badges have been added to this section`;
+    }
+
+    // Banner and advertisement rows are addressed by name, so there is no
+    // source option to inspect; their content carries its own schedule.
+    if (section.type === 'hero_carousel' || section.type === 'banner_strip') {
+      const where =
+        section.source?.collection_name === 'advertisements' ? 'Advertisements' : 'Banners';
+      return `${label} — no ${where.toLowerCase()} entry is switched on, inside its own start/end dates, and assigned to this store (check Dynamic Section › ${where})`;
+    }
+
+    const option = (meta.sources[section.source?.collection_name ?? ''] ?? []).find(
+      (o) => o.sequence === section.source?.sequence
+    );
+    if (option && !option.is_active) {
+      return `${label} — its source "${option.title}" is switched off`;
+    }
+    if (!option) {
+      return `${label} — its source no longer exists`;
+    }
+
+    return `${label} — its source has nothing for this store, or its own dates have passed`;
+  };
+
   const emptySections = feed.length
     ? visibleSections
         .filter((s) => !isPersonalized(s.type) && !feedById.has(s._id))
-        .map((s) => s.title || TYPE_LABELS[s.type] || s.type)
+        .map(describeEmpty)
     : [];
 
   const sourceCollectionFor = (type?: string, current?: string) => {
@@ -272,22 +420,56 @@ export default function Page() {
   };
 
   // A content section with no source would render as an empty heading.
-  // Banner and advertisement sections are addressed by name in `config`, so
-  // they have no numbered source to pick.
-  const needsSource =
-    !isPersonalized(draft.type) && draft.type !== 'hero_carousel' && draft.type !== 'banner_strip';
-  const draftValid = Boolean(draft.type && (!needsSource || draft.source?.sequence != null));
+  //
+  // These types have nothing to point at: banners and advertisements are
+  // addressed by name in `config`, coupons and brands are derived from the
+  // offers and catalogue this store already has, and trust badges are typed
+  // in directly.
+  const needsSource = !isPersonalized(draft.type) && !SOURCELESS_TYPES.includes(draft.type ?? '');
+
+  // A section that saves happily and then renders nothing is the failure mode
+  // this whole page exists to prevent, so the config each type needs is part
+  // of what makes a draft valid.
+  const configValid = (() => {
+    if (draft.type === 'free_delivery_progress') {
+      return Number(draft.config?.threshold ?? 0) > 0;
+    }
+    if (draft.type === 'usp_strip') {
+      return readBadges(draft.config).some((b) => b.label.trim());
+    }
+    return true;
+  })();
+
+  const draftValid = Boolean(
+    draft.type && (!needsSource || draft.source?.sequence != null) && configValid
+  );
 
   const handleSave = async () => {
     if (!draftValid) return;
+
+    // Drop badge rows left blank. An empty label renders as a bare icon with
+    // no text, which reads as a rendering fault rather than an empty field.
+    const payload: HomeSectionInput =
+      draft.type === 'usp_strip'
+        ? {
+            ...draft,
+            config: {
+              ...draft.config,
+              items: readBadges(draft.config)
+                .filter((b) => b.label.trim())
+                .map((b) => ({ label: b.label.trim() })),
+            },
+          }
+        : draft;
+
     try {
       setBusy(true);
       setError('');
       if (editing) {
-        await updateHomeSection(editing._id, draft);
+        await updateHomeSection(editing._id, payload);
         setToast('Section saved');
       } else {
-        await createHomeSection(draft);
+        await createHomeSection(payload);
         setToast('Section added');
       }
       setDialogOpen(false);
@@ -499,10 +681,14 @@ export default function Page() {
         </Box>
 
         {emptySections.length > 0 && (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            {emptySections.length} section
-            {emptySections.length > 1 ? 's have' : ' has'} no content for this store and will not
-            appear: {emptySections.join(', ')}.
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            {emptySections.length} section{emptySections.length > 1 ? 's' : ''} will not appear in
+            the app:
+            <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5 }}>
+              {emptySections.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </Box>
           </Alert>
         )}
 
@@ -769,6 +955,31 @@ export default function Page() {
                 )}
               </>
             )}
+
+            {draft.type === 'free_delivery_progress' && (
+              <TextField
+                fullWidth
+                size="small"
+                type="number"
+                label="Free delivery threshold"
+                placeholder="e.g. 500"
+                helperText="Cart value that earns free delivery. The nudge hides once the shopper reaches it."
+                value={(draft.config?.threshold as number | string) ?? ''}
+                onChange={(e) =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    config: {
+                      ...prev.config,
+                      // Stored as a number so the app parses it the same way
+                      // whichever locale typed it.
+                      threshold: e.target.value === '' ? '' : Number(e.target.value),
+                    },
+                  }))
+                }
+              />
+            )}
+
+            {draft.type === 'usp_strip' && <TrustBadgeEditor draft={draft} setDraft={setDraft} />}
 
             {needsSource && (
               <TextField

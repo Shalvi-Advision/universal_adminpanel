@@ -28,6 +28,45 @@ import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { PermissionButton } from 'src/components/permission-button/permission-button';
 
+// ----------------------------------------------------------------------
+
+/**
+ * What the app will actually do with this banner.
+ *
+ * The chip used to read `is_active` alone, so a banner whose window had closed
+ * still showed as "Active" — the toggle was on, after all. The app filters on
+ * the schedule as well, so the row claimed the banner was live while shoppers
+ * saw nothing, and there was nowhere in the panel to find out why.
+ */
+type BannerStatus = {
+  label: string;
+  color: 'success' | 'default' | 'warning' | 'error';
+  hint?: string;
+};
+
+function bannerStatus(banner: Banner, now: Date = new Date()): BannerStatus {
+  if (!banner.is_active) {
+    return { label: 'Inactive', color: 'default', hint: 'Switched off — the app skips it' };
+  }
+
+  const start = banner.start_date ? new Date(banner.start_date) : null;
+  const end = banner.end_date ? new Date(banner.end_date) : null;
+
+  if (end && !Number.isNaN(end.getTime()) && end < now) {
+    return {
+      label: 'Expired',
+      color: 'error',
+      hint: 'The end date has passed — extend it to show this banner again',
+    };
+  }
+
+  if (start && !Number.isNaN(start.getTime()) && start > now) {
+    return { label: 'Scheduled', color: 'warning', hint: 'Starts on its start date' };
+  }
+
+  return { label: 'Live', color: 'success', hint: 'Active and within its schedule' };
+}
+
 import { BannerDialog } from './components/banner-dialog';
 import { DeleteConfirmDialog } from './components/delete-confirm-dialog';
 
@@ -226,8 +265,9 @@ export default function Page() {
                           </TableCell>
                           <TableCell>
                             <Chip
-                              label={item.is_active ? 'Active' : 'Inactive'}
-                              color={item.is_active ? 'success' : 'default'}
+                              label={bannerStatus(item).label}
+                              color={bannerStatus(item).color}
+                              title={bannerStatus(item).hint}
                               size="small"
                             />
                           </TableCell>
