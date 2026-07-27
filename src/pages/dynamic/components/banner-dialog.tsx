@@ -31,8 +31,16 @@ import StoreCodeSelector from './store-code-selector';
 // app does not read — a typo, or a name invented on the spot — saved happily
 // and then showed nothing, with no error anywhere to explain why.
 const PLACEMENTS = [
-  { value: 'home_top', label: 'Home — hero carousel', hint: 'The large carousel at the top of home' },
-  { value: 'home_middle', label: 'Home — mid-page strip', hint: 'Between the first product blocks on home' },
+  {
+    value: 'home_top',
+    label: 'Home — hero carousel',
+    hint: 'The large carousel at the top of home',
+  },
+  {
+    value: 'home_middle',
+    label: 'Home — mid-page strip',
+    hint: 'Between the first product blocks on home',
+  },
   { value: 'category_banner', label: 'Category screen', hint: 'Shown on the category listing' },
   {
     value: 'product_detail_banner',
@@ -79,9 +87,11 @@ export function BannerDialog({ open, banner, onClose, onSuccess }: BannerDialogP
       setStoreCodes(codes);
       setIsActive(banner.is_active);
       setSequence(banner.sequence || 0);
-      setStartDate(banner.start_date ? new Date(banner.start_date).toISOString().split('T')[0] : '');
+      setStartDate(
+        banner.start_date ? new Date(banner.start_date).toISOString().split('T')[0] : ''
+      );
       setEndDate(banner.end_date ? new Date(banner.end_date).toISOString().split('T')[0] : '');
-      
+
       // Load banner assets from banner_assets or banner_urls
       if (banner.banner_assets && banner.banner_assets.length > 0) {
         setBannerAssets(banner.banner_assets);
@@ -118,10 +128,7 @@ export function BannerDialog({ open, banner, onClose, onSuccess }: BannerDialogP
       return;
     }
     const newKey = `bannerUrl${bannerAssets.length + 1}`;
-    setBannerAssets([
-      ...bannerAssets,
-      { key: newKey, desktop: '', mobile: '' },
-    ]);
+    setBannerAssets([...bannerAssets, { key: newKey, desktop: '', mobile: '' }]);
   };
 
   const handleRemoveBannerAsset = (index: number) => {

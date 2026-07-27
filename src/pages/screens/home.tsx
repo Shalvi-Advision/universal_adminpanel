@@ -275,9 +275,7 @@ export default function Page() {
   // Banner and advertisement sections are addressed by name in `config`, so
   // they have no numbered source to pick.
   const needsSource =
-    !isPersonalized(draft.type) &&
-    draft.type !== 'hero_carousel' &&
-    draft.type !== 'banner_strip';
+    !isPersonalized(draft.type) && draft.type !== 'hero_carousel' && draft.type !== 'banner_strip';
   const draftValid = Boolean(draft.type && (!needsSource || draft.source?.sequence != null));
 
   const handleSave = async () => {
