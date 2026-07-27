@@ -52,6 +52,7 @@ import { PermissionButton } from 'src/components/permission-button/permission-bu
 // from SOURCE_BY_TYPE take no source at all.
 const TYPE_LABELS: Record<string, string> = {
   hero_carousel: 'Hero banners',
+  banner_strip: 'Banner strip',
   category_strip: 'Category strip',
   category_grid: 'Category grid',
   product_rail: 'Product rail',
@@ -72,12 +73,23 @@ const SOURCE_BY_TYPE: Record<string, string> = {
   category_grid: 'popular_categories',
   seasonal_picks: 'seasonal_categories',
   hero_carousel: 'banners',
+  banner_strip: 'banners',
   flash_sale: 'best_sellers',
   deal_of_day: 'best_sellers',
 };
 
 // product_rail can read from either, so the admin picks.
 const RAIL_SOURCES = ['best_sellers', 'top_sellers'];
+
+// A banner strip can show either a banner placement or an advertisement
+// category. Both are picked by name in `config`, not by sequence, so these
+// types take no Content selector.
+const STRIP_SOURCES = ['banners', 'advertisements'];
+
+const BANNER_PLACEMENTS = [
+  { value: 'home_top', label: 'Home — hero carousel' },
+  { value: 'home_middle', label: 'Home — mid-page strip' },
+];
 
 const AUDIENCE_LABELS: Record<string, string> = {
   all: 'Everyone',
@@ -218,6 +230,9 @@ export default function Page() {
     if (type === 'product_rail') {
       return current && RAIL_SOURCES.includes(current) ? current : 'best_sellers';
     }
+    if (type === 'banner_strip') {
+      return current && STRIP_SOURCES.includes(current) ? current : 'banners';
+    }
     return SOURCE_BY_TYPE[type] ?? 'none';
   };
 
@@ -257,7 +272,12 @@ export default function Page() {
   };
 
   // A content section with no source would render as an empty heading.
-  const needsSource = !isPersonalized(draft.type) && draft.type !== 'hero_carousel';
+  // Banner and advertisement sections are addressed by name in `config`, so
+  // they have no numbered source to pick.
+  const needsSource =
+    !isPersonalized(draft.type) &&
+    draft.type !== 'hero_carousel' &&
+    draft.type !== 'banner_strip';
   const draftValid = Boolean(draft.type && (!needsSource || draft.source?.sequence != null));
 
   const handleSave = async () => {
@@ -688,6 +708,68 @@ export default function Page() {
                 <MenuItem value="best_sellers">Best sellers</MenuItem>
                 <MenuItem value="top_sellers">Top sellers</MenuItem>
               </TextField>
+            )}
+
+            {draft.type === 'banner_strip' && (
+              <>
+                <TextField
+                  select
+                  fullWidth
+                  size="small"
+                  label="Content from"
+                  value={draft.source?.collection_name ?? 'banners'}
+                  onChange={(e) =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      source: { collection_name: e.target.value, sequence: null },
+                      // The two sources are keyed differently, so a leftover
+                      // key from the other one would silently match nothing.
+                      config: {},
+                    }))
+                  }
+                >
+                  <MenuItem value="banners">Banners</MenuItem>
+                  <MenuItem value="advertisements">Advertisements</MenuItem>
+                </TextField>
+
+                {(draft.source?.collection_name ?? 'banners') === 'banners' ? (
+                  <TextField
+                    select
+                    fullWidth
+                    size="small"
+                    label="Placement"
+                    helperText="Which banner placement this slot shows"
+                    value={(draft.config?.section_name as string) ?? 'home_middle'}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        config: { ...prev.config, section_name: e.target.value },
+                      }))
+                    }
+                  >
+                    {BANNER_PLACEMENTS.map((placement) => (
+                      <MenuItem key={placement.value} value={placement.value}>
+                        {placement.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                ) : (
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Advertisement category"
+                    placeholder="Leave empty for all except popups"
+                    helperText="Matches the category set on the advertisement"
+                    value={(draft.config?.category as string) ?? ''}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        config: { ...prev.config, category: e.target.value },
+                      }))
+                    }
+                  />
+                )}
+              </>
             )}
 
             {needsSource && (

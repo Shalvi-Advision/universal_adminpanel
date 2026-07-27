@@ -27,6 +27,20 @@ import { ImageUpload } from 'src/components/image-upload';
 
 import StoreCodeSelector from './store-code-selector';
 
+// Where a banner can appear. This was a free-text field, so a placement the
+// app does not read — a typo, or a name invented on the spot — saved happily
+// and then showed nothing, with no error anywhere to explain why.
+const PLACEMENTS = [
+  { value: 'home_top', label: 'Home — hero carousel', hint: 'The large carousel at the top of home' },
+  { value: 'home_middle', label: 'Home — mid-page strip', hint: 'Between the first product blocks on home' },
+  { value: 'category_banner', label: 'Category screen', hint: 'Shown on the category listing' },
+  {
+    value: 'product_detail_banner',
+    label: 'Product detail screen',
+    hint: 'Shown on the product detail page',
+  },
+];
+
 interface BannerDialogProps {
   open: boolean;
   banner: Banner | null;
@@ -211,13 +225,26 @@ export function BannerDialog({ open, banner, onClose, onSuccess }: BannerDialogP
           />
 
           <TextField
+            select
             fullWidth
-            label="Section Name"
-            value={sectionName}
+            label="Placement"
+            value={PLACEMENTS.some((p) => p.value === sectionName) ? sectionName : ''}
             onChange={(e) => setSectionName(e.target.value)}
             required
-            helperText="e.g., home_top, home_middle, category_banner"
-          />
+            helperText={
+              sectionName && !PLACEMENTS.some((p) => p.value === sectionName)
+                ? `Saved as "${sectionName}", which no screen reads — pick a placement to make it visible`
+                : PLACEMENTS.find((p) => p.value === sectionName)?.hint ||
+                  'Where in the app this banner appears'
+            }
+            error={Boolean(sectionName) && !PLACEMENTS.some((p) => p.value === sectionName)}
+          >
+            {PLACEMENTS.map((placement) => (
+              <MenuItem key={placement.value} value={placement.value}>
+                {placement.label}
+              </MenuItem>
+            ))}
+          </TextField>
 
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 2 }}>
