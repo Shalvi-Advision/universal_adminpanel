@@ -73,6 +73,8 @@ function imageOf(item: Record<string, any>): string {
   return String(
     item?.image_link ||
       item?.image_url ||
+      // An advertisement's own key.
+      item?.banner_url ||
       item?.product_details?.pcode_img ||
       item?.product_details?.image_url ||
       ''
@@ -139,6 +141,21 @@ function TileLabel({ text }: { text: string }) {
 
 function LiveBody({ type, items }: { type: string; items: Record<string, any>[] }) {
   switch (type) {
+    // A banner placement or an advertisement category: one wide image, or
+    // several that scroll.
+    case 'banner_strip':
+      return items.length === 1 ? (
+        <Thumb src={imageOf(items[0])} height={54} radius={1.5} />
+      ) : (
+        <Stack direction="row" spacing={0.75}>
+          {items.slice(0, 3).map((item, i) => (
+            <Box key={item.id ?? i} sx={{ width: 78, flexShrink: 0 }}>
+              <Thumb src={imageOf(item)} height={48} radius={1.5} />
+            </Box>
+          ))}
+        </Stack>
+      );
+
     case 'hero_carousel':
       return (
         <Box>
@@ -256,6 +273,15 @@ function PersonalizedBody({ label }: { label: string }) {
 
 function SectionBody({ type }: { type: string }) {
   switch (type) {
+    case 'banner_strip':
+      return (
+        <Stack direction="row" spacing={0.75}>
+          {[0, 1, 2].map((i) => (
+            <Box key={i} sx={{ width: 78, height: 48, borderRadius: 1.5, bgcolor: TINT_STRONG }} />
+          ))}
+        </Stack>
+      );
+
     case 'hero_carousel':
       return (
         <Box>
