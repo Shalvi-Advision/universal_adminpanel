@@ -41,10 +41,8 @@ import {
   reorderHomeSections,
 } from 'src/services/home-sections';
 
-import { CONFIG } from 'src/config-global';
-
 import { Iconify } from 'src/components/iconify';
-import { FlutterPreview } from 'src/components/flutter-preview/flutter-preview';
+import { AppPreview, livePreviewAvailable } from 'src/components/flutter-preview/app-preview';
 import { ColorField } from 'src/components/project-settings/color-field';
 import { PhonePreview } from 'src/components/phone-preview/phone-preview';
 import { HomeSectionBlock } from 'src/components/phone-preview/home-section-block';
@@ -577,7 +575,7 @@ export default function Page() {
 
   // The live preview runs the app's own Flutter widgets; the wireframe is the
   // fallback for deployments that have not published that build yet.
-  const livePreviewAvailable = Boolean(CONFIG.previewOrigin);
+  const liveAvailable = livePreviewAvailable();
 
   const renderPreview = () => (
     <Grid size={{ xs: 12, md: 5 }}>
@@ -594,7 +592,7 @@ export default function Page() {
             </Typography>
           </Box>
 
-          {livePreviewAvailable && (
+          {liveAvailable && (
             <FormControlLabel
               sx={{ mr: 0 }}
               control={
@@ -609,9 +607,9 @@ export default function Page() {
           )}
         </Stack>
 
-        {liveMode && livePreviewAvailable ? (
-          <FlutterPreview
-            previewOrigin={CONFIG.previewOrigin}
+        {liveMode && liveAvailable ? (
+          <AppPreview
+            screen="home"
             feed={{ schema_version: 1, data: feed }}
             storeCode={previewStore}
             selectedId={selectedPreviewId}

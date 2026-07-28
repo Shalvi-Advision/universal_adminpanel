@@ -122,10 +122,7 @@ export function useFlutterPreview({
         post(Inbound.setConfig, { config, client_name: clientName }),
       [post]
     ),
-    setSlides: useCallback(
-      (slides: unknown[]) => post(Inbound.setSlides, { slides }),
-      [post]
-    ),
+    setSlides: useCallback((slides: unknown[]) => post(Inbound.setSlides, { slides }), [post]),
     setFeed: useCallback((feed: unknown) => post(Inbound.setFeed, feed), [post]),
     patchSection: useCallback(
       (section: unknown) => post(Inbound.patchSection, { section }),

@@ -1,5 +1,7 @@
 import type { ProjectSettingsConfig } from 'src/services/project-settings';
 
+import { useState } from 'react';
+
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Grid from '@mui/material/Grid';
@@ -20,6 +22,7 @@ import { Iconify } from 'src/components/iconify';
 import { ColorField } from 'src/components/project-settings/color-field';
 import { ImageField } from 'src/components/project-settings/image-field';
 import { PermissionButton } from 'src/components/permission-button/permission-button';
+import { AppPreview, livePreviewAvailable } from 'src/components/flutter-preview/app-preview';
 import { PhonePreview, statusColorFor } from 'src/components/phone-preview/phone-preview';
 import { useProjectSettings } from 'src/components/project-settings/use-project-settings';
 
@@ -77,6 +80,9 @@ export default function Page() {
     save,
     dismissSaved,
   } = useProjectSettings();
+
+  const [liveMode, setLiveMode] = useState(false);
+  const liveAvailable = livePreviewAvailable();
 
   const logoSizeInvalid = numberError(config.splash_logo_size ?? '', LOGO_SIZE_RANGE);
   const durationInvalid = numberError(config.splash_duration_ms ?? '', DURATION_RANGE);
@@ -244,60 +250,93 @@ export default function Page() {
 
         <Grid size={{ xs: 12, md: 5 }}>
           <Card sx={{ p: 3, position: 'sticky', top: 24 }}>
-            <Typography variant="h6" sx={{ mb: 0.5 }}>
-              Preview
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
-              Approximate — the device renders at its own scale.
-            </Typography>
+            <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
+              <Box>
+                <Typography variant="h6" sx={{ mb: 0.5 }}>
+                  Preview
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+                  {liveMode
+                    ? "The app's own splash screen, with these settings applied."
+                    : 'Approximate — the device renders at its own scale.'}
+                </Typography>
+              </Box>
 
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <PhonePreview
-                bgcolor={config.splash_background_color || '#ffffff'}
-                statusColor={statusColorFor(config.splash_background_color)}
-                backgroundImage={config.splash_background_image_url || undefined}
-              >
-                <Stack
-                  spacing={3}
-                  sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', px: 3 }}
-                >
-                  {config.splash_logo_url ? (
-                    <Box
-                      component="img"
-                      alt="Splash logo"
-                      src={config.splash_logo_url}
-                      sx={{ maxWidth: '70%', height: previewLogoSize / 3, objectFit: 'contain' }}
+              {liveAvailable && (
+                <FormControlLabel
+                  sx={{ mr: 0 }}
+                  control={
+                    <Switch
+                      size="small"
+                      checked={liveMode}
+                      onChange={(e) => setLiveMode(e.target.checked)}
                     />
-                  ) : (
-                    <Iconify
-                      icon={'solar:gallery-bold-duotone' as any}
-                      width={64}
-                      sx={{ color: 'text.disabled' }}
-                    />
-                  )}
+                  }
+                  label={<Typography variant="caption">Live app</Typography>}
+                />
+              )}
+            </Stack>
 
-                  {config.splash_tagline && (
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        textAlign: 'center',
-                        color: config.splash_tagline_color || 'text.secondary',
-                      }}
+            {liveMode && liveAvailable ? (
+              <AppPreview screen="splash" config={config} showStoreControls={false} />
+            ) : (
+              <>
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                  <PhonePreview
+                    bgcolor={config.splash_background_color || '#ffffff'}
+                    statusColor={statusColorFor(config.splash_background_color)}
+                    backgroundImage={config.splash_background_image_url || undefined}
+                  >
+                    <Stack
+                      spacing={3}
+                      sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', px: 3 }}
                     >
-                      {config.splash_tagline}
-                    </Typography>
-                  )}
+                      {config.splash_logo_url ? (
+                        <Box
+                          component="img"
+                          alt="Splash logo"
+                          src={config.splash_logo_url}
+                          sx={{
+                            maxWidth: '70%',
+                            height: previewLogoSize / 3,
+                            objectFit: 'contain',
+                          }}
+                        />
+                      ) : (
+                        <Iconify
+                          icon={'solar:gallery-bold-duotone' as any}
+                          width={64}
+                          sx={{ color: 'text.disabled' }}
+                        />
+                      )}
 
-                  {(config.splash_show_loader ?? 'true') !== 'false' && (
-                    <CircularProgress size={24} />
-                  )}
-                </Stack>
-              </PhonePreview>
-            </Box>
+                      {config.splash_tagline && (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            textAlign: 'center',
+                            color: config.splash_tagline_color || 'text.secondary',
+                          }}
+                        >
+                          {config.splash_tagline}
+                        </Typography>
+                      )}
 
-            <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary' }}>
-              Held for at least {previewDuration} ms on launch.
-            </Typography>
+                      {(config.splash_show_loader ?? 'true') !== 'false' && (
+                        <CircularProgress size={24} />
+                      )}
+                    </Stack>
+                  </PhonePreview>
+                </Box>
+
+                <Typography
+                  variant="caption"
+                  sx={{ display: 'block', mt: 2, color: 'text.secondary' }}
+                >
+                  Held for at least {previewDuration} ms on launch.
+                </Typography>
+              </>
+            )}
           </Card>
         </Grid>
       </Grid>
