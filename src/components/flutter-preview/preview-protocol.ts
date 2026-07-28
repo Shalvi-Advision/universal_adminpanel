@@ -7,8 +7,15 @@
 export const PREVIEW_CHANNEL = 'bdui-preview';
 export const PREVIEW_PROTOCOL_VERSION = 1;
 
+/** Screens the one preview surface can show. */
+export const PreviewScreens = ['splash', 'onboarding', 'home'] as const;
+export type PreviewScreen = (typeof PreviewScreens)[number];
+
 /** Admin → preview. */
 export const Inbound = {
+  setScreen: 'set_screen',
+  setConfig: 'set_config',
+  setSlides: 'set_slides',
   setFeed: 'set_feed',
   patchSection: 'patch_section',
   setContext: 'set_context',

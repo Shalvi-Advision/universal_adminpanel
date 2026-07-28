@@ -116,6 +116,16 @@ export function useFlutterPreview({
   return {
     frameRef,
     ready,
+    setScreen: useCallback((screen: string) => post(Inbound.setScreen, { screen }), [post]),
+    setConfig: useCallback(
+      (config: Record<string, unknown>, clientName?: string) =>
+        post(Inbound.setConfig, { config, client_name: clientName }),
+      [post]
+    ),
+    setSlides: useCallback(
+      (slides: unknown[]) => post(Inbound.setSlides, { slides }),
+      [post]
+    ),
     setFeed: useCallback((feed: unknown) => post(Inbound.setFeed, feed), [post]),
     patchSection: useCallback(
       (section: unknown) => post(Inbound.patchSection, { section }),
