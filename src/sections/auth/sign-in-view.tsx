@@ -4,30 +4,32 @@ import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import InputAdornment from '@mui/material/InputAdornment';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { useRouter } from 'src/routes/hooks';
 
-import { sendOtp, verifyOtp } from 'src/services/auth';
+import { adminLogin } from 'src/services/auth';
+
+import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
-
-type AuthStep = 'mobile' | 'otp';
 
 export function SignInView() {
   const router = useRouter();
 
-  const [step, setStep] = useState<AuthStep>('mobile');
   const [mobile, setMobile] = useState('');
-  const [otp, setOtp] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
 
   const handleMobileChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setMobile(event.target.value);
+      // Digits only — the API expects a bare 10-digit number.
+      setMobile(event.target.value.replace(/\D/g, '').slice(0, 10));
       if (errorMessage) {
         setErrorMessage('');
       }
@@ -35,9 +37,9 @@ export function SignInView() {
     [errorMessage]
   );
 
-  const handleOtpChange = useCallback(
+  const handlePasswordChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setOtp(event.target.value);
+      setPassword(event.target.value);
       if (errorMessage) {
         setErrorMessage('');
       }
@@ -45,13 +47,17 @@ export function SignInView() {
     [errorMessage]
   );
 
-  const handleSendOtp = useCallback(
+  const handleSignIn = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
 
-      // Validate mobile number
-      if (!mobile || mobile.length < 10) {
-        setErrorMessage('Please enter a valid mobile number');
+      if (!/^[6-9]\d{9}$/.test(mobile)) {
+        setErrorMessage('Please enter a valid 10-digit mobile number');
+        return;
+      }
+
+      if (!password) {
+        setErrorMessage('Please enter your password');
         return;
       }
 
@@ -59,163 +65,19 @@ export function SignInView() {
       setErrorMessage('');
 
       try {
-        const response = await sendOtp(mobile);
+        const response = await adminLogin(mobile, password);
         if (response.success) {
-          setSuccessMessage(response.message || 'OTP sent successfully');
-          setStep('otp');
-        }
-      } catch (error: any) {
-        setErrorMessage(error.message || 'Failed to send OTP. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [mobile]
-  );
-
-  const handleVerifyOtp = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-
-      // Validate OTP
-      if (!otp || otp.length < 4) {
-        setErrorMessage('Please enter a valid OTP');
-        return;
-      }
-
-      setLoading(true);
-      setErrorMessage('');
-
-      try {
-        const response = await verifyOtp(mobile, otp);
-        if (response.success) {
-          // Token and user data are already stored by verifyOtp
-          console.log('OTP verified successfully, token stored');
-
-          // Small delay to ensure storage completes
-          await new Promise((resolve) => setTimeout(resolve, 100));
-
-          // Navigate to dashboard
           router.push('/dashboard');
+        } else {
+          setErrorMessage(response.message || 'Sign in failed. Please try again.');
         }
       } catch (error: any) {
-        setErrorMessage(error.message || 'Invalid OTP. Please try again.');
+        setErrorMessage(error.message || 'Invalid mobile number or password.');
       } finally {
         setLoading(false);
       }
     },
-    [mobile, otp, router]
-  );
-
-  const handleBackToMobile = useCallback(() => {
-    setStep('mobile');
-    setOtp('');
-    setErrorMessage('');
-    setSuccessMessage('');
-  }, []);
-
-  const renderMobileForm = (
-    <Box
-      component="form"
-      onSubmit={handleSendOtp}
-      sx={{
-        display: 'flex',
-        alignItems: 'stretch',
-        flexDirection: 'column',
-      }}
-    >
-      <TextField
-        fullWidth
-        name="mobile"
-        label="Mobile Number"
-        value={mobile}
-        onChange={handleMobileChange}
-        placeholder="Enter your mobile number"
-        disabled={loading}
-        sx={{ mb: 3 }}
-        slotProps={{
-          inputLabel: { shrink: true },
-        }}
-      />
-
-      {errorMessage && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errorMessage}
-        </Alert>
-      )}
-
-      <Button
-        fullWidth
-        size="large"
-        type="submit"
-        color="inherit"
-        variant="contained"
-        disabled={loading}
-      >
-        {loading ? <CircularProgress size={24} /> : 'Send OTP'}
-      </Button>
-    </Box>
-  );
-
-  const renderOtpForm = (
-    <Box
-      component="form"
-      onSubmit={handleVerifyOtp}
-      sx={{
-        display: 'flex',
-        alignItems: 'stretch',
-        flexDirection: 'column',
-      }}
-    >
-      {successMessage && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {successMessage}
-        </Alert>
-      )}
-
-      <TextField
-        fullWidth
-        name="otp"
-        label="Enter OTP"
-        value={otp}
-        onChange={handleOtpChange}
-        placeholder="Enter the OTP sent to your mobile"
-        disabled={loading}
-        sx={{ mb: 3 }}
-        slotProps={{
-          inputLabel: { shrink: true },
-        }}
-      />
-
-      {errorMessage && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errorMessage}
-        </Alert>
-      )}
-
-      <Button
-        fullWidth
-        size="large"
-        type="submit"
-        color="inherit"
-        variant="contained"
-        disabled={loading}
-        sx={{ mb: 2 }}
-      >
-        {loading ? <CircularProgress size={24} /> : 'Verify OTP'}
-      </Button>
-
-      <Button
-        fullWidth
-        size="large"
-        color="inherit"
-        variant="outlined"
-        onClick={handleBackToMobile}
-        disabled={loading}
-      >
-        Back to Mobile
-      </Button>
-    </Box>
+    [mobile, password, router]
   );
 
   return (
@@ -236,12 +98,78 @@ export function SignInView() {
             color: 'text.secondary',
           }}
         >
-          {step === 'mobile'
-            ? 'Enter your mobile number to receive an OTP'
-            : `Enter the OTP sent to ${mobile}`}
+          Enter your mobile number and password to continue
         </Typography>
       </Box>
-      {step === 'mobile' ? renderMobileForm : renderOtpForm}
+
+      <Box
+        component="form"
+        onSubmit={handleSignIn}
+        sx={{
+          display: 'flex',
+          alignItems: 'stretch',
+          flexDirection: 'column',
+        }}
+      >
+        <TextField
+          fullWidth
+          name="mobile"
+          label="Mobile Number"
+          value={mobile}
+          onChange={handleMobileChange}
+          placeholder="Enter your mobile number"
+          autoComplete="username"
+          disabled={loading}
+          sx={{ mb: 3 }}
+          slotProps={{
+            inputLabel: { shrink: true },
+          }}
+        />
+
+        <TextField
+          fullWidth
+          name="password"
+          label="Password"
+          value={password}
+          onChange={handlePasswordChange}
+          placeholder="Enter your password"
+          type={showPassword ? 'text' : 'password'}
+          autoComplete="current-password"
+          disabled={loading}
+          sx={{ mb: 3 }}
+          slotProps={{
+            inputLabel: { shrink: true },
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                    <Iconify
+                      icon={showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
+                    />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+
+        {errorMessage && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {errorMessage}
+          </Alert>
+        )}
+
+        <Button
+          fullWidth
+          size="large"
+          type="submit"
+          color="inherit"
+          variant="contained"
+          disabled={loading}
+        >
+          {loading ? <CircularProgress size={24} /> : 'Sign in'}
+        </Button>
+      </Box>
     </>
   );
 }

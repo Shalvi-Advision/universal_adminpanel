@@ -1,4 +1,4 @@
-import type { OtpResponse, AuthResponse } from 'src/types/api';
+import type { AuthResponse } from 'src/types/api';
 
 import { apiClient, clearAuthData } from 'src/utils/api-client';
 
@@ -6,31 +6,21 @@ import { apiClient, clearAuthData } from 'src/utils/api-client';
 const TOKEN_KEY = 'authToken';
 const USER_DATA_KEY = 'userData';
 
-// Send OTP to mobile number
-export async function sendOtp(mobile: string): Promise<OtpResponse> {
-  return apiClient.post<OtpResponse>('/api/auth/send-otp', { mobile });
-}
+// Authenticate an admin with mobile + password.
+//
+// The panel deliberately does not use the OTP flow: every sign-in attempt there
+// costs an SMS, and admins are a small fixed set of accounts.
+export async function adminLogin(mobile: string, password: string): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>('/api/auth/admin-login', {
+    mobile,
+    password,
+  });
 
-// Verify OTP and authenticate user
-export async function verifyOtp(mobile: string, otp: string): Promise<AuthResponse> {
-  const response = await apiClient.post<AuthResponse>('/api/auth/verify-otp', { mobile, otp });
-
-  console.log('Full verify-otp response:', response);
-
-  // Store token and user data in session storage
   if (response.success && response.data?.token) {
-    console.log('Storing token and user data:', {
-      tokenLength: response.data.token.length,
-      userName: response.data.user.name,
-    });
     sessionStorage.setItem(TOKEN_KEY, response.data.token);
     sessionStorage.setItem(USER_DATA_KEY, JSON.stringify(response.data.user));
-
-    // Verify storage
-    const storedToken = sessionStorage.getItem(TOKEN_KEY);
-    console.log('Token stored successfully:', !!storedToken);
   } else {
-    console.error('Token not found in response!', response);
+    console.error('Token not found in admin-login response', response);
   }
 
   return response;
