@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useState, useContext, useCallback, createContext } from 'react';
 
 import {
-  DEFAULT_PROJECT_CODE,
+  NO_PROJECT_CODE,
   getSelectedProjectCode,
   PROJECT_CODE_STORAGE_KEY,
 } from 'src/utils/project-code';
@@ -16,7 +16,7 @@ interface ProjectContextType {
 
 // Create context with default values
 const ProjectContext = createContext<ProjectContextType>({
-  projectCode: DEFAULT_PROJECT_CODE,
+  projectCode: NO_PROJECT_CODE,
   setProjectCode: () => {},
 });
 

@@ -4,12 +4,16 @@
 
 export const PROJECT_CODE_STORAGE_KEY = 'selected_project_code';
 
-export const DEFAULT_PROJECT_CODE = 'RET5677'; // Pagariya Mart
+/// No tenant selected yet. Empty rather than a real client's code: the previous
+/// default meant an admin scoped to another client sent RET5677 on every request
+/// made before GET /api/projects resolved. ProjectSelector fills this in from
+/// the API — the first project the signed-in admin is allowed on.
+export const NO_PROJECT_CODE = '';
 
 export const getSelectedProjectCode = (): string => {
   try {
-    return localStorage.getItem(PROJECT_CODE_STORAGE_KEY) || DEFAULT_PROJECT_CODE;
+    return localStorage.getItem(PROJECT_CODE_STORAGE_KEY) || NO_PROJECT_CODE;
   } catch {
-    return DEFAULT_PROJECT_CODE;
+    return NO_PROJECT_CODE;
   }
 };

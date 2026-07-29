@@ -52,8 +52,14 @@ async function apiFetch<T>(
   // Bind the request to the selected client/tenant. Auth endpoints are
   // exempt so admin login always resolves to the backend's default project,
   // regardless of which client is selected in the UI.
+  // Omitted while no project is selected, rather than sent empty: an absent
+  // header is a request the backend can reject cleanly, where a blank one
+  // reads as a tenant named "".
   if (!endpoint.startsWith('/api/auth')) {
-    headers['X-Project-Code'] = getSelectedProjectCode();
+    const selectedProjectCode = getSelectedProjectCode();
+    if (selectedProjectCode) {
+      headers['X-Project-Code'] = selectedProjectCode;
+    }
   }
 
   const config: RequestInit = {
