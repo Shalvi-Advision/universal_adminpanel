@@ -11,7 +11,7 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Switch from '@mui/material/Switch';
-import FormControlLabel from '@mui/material/FormControlLabel';
+// import FormControlLabel from '@mui/material/FormControlLabel'; // parked live-app toggle
 import Tooltip from '@mui/material/Tooltip';
 import Snackbar from '@mui/material/Snackbar';
 import Container from '@mui/material/Container';
@@ -34,7 +34,8 @@ import {
 import { Iconify } from 'src/components/iconify';
 import { ImageField } from 'src/components/project-settings/image-field';
 import { PhonePreview } from 'src/components/phone-preview/phone-preview';
-import { AppPreview, livePreviewAvailable } from 'src/components/flutter-preview/app-preview';
+// Live-app (Flutter Web) preview is parked until a preview build is deployed.
+// import { AppPreview, livePreviewAvailable } from 'src/components/flutter-preview/app-preview';
 import { PermissionButton } from 'src/components/permission-button/permission-button';
 
 // ----------------------------------------------------------------------
@@ -66,7 +67,7 @@ export default function Page() {
 
   const [editing, setEditing] = useState<OnboardingSlide | null>(null);
   const [draft, setDraft] = useState<DraftSlide>(EMPTY_DRAFT);
-  const [liveMode, setLiveMode] = useState(false);
+  // const [liveMode, setLiveMode] = useState(false); // parked live-app toggle
   const [dialogOpen, setDialogOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
 
@@ -177,7 +178,7 @@ export default function Page() {
 
   // The app only ever shows active slides, so the preview walks those.
   const activeSlides = slides.filter((s) => s.is_active);
-  const liveAvailable = livePreviewAvailable();
+  // const liveAvailable = livePreviewAvailable(); // parked live-app toggle
   const activeCount = activeSlides.length;
 
   // Hiding or deleting a slide can strand the index past the end.
@@ -349,11 +350,10 @@ export default function Page() {
                 <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
                   {activeSlides.length === 0
                     ? 'Every slide is hidden, so the app skips onboarding.'
-                    : liveMode
-                      ? "The app's own onboarding carousel, with these slides."
-                      : 'Approximate — the device renders at its own scale.'}
+                    : 'Approximate — the device renders at its own scale.'}
                 </Typography>
 
+                {/* Live-app toggle, parked:
                 {liveAvailable && (
                   <FormControlLabel
                     sx={{ mr: 0, mb: 3 }}
@@ -366,93 +366,93 @@ export default function Page() {
                     }
                     label={<Typography variant="caption">Live app</Typography>}
                   />
-                )}
+                )} */}
               </Stack>
 
-              {liveMode && liveAvailable ? (
-                <AppPreview screen="onboarding" slides={activeSlides} showStoreControls={false} />
-              ) : (
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  <PhonePreview>
-                    {currentSlide ? (
-                      <Stack sx={{ flex: 1, minHeight: 0 }}>
+              {/* Live app, parked:
+              {liveMode && liveAvailable
+                ? <AppPreview screen="onboarding" slides={activeSlides} showStoreControls={false} />
+                : (the wireframe below)} */}
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <PhonePreview>
+                  {currentSlide ? (
+                    <Stack sx={{ flex: 1, minHeight: 0 }}>
+                      <Box
+                        sx={{
+                          flex: 1,
+                          minHeight: 0,
+                          backgroundImage: `url(${currentSlide.image_url})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          bgcolor: 'background.neutral',
+                        }}
+                      />
+
+                      <Stack spacing={1} sx={{ px: 3, pt: 2.5, textAlign: 'center' }}>
+                        <Typography sx={{ fontSize: 18, fontWeight: 700, color: '#111' }}>
+                          {currentSlide.title}
+                        </Typography>
+                        {currentSlide.description && (
+                          <Typography sx={{ fontSize: 13, color: 'rgba(0,0,0,0.6)' }}>
+                            {currentSlide.description}
+                          </Typography>
+                        )}
+                      </Stack>
+
+                      {/* Pager dots */}
+                      <Stack
+                        direction="row"
+                        spacing={0.75}
+                        sx={{ justifyContent: 'center', pt: 2.5 }}
+                      >
+                        {activeSlides.map((slide, i) => (
+                          <Box
+                            key={slide._id}
+                            sx={{
+                              width: i === clampedIndex ? 18 : 6,
+                              height: 6,
+                              borderRadius: 999,
+                              bgcolor: i === clampedIndex ? '#111' : 'rgba(0,0,0,0.2)',
+                            }}
+                          />
+                        ))}
+                      </Stack>
+
+                      <Box sx={{ px: 3, pt: 2.5, pb: 1 }}>
                         <Box
                           sx={{
-                            flex: 1,
-                            minHeight: 0,
-                            backgroundImage: `url(${currentSlide.image_url})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            bgcolor: 'background.neutral',
+                            py: 1.25,
+                            borderRadius: 999,
+                            bgcolor: '#111',
+                            color: '#fff',
+                            fontSize: 14,
+                            fontWeight: 600,
+                            textAlign: 'center',
                           }}
-                        />
-
-                        <Stack spacing={1} sx={{ px: 3, pt: 2.5, textAlign: 'center' }}>
-                          <Typography sx={{ fontSize: 18, fontWeight: 700, color: '#111' }}>
-                            {currentSlide.title}
-                          </Typography>
-                          {currentSlide.description && (
-                            <Typography sx={{ fontSize: 13, color: 'rgba(0,0,0,0.6)' }}>
-                              {currentSlide.description}
-                            </Typography>
-                          )}
-                        </Stack>
-
-                        {/* Pager dots */}
-                        <Stack
-                          direction="row"
-                          spacing={0.75}
-                          sx={{ justifyContent: 'center', pt: 2.5 }}
                         >
-                          {activeSlides.map((slide, i) => (
-                            <Box
-                              key={slide._id}
-                              sx={{
-                                width: i === clampedIndex ? 18 : 6,
-                                height: 6,
-                                borderRadius: 999,
-                                bgcolor: i === clampedIndex ? '#111' : 'rgba(0,0,0,0.2)',
-                              }}
-                            />
-                          ))}
-                        </Stack>
-
-                        <Box sx={{ px: 3, pt: 2.5, pb: 1 }}>
-                          <Box
-                            sx={{
-                              py: 1.25,
-                              borderRadius: 999,
-                              bgcolor: '#111',
-                              color: '#fff',
-                              fontSize: 14,
-                              fontWeight: 600,
-                              textAlign: 'center',
-                            }}
-                          >
-                            {clampedIndex === activeSlides.length - 1 ? 'Get started' : 'Next'}
-                          </Box>
+                          {clampedIndex === activeSlides.length - 1 ? 'Get started' : 'Next'}
                         </Box>
-                      </Stack>
-                    ) : (
-                      <Stack
-                        spacing={1.5}
-                        sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', px: 4 }}
+                      </Box>
+                    </Stack>
+                  ) : (
+                    <Stack
+                      spacing={1.5}
+                      sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', px: 4 }}
+                    >
+                      <Iconify
+                        icon={'solar:slider-horizontal-bold-duotone' as any}
+                        width={48}
+                        sx={{ color: 'text.disabled' }}
+                      />
+                      <Typography
+                        sx={{ fontSize: 13, color: 'text.secondary', textAlign: 'center' }}
                       >
-                        <Iconify
-                          icon={'solar:slider-horizontal-bold-duotone' as any}
-                          width={48}
-                          sx={{ color: 'text.disabled' }}
-                        />
-                        <Typography
-                          sx={{ fontSize: 13, color: 'text.secondary', textAlign: 'center' }}
-                        >
-                          Onboarding is skipped — the app opens straight to Home.
-                        </Typography>
-                      </Stack>
-                    )}
-                  </PhonePreview>
-                </Box>
-              )}
+                        Onboarding is skipped — the app opens straight to Home.
+                      </Typography>
+                    </Stack>
+                  )}
+                </PhonePreview>
+              </Box>
             </Card>
           </Grid>
         </Grid>

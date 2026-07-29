@@ -28,7 +28,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
-import FormControlLabel from '@mui/material/FormControlLabel';
+// import FormControlLabel from '@mui/material/FormControlLabel'; // parked live-app toggle
 
 import { getStoreCodes } from 'src/services/store-codes';
 import {
@@ -42,7 +42,8 @@ import {
 } from 'src/services/home-sections';
 
 import { Iconify } from 'src/components/iconify';
-import { AppPreview, livePreviewAvailable } from 'src/components/flutter-preview/app-preview';
+// Live-app (Flutter Web) preview is parked until a preview build is deployed.
+// import { AppPreview, livePreviewAvailable } from 'src/components/flutter-preview/app-preview';
 import { ColorField } from 'src/components/project-settings/color-field';
 import { PhonePreview } from 'src/components/phone-preview/phone-preview';
 import { HomeSectionBlock } from 'src/components/phone-preview/home-section-block';
@@ -239,10 +240,10 @@ export default function Page() {
   const [stores, setStores] = useState<StoreCode[]>([]);
   const [previewStore, setPreviewStore] = useState('');
   const [feed, setFeed] = useState<FeedSection[]>([]);
-  const [liveMode, setLiveMode] = useState(false);
+  // const [liveMode, setLiveMode] = useState(false);
   // Two-way selection: tapping in the preview highlights the row, and
   // selecting a row scrolls the preview to it.
-  const [selectedPreviewId, setSelectedPreviewId] = useState<string | null>(null);
+  // const [selectedPreviewId, setSelectedPreviewId] = useState<string | null>(null);
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedError, setFeedError] = useState('');
 
@@ -573,9 +574,9 @@ export default function Page() {
     );
   }
 
-  // The live preview runs the app's own Flutter widgets; the wireframe is the
-  // fallback for deployments that have not published that build yet.
-  const liveAvailable = livePreviewAvailable();
+  // Live-app preview parked: only the wireframe renders. To restore it, uncomment
+  // the import, the liveMode/selectedPreviewId state, and the two blocks below.
+  // const liveAvailable = livePreviewAvailable();
 
   const renderPreview = () => (
     <Grid size={{ xs: 12, md: 5 }}>
@@ -586,13 +587,11 @@ export default function Page() {
               Preview
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-              {liveMode
-                ? "Drawn by the app's own widgets, from the feed the phone receives."
-                : 'The real feed for this store, exactly as the app receives it.'}
+              The real feed for this store, exactly as the app receives it.
             </Typography>
           </Box>
 
-          {liveAvailable && (
+          {/* {liveAvailable && (
             <FormControlLabel
               sx={{ mr: 0 }}
               control={
@@ -604,10 +603,10 @@ export default function Page() {
               }
               label={<Typography variant="caption">Live app</Typography>}
             />
-          )}
+          )} */}
         </Stack>
 
-        {liveMode && liveAvailable ? (
+        {/* {liveMode && liveAvailable ? (
           <AppPreview
             screen="home"
             feed={{ schema_version: 1, data: feed }}
@@ -617,7 +616,8 @@ export default function Page() {
           />
         ) : (
           renderWireframePreview()
-        )}
+        )} */}
+        {renderWireframePreview()}
       </Card>
     </Grid>
   );
