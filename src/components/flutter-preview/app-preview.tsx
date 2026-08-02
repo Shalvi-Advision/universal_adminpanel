@@ -1,5 +1,3 @@
-import type { PreviewScreen, SectionMetrics } from './preview-protocol';
-
 import { useMemo, useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
@@ -16,8 +14,10 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { CONFIG } from 'src/config-global';
 
-import { DEVICES, USER_TIERS, DEFAULT_DEVICE, NETWORK_PROFILES } from './devices';
 import { useFlutterPreview } from './use-flutter-preview';
+import { DEVICES, USER_TIERS, DEFAULT_DEVICE, NETWORK_PROFILES } from './devices';
+
+import type { PreviewScreen, SectionMetrics } from './preview-protocol';
 
 // ----------------------------------------------------------------------
 

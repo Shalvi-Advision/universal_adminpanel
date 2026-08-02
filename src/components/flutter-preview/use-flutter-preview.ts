@@ -1,7 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 
-import type { SectionMetrics, PreviewContextInput } from './preview-protocol';
-
 import {
   Inbound,
   Outbound,
@@ -9,6 +7,8 @@ import {
   isPreviewMessage,
   PREVIEW_PROTOCOL_VERSION,
 } from './preview-protocol';
+
+import type { SectionMetrics, PreviewContextInput } from './preview-protocol';
 
 // ----------------------------------------------------------------------
 

@@ -200,6 +200,11 @@ export const navData: NavItem[] = [
             path: '/screens/onboarding',
             icon: iconify('solar:slider-horizontal-bold-duotone'),
           },
+          {
+            title: 'Content',
+            path: '/screens/content',
+            icon: iconify('solar:document-text-bold-duotone'),
+          },
         ],
       },
       {
