@@ -36,7 +36,6 @@ import { usePermissions } from 'src/contexts/permissions-context';
 import {
     getOrders,
     ORDER_STATUSES,
-    orderStatusLabel,
     updateOrderStatus,
     updatePaymentStatus,
     ORDER_STATUS_LABELS,
@@ -46,57 +45,19 @@ import {
 
 import { Scrollbar } from 'src/components/scrollbar';
 
+import { OrderDetailsDialog } from 'src/sections/orders/order-details-dialog';
+import { OrderHistoryDialog } from 'src/sections/orders/order-history-dialog';
+import {
+    formatDate,
+    STATUS_COLORS,
+    formatDateTime,
+    formatCurrency,
+    getPaymentStatusColor,
+} from 'src/sections/orders/order-format';
+
 // ----------------------------------------------------------------------
 
 const PAYMENT_STATUSES: PaymentStatus[] = ['pending', 'processing', 'completed', 'failed', 'cancelled'];
-
-// Tab colours mirror the legacy admin panel's status pills.
-const STATUS_COLORS: Record<OrderStatus, string> = {
-    pending: '#F0C040',
-    accepted: '#2E7D32',
-    accepted_by_store: '#1B6B6B',
-    in_packaging: '#17696A',
-    out_for_delivery: '#1565C0',
-    delivered: '#78909C',
-    payment_processing: '#00695C',
-    cancelled: '#D32F2F',
-};
-
-const getPaymentStatusColor = (
-    status: PaymentStatus
-): 'default' | 'primary' | 'warning' | 'error' | 'success' => {
-    const colors: Record<PaymentStatus, 'default' | 'primary' | 'warning' | 'error' | 'success'> = {
-        pending: 'warning',
-        processing: 'primary',
-        completed: 'success',
-        failed: 'error',
-        cancelled: 'default',
-    };
-    return colors[status] || 'default';
-};
-
-const formatDateTime = (value?: string) => {
-    if (!value) return '—';
-    return new Date(value).toLocaleString('en-IN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-};
-
-const formatDate = (value?: string) => {
-    if (!value) return '—';
-    return new Date(value).toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-    });
-};
-
-const formatCurrency = (amount = 0) =>
-    `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 type StatusCounts = Record<OrderStatus, number>;
 
@@ -131,6 +92,7 @@ export default function OrdersPage() {
     const [statusDialogOpen, setStatusDialogOpen] = useState(false);
     const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
     const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+    const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
     const [newStatus, setNewStatus] = useState<OrderStatus>('pending');
     const [newPaymentStatus, setNewPaymentStatus] = useState<PaymentStatus>('pending');
     const [updating, setUpdating] = useState(false);
@@ -248,6 +210,21 @@ export default function OrdersPage() {
             }
         },
         [refresh]
+    );
+
+    // Accept / Cancel from inside the details view. The order object held in
+    // state is the one the dialog renders, so it is updated in place rather
+    // than waiting for the refetched list.
+    const handleDetailStatusChange = useCallback(
+        async (order: Order, status: OrderStatus) => {
+            await applyStatus(order, status);
+            setSelectedOrder((current) =>
+                current && current._id === order._id
+                    ? { ...current, order_status: status }
+                    : current
+            );
+        },
+        [applyStatus]
     );
 
     const handleUpdateStatus = async () => {
@@ -660,149 +637,22 @@ export default function OrdersPage() {
                 </DialogActions>
             </Dialog>
 
-            {/* Order Details Dialog */}
-            <Dialog open={detailDialogOpen} onClose={() => setDetailDialogOpen(false)} maxWidth="md" fullWidth>
-                <DialogTitle>Order Details - {selectedOrder?.order_number}</DialogTitle>
-                <DialogContent dividers>
-                    {selectedOrder && (
-                        <Stack spacing={3}>
-                            <Box>
-                                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                    Status
-                                </Typography>
-                                <Chip
-                                    size="small"
-                                    label={orderStatusLabel(selectedOrder.order_status)}
-                                    sx={{
-                                        color: '#fff',
-                                        fontWeight: 600,
-                                        bgcolor: STATUS_COLORS[normalizeOrderStatus(selectedOrder.order_status)],
-                                    }}
-                                />
-                            </Box>
+            <OrderDetailsDialog
+                open={detailDialogOpen}
+                order={selectedOrder}
+                canEdit={canEditOrders}
+                busy={updating}
+                onClose={() => setDetailDialogOpen(false)}
+                onOpenHistory={() => setHistoryDialogOpen(true)}
+                onChangeStatus={handleDetailStatusChange}
+            />
 
-                            <Box>
-                                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                    Customer Information
-                                </Typography>
-                                <Typography>Name: {selectedOrder.customer_info?.name || 'N/A'}</Typography>
-                                <Typography>Phone: {selectedOrder.mobile_no}</Typography>
-                                {selectedOrder.customer_info?.email && (
-                                    <Typography>Email: {selectedOrder.customer_info.email}</Typography>
-                                )}
-                            </Box>
-
-                            {selectedOrder.delivery_info?.delivery_address && (
-                                <Box>
-                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                        Delivery Address
-                                    </Typography>
-                                    <Typography>
-                                        {[
-                                            selectedOrder.delivery_info.delivery_address.line_1,
-                                            selectedOrder.delivery_info.delivery_address.line_2,
-                                        ]
-                                            .filter(Boolean)
-                                            .join(', ')}
-                                    </Typography>
-                                    <Typography>
-                                        {selectedOrder.delivery_info.delivery_address.city} -{' '}
-                                        {selectedOrder.delivery_info.delivery_address.pincode}
-                                    </Typography>
-                                </Box>
-                            )}
-
-                            <Box>
-                                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                    Order Items
-                                </Typography>
-                                <Table size="small">
-                                    <TableHead>
-                                        <TableRow>
-                                            <TableCell>Product</TableCell>
-                                            <TableCell align="right">Qty</TableCell>
-                                            <TableCell align="right">Price</TableCell>
-                                            <TableCell align="right">Total</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {selectedOrder.order_items?.map((item) => (
-                                            <TableRow key={`${item.p_code}-${item.product_name}`}>
-                                                <TableCell>{item.product_name}</TableCell>
-                                                <TableCell align="right">{item.quantity}</TableCell>
-                                                <TableCell align="right">{formatCurrency(item.unit_price)}</TableCell>
-                                                <TableCell align="right">{formatCurrency(item.total_price)}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </Box>
-
-                            <Box>
-                                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                    Order Summary
-                                </Typography>
-                                <Stack spacing={1}>
-                                    <Stack direction="row" justifyContent="space-between">
-                                        <Typography>Subtotal:</Typography>
-                                        <Typography>
-                                            {formatCurrency(selectedOrder.order_summary?.subtotal)}
-                                        </Typography>
-                                    </Stack>
-                                    <Stack direction="row" justifyContent="space-between">
-                                        <Typography>Delivery:</Typography>
-                                        <Typography>
-                                            {formatCurrency(selectedOrder.order_summary?.delivery_charges)}
-                                        </Typography>
-                                    </Stack>
-                                    {(selectedOrder.order_summary?.discount_amount ?? 0) > 0 && (
-                                        <Stack direction="row" justifyContent="space-between">
-                                            <Typography>Discount:</Typography>
-                                            <Typography color="success.main">
-                                                -{formatCurrency(selectedOrder.order_summary.discount_amount)}
-                                            </Typography>
-                                        </Stack>
-                                    )}
-                                    <Stack direction="row" justifyContent="space-between">
-                                        <Typography variant="subtitle1" fontWeight={600}>
-                                            Total:
-                                        </Typography>
-                                        <Typography variant="subtitle1" fontWeight={600} color="primary">
-                                            {formatCurrency(selectedOrder.order_summary?.total_amount)}
-                                        </Typography>
-                                    </Stack>
-                                </Stack>
-                            </Box>
-
-                            <Box>
-                                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                    Payment Information
-                                </Typography>
-                                <Typography>
-                                    Mode: {selectedOrder.payment_info?.payment_mode_name || 'N/A'}
-                                </Typography>
-                                <Typography component="div">
-                                    Status:{' '}
-                                    <Chip
-                                        size="small"
-                                        label={selectedOrder.payment_info?.payment_status}
-                                        color={getPaymentStatusColor(selectedOrder.payment_info?.payment_status)}
-                                        sx={{ ml: 1, textTransform: 'capitalize' }}
-                                    />
-                                </Typography>
-                                {selectedOrder.payment_info?.transaction_id && (
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        Transaction ID: {selectedOrder.payment_info.transaction_id}
-                                    </Typography>
-                                )}
-                            </Box>
-                        </Stack>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDetailDialogOpen(false)}>Close</Button>
-                </DialogActions>
-            </Dialog>
+            <OrderHistoryDialog
+                open={historyDialogOpen}
+                orderId={selectedOrder?._id ?? null}
+                orderNumber={selectedOrder?.order_number}
+                onClose={() => setHistoryDialogOpen(false)}
+            />
         </>
     );
 }

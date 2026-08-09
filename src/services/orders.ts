@@ -57,12 +57,35 @@ export interface Order {
     cancelled_at?: string;
     estimated_delivery_date?: string;
     order_placed_at: string;
+    order_confirmed_at?: string;
+    order_completed_at?: string;
+    actual_delivery_date?: string;
     last_updated_at: string;
-    status_history?: {
-        status: string;
-        timestamp: string;
-        note?: string;
-    }[];
+    store_name?: string;
+    project_code?: string;
+    status_history?: OrderStatusHistoryEntry[];
+}
+
+// One step of the order's status timeline (API: utils/orderStatusHistory.js).
+export interface OrderStatusHistoryEntry {
+    status: string;
+    from_status?: string;
+    changed_at: string;
+    changed_by_role?: 'admin' | 'customer' | 'system';
+    changed_by_id?: string;
+    changed_by_name?: string;
+    note?: string;
+    // Set when the entry was reconstructed from the order's timestamps rather
+    // than recorded at the moment the status changed.
+    derived?: boolean;
+}
+
+export interface OrderHistory {
+    order_number: string;
+    current_status: OrderStatus;
+    // True when the whole timeline had to be inferred from timestamps.
+    derived: boolean;
+    timeline: OrderStatusHistoryEntry[];
 }
 
 export interface OrderItem {
@@ -71,6 +94,13 @@ export interface OrderItem {
     quantity: number;
     unit_price: number;
     total_price: number;
+    // Catalogue MRP captured at placement time. Absent on older orders, which
+    // is why the pick list shows a dash rather than a fabricated discount.
+    mrp?: number;
+    package_size?: number;
+    package_unit?: string;
+    brand_name?: string;
+    pcode_img?: string;
     product_image?: string;
 }
 
@@ -161,12 +191,18 @@ export async function getOrderById(id: string): Promise<ApiResponse<Order>> {
     return apiClient.get<ApiResponse<Order>>(`/api/admin/orders/${id}`);
 }
 
+// Status change timeline for one order
+export async function getOrderHistory(id: string): Promise<ApiResponse<OrderHistory>> {
+    return apiClient.get<ApiResponse<OrderHistory>>(`/api/admin/orders/${id}/history`);
+}
+
 // Update order status
 export async function updateOrderStatus(
     id: string,
-    status: OrderStatus
+    status: OrderStatus,
+    note?: string
 ): Promise<ApiResponse<Order>> {
-    return apiClient.patch<ApiResponse<Order>>(`/api/admin/orders/${id}/status`, { status });
+    return apiClient.patch<ApiResponse<Order>>(`/api/admin/orders/${id}/status`, { status, note });
 }
 
 // Update payment status
