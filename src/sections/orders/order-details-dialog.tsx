@@ -65,8 +65,17 @@ const labelledValue = (label: string, value: React.ReactNode) => (
     </Stack>
 );
 
-const cellSx = { py: 1, borderColor: 'divider' };
+// The pick list is a printed grid, so every cell is boxed — including the
+// empty ones in the totals rows, which keep the column edges unbroken all the
+// way down.
+const cellSx = { py: 1, border: '1px solid', borderColor: 'divider' };
 const headCellSx = { ...cellSx, fontWeight: 700, whiteSpace: 'nowrap' };
+
+// The five middle columns a totals row leaves blank, as individual boxed cells
+// rather than one colSpan, so the vertical rules line up with the rows above.
+const spacerCells = ['size', 'qty', 'mrp', 'selling', 'discount'].map((column) => (
+    <TableCell key={column} sx={cellSx} />
+));
 
 type Props = {
     open: boolean;
@@ -271,14 +280,14 @@ export function OrderDetailsDialog({
                             <TableRow>
                                 <TableCell sx={cellSx} />
                                 <TableCell sx={headCellSx}>Delivery Charges +</TableCell>
-                                <TableCell sx={cellSx} colSpan={5} />
+                                {spacerCells}
                                 <TableCell sx={headCellSx}>{formatAmount(deliveryCharges)}</TableCell>
                             </TableRow>
 
                             <TableRow>
                                 <TableCell sx={cellSx} />
                                 <TableCell sx={headCellSx}>Final Receivable Amount</TableCell>
-                                <TableCell sx={cellSx} colSpan={5} />
+                                {spacerCells}
                                 <TableCell sx={headCellSx}>
                                     {formatAmount(order.order_summary?.total_amount ?? 0)}
                                 </TableCell>
