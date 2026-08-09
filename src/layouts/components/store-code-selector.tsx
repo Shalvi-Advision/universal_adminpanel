@@ -14,10 +14,12 @@ import { getAllStoreCodes } from 'src/services/stores';
 import { useStoreCode } from 'src/contexts/store-code-context';
 
 export function StoreCodeSelector() {
-  const { storeCode, setStoreCode } = useStoreCode();
+  const { storeCode, setStoreCode, isLoading: isStoreCodeLoading } = useStoreCode();
   const [storeCodes, setStoreCodes] = useState<StoreCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
+
+  const hasSingleStoreCode = storeCodes.length === 1;
 
   useEffect(() => {
     const fetchStoreCodes = async () => {
@@ -38,6 +40,17 @@ export function StoreCodeSelector() {
 
     fetchStoreCodes();
   }, []);
+
+  // When only one store code exists there is nothing to choose: select it automatically.
+  // Waits for the persisted selection to load first so we don't race localStorage.
+  useEffect(() => {
+    if (loading || isStoreCodeLoading || !hasSingleStoreCode) return;
+
+    const onlyStoreCode = storeCodes[0].store_code;
+    if (storeCode !== onlyStoreCode) {
+      setStoreCode(onlyStoreCode);
+    }
+  }, [loading, isStoreCodeLoading, hasSingleStoreCode, storeCodes, storeCode, setStoreCode]);
 
   const handleChange = (event: any) => {
     const selectedCode = event.target.value;
@@ -73,9 +86,13 @@ export function StoreCodeSelector() {
           label="Select Store Code"
           onChange={handleChange}
         >
-          <MenuItem value="">
-            <em>None</em>
-          </MenuItem>
+          {/* Clearing the selection is pointless when there is only one store code —
+              the auto-select effect would immediately re-apply it. */}
+          {!hasSingleStoreCode && (
+            <MenuItem value="">
+              <em>None</em>
+            </MenuItem>
+          )}
           {storeCodes.map((store) => (
             <MenuItem key={store.store_code} value={store.store_code}>
               {store.store_code} - {store.store_name}
