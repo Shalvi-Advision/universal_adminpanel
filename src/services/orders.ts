@@ -2,6 +2,20 @@ import type { ApiResponse, PaginatedResponse } from 'src/types/api';
 
 import { apiClient } from 'src/utils/api-client';
 
+// Delivery address as stored on the order (models/Order.js deliveryInfoSchema).
+export interface OrderDeliveryAddress {
+    full_name?: string;
+    mobile_number?: string;
+    email_id?: string;
+    line_1?: string;
+    line_2?: string;
+    city?: string;
+    pincode?: string;
+    latitude?: string;
+    longitude?: string;
+    area_id?: string;
+}
+
 // Order type matching backend model
 export interface Order {
     _id: string;
@@ -14,35 +28,34 @@ export interface Order {
         email?: string;
         phone?: string;
     };
-    delivery_address?: {
-        address_line1: string;
-        address_line2?: string;
-        city: string;
-        state: string;
-        pincode: string;
-        landmark?: string;
-    };
     order_items: OrderItem[];
     order_summary: {
         total_items: number;
-        total_quantity: number;
+        total_quantity?: number;
         subtotal: number;
-        delivery_charge: number;
-        discount: number;
+        delivery_charges?: number;
+        tax_amount?: number;
+        discount_amount?: number;
         total_amount: number;
     };
     order_status: OrderStatus;
     payment_info: {
-        payment_mode: string;
+        payment_mode_id?: number;
         payment_mode_name?: string;
         payment_status: PaymentStatus;
         transaction_id?: string;
     };
     delivery_info?: {
-        delivery_type: 'home_delivery' | 'self_pickup';
-        delivery_slot?: string;
-        expected_delivery_date?: string;
+        delivery_date?: string;
+        delivery_slot_id?: number;
+        delivery_slot_from?: string;
+        delivery_slot_to?: string;
+        delivery_address?: OrderDeliveryAddress;
     };
+    order_notes?: string;
+    cancel_reason?: string;
+    cancelled_at?: string;
+    estimated_delivery_date?: string;
     order_placed_at: string;
     last_updated_at: string;
     status_history?: {
@@ -61,7 +74,52 @@ export interface OrderItem {
     product_image?: string;
 }
 
-export type OrderStatus = 'placed' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
+// The eight buckets the Orders page exposes as tabs, in workflow order.
+// Mirrors constants/orderStatus.js in the API.
+export const ORDER_STATUSES = [
+    'pending',
+    'accepted',
+    'accepted_by_store',
+    'in_packaging',
+    'out_for_delivery',
+    'delivered',
+    'payment_processing',
+    'cancelled',
+] as const;
+
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+    pending: 'Pending',
+    accepted: 'Accepted',
+    accepted_by_store: 'Accepted By Store',
+    in_packaging: 'In Packaging',
+    out_for_delivery: 'Out for Delivery',
+    delivered: 'Delivered',
+    payment_processing: 'Payment Processing',
+    cancelled: 'Cancelled',
+};
+
+// Pre-rename values still present on documents the migration has not touched.
+const LEGACY_STATUS_MAP: Record<string, OrderStatus> = {
+    placed: 'pending',
+    confirmed: 'accepted',
+    processing: 'accepted_by_store',
+    packed: 'in_packaging',
+    shipped: 'out_for_delivery',
+    refunded: 'cancelled',
+};
+
+// Reads a raw order_status off an order, folding legacy spellings.
+export function normalizeOrderStatus(raw?: string): OrderStatus {
+    if (!raw) return 'pending';
+    return LEGACY_STATUS_MAP[raw] ?? (raw as OrderStatus);
+}
+
+export function orderStatusLabel(raw?: string): string {
+    const status = normalizeOrderStatus(raw);
+    return ORDER_STATUS_LABELS[status] ?? status;
+}
 export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 
 export interface OrdersQueryParams {
@@ -134,6 +192,24 @@ export async function updateOrder(
 // Delete order (only if placed or cancelled)
 export async function deleteOrder(id: string): Promise<ApiResponse<void>> {
     return apiClient.delete<ApiResponse<void>>(`/api/admin/orders/${id}`);
+}
+
+// Count orders per status tab. Counts honour search/date filters but not the
+// status filter, so the tab badges do not change as tabs are switched.
+export async function getOrderStatusCounts(params: {
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+} = {}): Promise<ApiResponse<{ total: number; counts: Record<OrderStatus, number> }>> {
+    const queryParams = new URLSearchParams();
+    if (params.search) queryParams.append('search', params.search);
+    if (params.startDate) queryParams.append('startDate', params.startDate);
+    if (params.endDate) queryParams.append('endDate', params.endDate);
+
+    const queryString = queryParams.toString();
+    return apiClient.get<ApiResponse<{ total: number; counts: Record<OrderStatus, number> }>>(
+        `/api/admin/orders/stats/status-counts${queryString ? `?${queryString}` : ''}`
+    );
 }
 
 // Bulk update order status

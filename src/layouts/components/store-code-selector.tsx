@@ -1,7 +1,3 @@
-import type { StoreCode } from 'src/types/api';
-
-import { useState, useEffect } from 'react';
-
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Select from '@mui/material/Select';
@@ -10,47 +6,14 @@ import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { getAllStoreCodes } from 'src/services/stores';
 import { useStoreCode } from 'src/contexts/store-code-context';
 
 export function StoreCodeSelector() {
-  const { storeCode, setStoreCode, isLoading: isStoreCodeLoading } = useStoreCode();
-  const [storeCodes, setStoreCodes] = useState<StoreCode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
+  const { storeCode, setStoreCode, storeCodes, isLoading, error } = useStoreCode();
 
+  // A single store code is auto-selected by the provider, so there is nothing
+  // to pick — render it as a read-only field instead of a dropdown.
   const hasSingleStoreCode = storeCodes.length === 1;
-
-  useEffect(() => {
-    const fetchStoreCodes = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        const response = await getAllStoreCodes();
-        if (response.success) {
-          setStoreCodes(response.data);
-        }
-      } catch (err: any) {
-        setError(err.message || 'Failed to load store codes');
-        console.error('Error fetching store codes:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStoreCodes();
-  }, []);
-
-  // When only one store code exists there is nothing to choose: select it automatically.
-  // Waits for the persisted selection to load first so we don't race localStorage.
-  useEffect(() => {
-    if (loading || isStoreCodeLoading || !hasSingleStoreCode) return;
-
-    const onlyStoreCode = storeCodes[0].store_code;
-    if (storeCode !== onlyStoreCode) {
-      setStoreCode(onlyStoreCode);
-    }
-  }, [loading, isStoreCodeLoading, hasSingleStoreCode, storeCodes, storeCode, setStoreCode]);
 
   const handleChange = (event: any) => {
     const selectedCode = event.target.value;
@@ -67,7 +30,7 @@ export function StoreCodeSelector() {
     );
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', px: 2, py: 2 }}>
         <CircularProgress size={24} />
@@ -85,9 +48,8 @@ export function StoreCodeSelector() {
           value={storeCode || ''}
           label="Select Store Code"
           onChange={handleChange}
+          disabled={hasSingleStoreCode}
         >
-          {/* Clearing the selection is pointless when there is only one store code —
-              the auto-select effect would immediately re-apply it. */}
           {!hasSingleStoreCode && (
             <MenuItem value="">
               <em>None</em>
