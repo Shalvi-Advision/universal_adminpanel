@@ -168,6 +168,9 @@ export default function OrdersPage() {
         setPage(0);
     };
 
+    // Only wired to the Payment Status filter dropdown, which is commented
+    // out below for now — kept, not deleted, so restoring it is one uncomment.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handlePaymentStatusFilterChange = (event: any) => {
         setPaymentStatusFilter(event.target.value);
         setPage(0);
@@ -384,7 +387,11 @@ export default function OrdersPage() {
                                 sx={{ minWidth: 280 }}
                             />
 
-                            <FormControl size="small" sx={{ minWidth: 180 }}>
+                            {/* Payment Status filter — commented out for now, not removed.
+                                paymentStatusFilter/handlePaymentStatusFilterChange/PAYMENT_STATUSES
+                                stay wired up below (Clear Filters still resets the state) so this
+                                drops back in with a one-line uncomment. */}
+                            {/* <FormControl size="small" sx={{ minWidth: 180 }}>
                                 <InputLabel>Payment Status</InputLabel>
                                 <Select
                                     value={paymentStatusFilter}
@@ -398,7 +405,7 @@ export default function OrdersPage() {
                                         </MenuItem>
                                     ))}
                                 </Select>
-                            </FormControl>
+                            </FormControl> */}
 
                             <Button
                                 variant="outlined"
