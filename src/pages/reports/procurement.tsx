@@ -55,6 +55,10 @@ const printStyles = (
   <GlobalStyles
     styles={{
       '.print-only': { display: 'none' },
+      // Chrome/Edge/Firefox all default to roughly a 1in page margin, which
+      // alone can be the difference between a 19-row report fitting on one
+      // page and spilling one or two rows onto a near-empty second page.
+      '@page': { margin: '10mm' },
       '@media print': {
         'body *': { visibility: 'hidden' },
         '.report-print-area, .report-print-area *': { visibility: 'visible' },
@@ -74,6 +78,17 @@ const printStyles = (
         // silently dropping every row below the fold.
         '.report-print-area .simplebar-wrapper, .report-print-area .simplebar-mask, .report-print-area .simplebar-content-wrapper, .report-print-area .simplebar-content':
           { overflow: 'visible !important', height: 'auto !important', maxHeight: 'none !important' },
+        // Everything below trims vertical space the screen layout can afford
+        // but a one-page print budget can't: gaps between sections, the
+        // title, and — the biggest lever, since it's multiplied by every row
+        // — cell padding and font size in the table itself.
+        '.report-print-area .MuiStack-root': { gap: '4px !important' },
+        '.report-print-area h4': { fontSize: '16px !important', margin: '0 !important' },
+        '.report-print-area table': { fontSize: '10px' },
+        '.report-print-area th, .report-print-area td': {
+          padding: '2px 6px !important',
+          lineHeight: 1.2,
+        },
       },
     }}
   />
@@ -155,7 +170,12 @@ export default function Page() {
         <Stack spacing={3}>
           <Box>
             <Typography variant="h4">Procurement Report</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 0.5 }}
+              className="no-print"
+            >
               Total quantity of each product ordered on a given day, for restocking.
               Cancelled orders are excluded.
             </Typography>
