@@ -45,11 +45,6 @@ import { PermissionButton } from 'src/components/permission-button/permission-bu
 import { ProductDialog } from './components/product-dialog';
 import { DeleteConfirmDialog } from '../dynamic/components/delete-confirm-dialog';
 
-// Dropdown-population calls want the full list, not a paginated page — the
-// by-store endpoints default to limit=20 which would silently truncate any
-// tenant with more departments/categories/subcategories than that.
-const LOOKUP_LIST_LIMIT = 500;
-
 export default function Page() {
   const { storeCode } = useStoreCode();
   const [products, setProducts] = useState<Product[]>([]);
