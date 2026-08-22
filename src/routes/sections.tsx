@@ -39,6 +39,15 @@ export const OutletDeliverySlotsPage = lazyWithRetry(
 );
 export const OutletDeliveryFeesPage = lazyWithRetry(() => import('src/pages/outlet/delivery-fees'));
 export const ReportsProcurementPage = lazyWithRetry(() => import('src/pages/reports/procurement'));
+export const LoyaltyDashboardPage = lazyWithRetry(() => import('src/pages/loyalty/dashboard'));
+export const LoyaltyRulesPage = lazyWithRetry(() => import('src/pages/loyalty/rules'));
+export const LoyaltyRewardsPage = lazyWithRetry(() => import('src/pages/loyalty/rewards'));
+export const LoyaltyTiersPage = lazyWithRetry(() => import('src/pages/loyalty/tiers'));
+export const LoyaltyCampaignsPage = lazyWithRetry(() => import('src/pages/loyalty/campaigns'));
+export const LoyaltyChallengesPage = lazyWithRetry(() => import('src/pages/loyalty/challenges'));
+export const LoyaltyCustomersPage = lazyWithRetry(() => import('src/pages/loyalty/customers'));
+export const LoyaltyReferralsPage = lazyWithRetry(() => import('src/pages/loyalty/referrals'));
+export const LoyaltyAuditLogsPage = lazyWithRetry(() => import('src/pages/loyalty/audit-logs'));
 export const DynamicBestSellersPage = lazyWithRetry(() => import('src/pages/dynamic/best-sellers'));
 export const DynamicTopSellersPage = lazyWithRetry(() => import('src/pages/dynamic/top-sellers'));
 export const DynamicAdvertisementsPage = lazyWithRetry(
@@ -229,6 +238,78 @@ export const routesSection: RouteObject[] = [
         element: (
           <PermissionGuard section="reports">
             <ReportsProcurementPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'loyalty/dashboard',
+        element: (
+          <PermissionGuard section="loyalty">
+            <LoyaltyDashboardPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'loyalty/rules',
+        element: (
+          <PermissionGuard section="loyalty">
+            <LoyaltyRulesPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'loyalty/rewards',
+        element: (
+          <PermissionGuard section="loyalty">
+            <LoyaltyRewardsPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'loyalty/tiers',
+        element: (
+          <PermissionGuard section="loyalty">
+            <LoyaltyTiersPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'loyalty/campaigns',
+        element: (
+          <PermissionGuard section="loyalty">
+            <LoyaltyCampaignsPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'loyalty/challenges',
+        element: (
+          <PermissionGuard section="loyalty">
+            <LoyaltyChallengesPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'loyalty/customers',
+        element: (
+          <PermissionGuard section="loyalty">
+            <LoyaltyCustomersPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'loyalty/referrals',
+        element: (
+          <PermissionGuard section="loyalty">
+            <LoyaltyReferralsPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'loyalty/audit-logs',
+        element: (
+          <PermissionGuard section="loyalty">
+            <LoyaltyAuditLogsPage />
           </PermissionGuard>
         ),
       },
