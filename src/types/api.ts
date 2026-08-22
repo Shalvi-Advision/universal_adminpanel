@@ -538,6 +538,9 @@ export interface Category {
   no_of_col: string;
   image_link: string;
   category_bg_color: string;
+  // Whether this category shows on the customer mobile app. Defaults true;
+  // absent on documents created before this field existed.
+  is_visible?: boolean;
   __v?: number;
 }
 
@@ -551,6 +554,7 @@ export interface CategoryPayload {
   no_of_col?: string;
   image_link?: string;
   category_bg_color?: string;
+  is_visible?: boolean;
 }
 
 // Categories query parameters for POST endpoint
@@ -606,6 +610,9 @@ export interface Subcategory {
   main_category_name: string;
   image_link?: string;
   department_name?: string;
+  // Whether this subcategory shows on the customer mobile app. Defaults
+  // true; absent on documents created before this field existed.
+  is_visible?: boolean;
   __v?: number;
 }
 
@@ -616,6 +623,7 @@ export interface SubcategoryPayload {
   category_id: string;
   main_category_name: string;
   image_link?: string;
+  is_visible?: boolean;
 }
 
 // Subcategories query parameters for POST endpoint

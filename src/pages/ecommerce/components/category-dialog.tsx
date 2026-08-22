@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react';
 
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import TextField from '@mui/material/TextField';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { useStoreCode } from 'src/contexts/store-code-context';
@@ -39,6 +41,7 @@ export function CategoryDialog({ open, category, onClose, onSuccess }: CategoryD
   const [noOfCol, setNoOfCol] = useState('');
   const [imageLink, setImageLink] = useState('');
   const [categoryBgColor, setCategoryBgColor] = useState('');
+  const [isVisible, setIsVisible] = useState(true);
 
   // Load data when editing
   useEffect(() => {
@@ -51,6 +54,7 @@ export function CategoryDialog({ open, category, onClose, onSuccess }: CategoryD
       setNoOfCol(category.no_of_col ?? '');
       setImageLink(category.image_link ?? '');
       setCategoryBgColor(category.category_bg_color ?? '');
+      setIsVisible(category.is_visible ?? true);
     } else {
       // Reset form for create, pre-fill store code from context
       setIdCategoryMaster('');
@@ -61,6 +65,7 @@ export function CategoryDialog({ open, category, onClose, onSuccess }: CategoryD
       setNoOfCol('');
       setImageLink('');
       setCategoryBgColor('');
+      setIsVisible(true);
     }
     setError('');
   }, [category, open, contextStoreCode]);
@@ -109,6 +114,7 @@ export function CategoryDialog({ open, category, onClose, onSuccess }: CategoryD
       no_of_col: noOfCol.trim() || undefined,
       image_link: imageLink.trim() || undefined,
       category_bg_color: categoryBgColor.trim() || undefined,
+      is_visible: isVisible,
     };
 
     try {
@@ -216,6 +222,16 @@ export function CategoryDialog({ open, category, onClose, onSuccess }: CategoryD
             label="Background Color"
             value={categoryBgColor}
             onChange={(e) => setCategoryBgColor(e.target.value)}
+          />
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={isVisible}
+                onChange={(e) => setIsVisible(e.target.checked)}
+              />
+            }
+            label="Visible on mobile app"
           />
         </Stack>
       </DialogContent>

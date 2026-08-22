@@ -13,7 +13,10 @@ export async function createCategory(data: CategoryPayload): Promise<ApiResponse
   return apiClient.post<ApiResponse<Category>>('/api/admin/categories', data);
 }
 
-export async function updateCategory(id: string, data: CategoryPayload): Promise<ApiResponse<Category>> {
+export async function updateCategory(
+  id: string,
+  data: Partial<CategoryPayload>
+): Promise<ApiResponse<Category>> {
   return apiClient.put<ApiResponse<Category>>(`/api/admin/categories/${id}`, data);
 }
 

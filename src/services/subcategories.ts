@@ -16,7 +16,10 @@ export async function createSubcategory(data: SubcategoryPayload): Promise<ApiRe
   return apiClient.post<ApiResponse<Subcategory>>('/api/admin/categories/subcategories', data);
 }
 
-export async function updateSubcategory(id: string, data: SubcategoryPayload): Promise<ApiResponse<Subcategory>> {
+export async function updateSubcategory(
+  id: string,
+  data: Partial<SubcategoryPayload>
+): Promise<ApiResponse<Subcategory>> {
   return apiClient.put<ApiResponse<Subcategory>>(`/api/admin/categories/subcategories/${id}`, data);
 }
 

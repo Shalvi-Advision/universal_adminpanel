@@ -8,8 +8,10 @@ import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Table from '@mui/material/Table';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
 import TableRow from '@mui/material/TableRow';
 import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
@@ -25,7 +27,11 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { CONFIG } from 'src/config-global';
 import { useStoreCode } from 'src/contexts/store-code-context';
-import { deleteSubcategory, getSubcategoriesByStore } from 'src/services/subcategories';
+import {
+  updateSubcategory,
+  deleteSubcategory,
+  getSubcategoriesByStore,
+} from 'src/services/subcategories';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
@@ -46,6 +52,7 @@ export default function Page() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [togglingId, setTogglingId] = useState('');
   const limit = 20;
 
   const fetchSubcategories = useCallback(async () => {
@@ -125,6 +132,20 @@ export default function Page() {
     fetchSubcategories(); // Refresh list
   };
 
+  const handleToggleVisible = async (subcategory: Subcategory) => {
+    try {
+      setTogglingId(subcategory._id);
+      await updateSubcategory(subcategory._id, {
+        is_visible: !(subcategory.is_visible ?? true),
+      });
+      await fetchSubcategories();
+    } catch (err: any) {
+      setError(err.message || 'Failed to update visibility');
+    } finally {
+      setTogglingId('');
+    }
+  };
+
   return (
     <>
       <title>{`Subcategories - ${CONFIG.appName}`}</title>
@@ -189,19 +210,20 @@ export default function Page() {
                         <TableCell>Category</TableCell>
                         <TableCell>Category ID</TableCell>
                         <TableCell>Department</TableCell>
+                        <TableCell align="center">Visible</TableCell>
                         <TableCell align="right">Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                          <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                             <CircularProgress />
                           </TableCell>
                         </TableRow>
                       ) : subcategories.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                          <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                             <Typography variant="body2" color="text.secondary">
                               No subcategories found
                             </Typography>
@@ -240,6 +262,27 @@ export default function Page() {
                               <Typography variant="body2">
                                 {item.department_name || '—'}
                               </Typography>
+                            </TableCell>
+                            <TableCell align="center">
+                              <Tooltip
+                                title={
+                                  (item.is_visible ?? true)
+                                    ? 'Shown on the mobile app'
+                                    : 'Hidden from the mobile app'
+                                }
+                              >
+                                <PermissionButton
+                                  section="ecommerce"
+                                  action="edit"
+                                  fallback="disable"
+                                >
+                                  <Switch
+                                    checked={item.is_visible ?? true}
+                                    disabled={togglingId === item._id}
+                                    onChange={() => handleToggleVisible(item)}
+                                  />
+                                </PermissionButton>
+                              </Tooltip>
                             </TableCell>
                             <TableCell align="right">
                               <PermissionButton section="ecommerce" action="edit">

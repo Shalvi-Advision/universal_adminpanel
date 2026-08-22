@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react';
 
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import TextField from '@mui/material/TextField';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { createSubcategory, updateSubcategory } from 'src/services/subcategories';
@@ -38,6 +40,7 @@ export function SubcategoryDialog({
   const [categoryId, setCategoryId] = useState('');
   const [mainCategoryName, setMainCategoryName] = useState('');
   const [imageLink, setImageLink] = useState('');
+  const [isVisible, setIsVisible] = useState(true);
 
   // Load data when editing
   useEffect(() => {
@@ -47,6 +50,7 @@ export function SubcategoryDialog({
       setCategoryId(subcategory.category_id);
       setMainCategoryName(subcategory.main_category_name);
       setImageLink(subcategory.image_link ?? '');
+      setIsVisible(subcategory.is_visible ?? true);
     } else {
       // Reset form for create
       setIdSubCategoryMaster('');
@@ -54,6 +58,7 @@ export function SubcategoryDialog({
       setCategoryId('');
       setMainCategoryName('');
       setImageLink('');
+      setIsVisible(true);
     }
     setError('');
   }, [subcategory, open]);
@@ -94,6 +99,7 @@ export function SubcategoryDialog({
       category_id: categoryId.trim(),
       main_category_name: mainCategoryName.trim(),
       image_link: imageLink.trim() || undefined,
+      is_visible: isVisible,
     };
 
     try {
@@ -165,6 +171,16 @@ export function SubcategoryDialog({
             value={imageLink}
             onChange={(url) => setImageLink(url)}
             folder="subcategories"
+          />
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={isVisible}
+                onChange={(e) => setIsVisible(e.target.checked)}
+              />
+            }
+            label="Visible on mobile app"
           />
         </Stack>
       </DialogContent>
