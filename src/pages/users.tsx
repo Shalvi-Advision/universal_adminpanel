@@ -33,6 +33,8 @@ import { usePermissions } from 'src/contexts/permissions-context';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
+import { UserDetailDialog } from 'src/sections/users/user-detail-dialog';
+
 // ----------------------------------------------------------------------
 
 export default function Page() {
@@ -47,6 +49,10 @@ export default function Page() {
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [changingRole, setChangingRole] = useState(false);
+
+  // Customer drill-down dialog
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [detailUserId, setDetailUserId] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -70,6 +76,13 @@ export default function Page() {
   const handleOpenRoleDialog = (user: User) => {
     setSelectedUser(user);
     setRoleDialogOpen(true);
+  };
+
+  const handleOpenDetail = (user: User) => {
+    const id = user._id || user.id;
+    if (!id) return;
+    setDetailUserId(id);
+    setDetailDialogOpen(true);
   };
 
   const handleChangeRole = async () => {
@@ -149,19 +162,19 @@ export default function Page() {
                       <TableCell>Last Active</TableCell>
                       <TableCell align="center">Notifications</TableCell>
                       <TableCell>Created At</TableCell>
-                      {isSuperAdmin && <TableCell align="right">Actions</TableCell>}
+                      <TableCell align="right">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={isSuperAdmin ? 10 : 9} align="center" sx={{ py: 8 }}>
+                        <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
                           <CircularProgress />
                         </TableCell>
                       </TableRow>
                     ) : users.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={isSuperAdmin ? 10 : 9} align="center" sx={{ py: 8 }}>
+                        <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
                           <Typography variant="body2" color="text.secondary">
                             No users found
                           </Typography>
@@ -242,24 +255,31 @@ export default function Page() {
                           <TableCell>
                             {user.createdAt ? formatDate(user.createdAt) : '-'}
                           </TableCell>
-                          {isSuperAdmin && (
-                            <TableCell align="right">
-                              <Tooltip title={user.role === 'admin' ? 'Demote to User' : 'Promote to Admin'}>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleOpenRoleDialog(user)}
-                                  color={user.role === 'admin' ? 'warning' : 'primary'}
-                                >
-                                  <Iconify
-                                    icon={user.role === 'admin'
-                                      ? ('solar:shield-minus-bold-duotone' as any)
-                                      : ('solar:shield-plus-bold-duotone' as any)}
-                                    width={20}
-                                  />
+                          <TableCell align="right">
+                            <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
+                              <Tooltip title="View customer details">
+                                <IconButton size="small" onClick={() => handleOpenDetail(user)}>
+                                  <Iconify icon={'solar:eye-bold-duotone' as any} width={20} />
                                 </IconButton>
                               </Tooltip>
-                            </TableCell>
-                          )}
+                              {isSuperAdmin && (
+                                <Tooltip title={user.role === 'admin' ? 'Demote to User' : 'Promote to Admin'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleOpenRoleDialog(user)}
+                                    color={user.role === 'admin' ? 'warning' : 'primary'}
+                                  >
+                                    <Iconify
+                                      icon={user.role === 'admin'
+                                        ? ('solar:shield-minus-bold-duotone' as any)
+                                        : ('solar:shield-plus-bold-duotone' as any)}
+                                      width={20}
+                                    />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </Stack>
+                          </TableCell>
                         </TableRow>
                       ))
                     )}
@@ -325,6 +345,13 @@ export default function Page() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Customer Drill-Down Dialog */}
+        <UserDetailDialog
+          open={detailDialogOpen}
+          userId={detailUserId}
+          onClose={() => setDetailDialogOpen(false)}
+        />
       </Container>
     </>
   );

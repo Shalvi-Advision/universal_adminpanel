@@ -25,6 +25,87 @@ export interface User {
   unreadNotificationCount?: number;
 }
 
+// Order summary row within a user's drill-down order history
+export interface UserOrderSummary {
+  _id: string;
+  order_number: string;
+  store_code: string;
+  order_status: string;
+  order_placed_at: string;
+  order_summary: {
+    total_amount: number;
+    total_items: number;
+    total_quantity: number;
+  };
+}
+
+// Monthly spend trend point within a user's drill-down
+export interface UserSpendTrendPoint {
+  _id: string; // 'YYYY-MM'
+  totalSpent: number;
+  orderCount: number;
+}
+
+// Saved address within a user's drill-down (AddressBook document)
+export interface UserAddress {
+  _id: string;
+  idaddress_book: string;
+  full_name: string;
+  mobile_number: string;
+  email_id?: string;
+  delivery_addr_line_1: string;
+  delivery_addr_line_2?: string;
+  delivery_addr_city: string;
+  delivery_addr_pincode: string;
+  is_default: 'Yes' | 'No';
+}
+
+// Favorited product within a user's drill-down (Favorite document, enriched)
+export interface UserFavorite {
+  _id: string;
+  p_code: string;
+  store_code: string;
+  createdAt?: string;
+  product: {
+    name: string;
+    image: string | null;
+    mrp: number | null;
+    sellingPrice: number | null;
+  } | null;
+}
+
+// Notification within a user's drill-down
+export interface UserNotification {
+  _id: string;
+  title: string;
+  body: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+// Aggregate order stats within a user's drill-down
+export interface UserOrderStats {
+  totalOrders: number;
+  totalSpent: number;
+  completedOrders: number;
+  cancelledOrders: number;
+  lastOrderAt: string | null;
+  avgOrderValue: number;
+}
+
+// Full response shape for GET /api/admin/users/:id
+export interface UserDetail {
+  user: User;
+  stats: UserOrderStats;
+  orders: UserOrderSummary[];
+  spendTrend: UserSpendTrendPoint[];
+  addresses: UserAddress[];
+  favorites: UserFavorite[];
+  notifications: UserNotification[];
+  notificationStats: { totalCount: number; unreadCount: number };
+}
+
 // Pagination metadata
 export interface Pagination {
   total: number;

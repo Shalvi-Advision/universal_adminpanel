@@ -1,4 +1,10 @@
-import type { User, ApiResponse, UsersQueryParams, PaginatedResponse } from 'src/types/api';
+import type {
+  User,
+  UserDetail,
+  ApiResponse,
+  UsersQueryParams,
+  PaginatedResponse,
+} from 'src/types/api';
 
 import { apiClient } from 'src/utils/api-client';
 
@@ -19,6 +25,12 @@ export async function getAllUsers(
   const endpoint = `/api/admin/users${queryString ? `?${queryString}` : ''}`;
 
   return apiClient.get<PaginatedResponse<User>>(endpoint);
+}
+
+// Get the full customer drill-down: order history, spend trend,
+// addresses, favorites, and recent notifications for one user
+export async function getUserDetail(userId: string): Promise<ApiResponse<UserDetail>> {
+  return apiClient.get<ApiResponse<UserDetail>>(`/api/admin/users/${userId}`);
 }
 
 // Change user role (admin/user)
