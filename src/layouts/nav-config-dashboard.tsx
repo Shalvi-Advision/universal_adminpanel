@@ -50,6 +50,22 @@ export const navData: NavItem[] = [
     permissionSection: 'offers',
   },
   {
+    title: 'Reports',
+    path: '/reports/procurement',
+    icon: iconify('solar:chart-2-bold-duotone'),
+    // Reuses the 'orders' permission section — see the note in
+    // routes/sections.tsx on why Reports has no permission section of its
+    // own yet.
+    permissionSection: 'orders',
+    children: [
+      {
+        title: 'Procurement',
+        path: '/reports/procurement',
+        icon: iconify('solar:cart-check-bold-duotone'),
+      },
+    ],
+  },
+  {
     title: 'Ecommerce',
     path: '/ecommerce/departments',
     icon: icon('ic-cart'),

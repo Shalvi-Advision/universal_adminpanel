@@ -38,6 +38,7 @@ export const OutletDeliverySlotsPage = lazyWithRetry(
   () => import('src/pages/outlet/delivery-slots')
 );
 export const OutletDeliveryFeesPage = lazyWithRetry(() => import('src/pages/outlet/delivery-fees'));
+export const ReportsProcurementPage = lazyWithRetry(() => import('src/pages/reports/procurement'));
 export const DynamicBestSellersPage = lazyWithRetry(() => import('src/pages/dynamic/best-sellers'));
 export const DynamicTopSellersPage = lazyWithRetry(() => import('src/pages/dynamic/top-sellers'));
 export const DynamicAdvertisementsPage = lazyWithRetry(
@@ -220,6 +221,16 @@ export const routesSection: RouteObject[] = [
         element: (
           <PermissionGuard section="outlet">
             <OutletDeliveryFeesPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        // Reuses the 'orders' permission section — this is order-derived
+        // data, not its own resource (see routes/admin/reports.js).
+        path: 'reports/procurement',
+        element: (
+          <PermissionGuard section="orders">
+            <ReportsProcurementPage />
           </PermissionGuard>
         ),
       },
