@@ -407,7 +407,10 @@ export default function OrdersPage() {
                                 </Select>
                             </FormControl> */}
 
-                            <Button
+                            {/* Clear Filters — commented out for now, not removed. Not
+                                needed while the Payment Status filter above is also
+                                hidden; search still clears itself by emptying the field. */}
+                            {/* <Button
                                 variant="outlined"
                                 onClick={() => {
                                     setSearch('');
@@ -416,7 +419,7 @@ export default function OrdersPage() {
                                 }}
                             >
                                 Clear Filters
-                            </Button>
+                            </Button> */}
 
                             <Box sx={{ flexGrow: 1 }} />
 
