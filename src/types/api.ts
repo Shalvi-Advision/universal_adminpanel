@@ -388,7 +388,9 @@ export interface StoresQueryParams {
 
 // Store create/update payload
 export interface StorePayload {
-  pincode: string;
+  // Legacy — which pincodes a store serves is assigned on Pincode.store_code
+  // instead (Outlet > Pincodes). No longer required to create/save a store.
+  pincode?: string;
   mobile_outlet_name: string;
   store_code: string;
   is_enabled: 'Enabled' | 'Disabled';

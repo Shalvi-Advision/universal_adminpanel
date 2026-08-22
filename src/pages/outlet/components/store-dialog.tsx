@@ -156,7 +156,7 @@ export function StoreDialog({ open, store, onClose, onSuccess }: StoreDialogProp
     const payload: StorePayload = {
       mobile_outlet_name: storeName.trim(),
       store_code: storeCode.trim().toUpperCase(),
-      pincode: pincode.trim(),
+      pincode: pincode.trim() || undefined,
       store_address: storeAddress.trim(),
       contact_number: contactNumber.trim(),
       email: email.trim(),
