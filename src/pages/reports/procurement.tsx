@@ -15,6 +15,7 @@ import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import GlobalStyles from '@mui/material/GlobalStyles';
 import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
@@ -31,6 +32,44 @@ const todayIso = () => {
   const offset = now.getTimezoneOffset();
   return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10);
 };
+
+const formatDateForDisplay = (iso: string) => {
+  const [year, month, day] = iso.split('-');
+  return `${day}/${month}/${year}`;
+};
+
+// Same technique as the order Pick List (order-details-dialog.tsx): print
+// relies on visibility rather than display so the page keeps its layout —
+// everything is hidden, then only the report area is switched back on. "Export
+// PDF" is window.print() with the browser's own Save as PDF destination —
+// no PDF library needed, consistent with how the Pick List already does this.
+const printStyles = (
+  <GlobalStyles
+    styles={{
+      '.print-only': { display: 'none' },
+      '@media print': {
+        'body *': { visibility: 'hidden' },
+        '.report-print-area, .report-print-area *': { visibility: 'visible' },
+        '.report-print-area': {
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: '100%',
+          padding: 0,
+          boxShadow: 'none',
+        },
+        '.no-print': { display: 'none !important' },
+        '.print-only': { display: 'block !important' },
+        // The table sits inside Scrollbar (simplebar), which scrolls a
+        // fixed-height viewport on screen — left alone, print would only
+        // capture whatever slice was visible when Export PDF was clicked,
+        // silently dropping every row below the fold.
+        '.report-print-area .simplebar-wrapper, .report-print-area .simplebar-mask, .report-print-area .simplebar-content-wrapper, .report-print-area .simplebar-content':
+          { overflow: 'visible !important', height: 'auto !important', maxHeight: 'none !important' },
+      },
+    }}
+  />
+);
 
 // Quotes every field so a product name with a comma in it (there are plenty
 // — "Kantoli (Whole Vegetables)") can't be mistaken for a column break, and
@@ -91,15 +130,18 @@ export default function Page() {
     fetchReport();
   }, [fetchReport]);
 
-  const handleDownload = () => {
+  const handleDownloadCsv = () => {
     downloadCsv(buildCsv(rows), `Item_procurement_data_${date.replace(/-/g, '')}.csv`);
   };
 
+  const handleExportPdf = () => window.print();
+
   return (
     <>
+      {printStyles}
       <title>{`Procurement Report - ${CONFIG.appName}`}</title>
 
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="xl" sx={{ py: 4 }} className="report-print-area">
         <Stack spacing={3}>
           <Box>
             <Typography variant="h4">Procurement Report</Typography>
@@ -110,7 +152,7 @@ export default function Page() {
           </Box>
 
           {error && (
-            <Alert severity="error" onClose={() => setError('')}>
+            <Alert severity="error" onClose={() => setError('')} className="no-print">
               {error}
             </Alert>
           )}
@@ -131,7 +173,13 @@ export default function Page() {
                   onChange={(e) => setDate(e.target.value)}
                   InputLabelProps={{ shrink: true }}
                   sx={{ minWidth: 200 }}
+                  className="no-print"
                 />
+                {/* The date field itself is hidden for print — this stands in
+                    for it, so the printed page still says which day it's for. */}
+                <Typography variant="subtitle2" className="print-only">
+                  {formatDateForDisplay(date)}
+                </Typography>
                 {!loading && (
                   <Typography variant="body2" color="text.secondary">
                     {orderCount} order{orderCount === 1 ? '' : 's'} · {rows.length} product
@@ -140,14 +188,24 @@ export default function Page() {
                 )}
               </Stack>
 
-              <Button
-                variant="contained"
-                startIcon={<Iconify icon={'solar:download-bold-duotone' as any} />}
-                onClick={handleDownload}
-                disabled={loading || rows.length === 0}
-              >
-                Download CSV
-              </Button>
+              <Stack direction="row" spacing={1.5} className="no-print">
+                <Button
+                  variant="outlined"
+                  startIcon={<Iconify icon={'solar:printer-bold-duotone' as any} />}
+                  onClick={handleExportPdf}
+                  disabled={loading || rows.length === 0}
+                >
+                  Export PDF
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<Iconify icon={'solar:download-bold-duotone' as any} />}
+                  onClick={handleDownloadCsv}
+                  disabled={loading || rows.length === 0}
+                >
+                  Download CSV
+                </Button>
+              </Stack>
             </Stack>
 
             <Scrollbar>
