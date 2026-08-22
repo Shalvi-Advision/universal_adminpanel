@@ -23,7 +23,6 @@ import { CONFIG } from 'src/config-global';
 import { getProcurementReport } from 'src/services/reports';
 
 import { Iconify } from 'src/components/iconify';
-import { Scrollbar } from 'src/components/scrollbar';
 
 // "2026-08-22" for today, in the browser's local timezone — matches what the
 // <input type="date"> field itself would produce for "today".
@@ -72,12 +71,6 @@ const printStyles = (
         },
         '.no-print': { display: 'none !important' },
         '.print-only': { display: 'block !important' },
-        // The table sits inside Scrollbar (simplebar), which scrolls a
-        // fixed-height viewport on screen — left alone, print would only
-        // capture whatever slice was visible when Export PDF was clicked,
-        // silently dropping every row below the fold.
-        '.report-print-area .simplebar-wrapper, .report-print-area .simplebar-mask, .report-print-area .simplebar-content-wrapper, .report-print-area .simplebar-content':
-          { overflow: 'visible !important', height: 'auto !important', maxHeight: 'none !important' },
         // Everything below trims vertical space the screen layout can afford
         // but a one-page print budget can't: gaps between sections, the
         // title, and — the biggest lever, since it's multiplied by every row
@@ -238,8 +231,14 @@ export default function Page() {
               </Stack>
             </Stack>
 
-            <Scrollbar>
-              <TableContainer>
+            {/* Plain TableContainer (its own overflow-x: auto handles a
+                narrow viewport), not the Scrollbar/simplebar wrapper used
+                elsewhere — simplebar simulates scrolling via an internal
+                transform rather than native overflow, and that transform
+                doesn't reset for print: it left a scroll-offset-sized gap
+                mid-table, silently hiding whichever rows it corresponded to,
+                with nothing to indicate rows were missing. */}
+            <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow>
@@ -293,8 +292,7 @@ export default function Page() {
                     )}
                   </TableBody>
                 </Table>
-              </TableContainer>
-            </Scrollbar>
+            </TableContainer>
           </Card>
         </Stack>
       </Container>
