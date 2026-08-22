@@ -53,10 +53,7 @@ export const navData: NavItem[] = [
     title: 'Reports',
     path: '/reports/procurement',
     icon: iconify('solar:chart-2-bold-duotone'),
-    // Reuses the 'orders' permission section — see the note in
-    // routes/sections.tsx on why Reports has no permission section of its
-    // own yet.
-    permissionSection: 'orders',
+    permissionSection: 'reports',
     children: [
       {
         title: 'Procurement',

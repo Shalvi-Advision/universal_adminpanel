@@ -225,11 +225,9 @@ export const routesSection: RouteObject[] = [
         ),
       },
       {
-        // Reuses the 'orders' permission section — this is order-derived
-        // data, not its own resource (see routes/admin/reports.js).
         path: 'reports/procurement',
         element: (
-          <PermissionGuard section="orders">
+          <PermissionGuard section="reports">
             <ReportsProcurementPage />
           </PermissionGuard>
         ),
