@@ -30,6 +30,7 @@ import { Scrollbar } from 'src/components/scrollbar';
 import { PermissionButton } from 'src/components/permission-button/permission-button';
 
 import { StoreDialog } from './components/store-dialog';
+import { StorePincodesDialog } from './components/store-pincodes-dialog';
 import { DeleteConfirmDialog } from '../dynamic/components/delete-confirm-dialog';
 
 export default function Page() {
@@ -38,6 +39,7 @@ export default function Page() {
   const [error, setError] = useState<string>('');
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openPincodesDialog, setOpenPincodesDialog] = useState(false);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [deleteId, setDeleteId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,6 +80,11 @@ export default function Page() {
   const handleEdit = (store: Store) => {
     setSelectedStore(store);
     setOpenDialog(true);
+  };
+
+  const handleViewPincodes = (store: Store) => {
+    setSelectedStore(store);
+    setOpenPincodesDialog(true);
   };
 
   const handleDeleteClick = (id: string) => {
@@ -168,7 +175,7 @@ export default function Page() {
                     <TableRow>
                       <TableCell>Store Name</TableCell>
                       <TableCell>Store Code</TableCell>
-                      <TableCell>Pincode</TableCell>
+                      <TableCell>Pincodes</TableCell>
                       <TableCell>Contact</TableCell>
                       <TableCell>Email</TableCell>
                       <TableCell>Status</TableCell>
@@ -216,7 +223,14 @@ export default function Page() {
                             <Chip label={item.store_code} size="small" variant="outlined" />
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2">{item.pincode}</Typography>
+                            <Button
+                              size="small"
+                              variant="text"
+                              startIcon={<Iconify icon={'solar:map-point-bold-duotone' as any} />}
+                              onClick={() => handleViewPincodes(item)}
+                            >
+                              View
+                            </Button>
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2">{item.contact_number}</Typography>
@@ -290,6 +304,12 @@ export default function Page() {
         store={selectedStore}
         onClose={handleDialogClose}
         onSuccess={handleSaveSuccess}
+      />
+
+      <StorePincodesDialog
+        open={openPincodesDialog}
+        store={selectedStore}
+        onClose={() => setOpenPincodesDialog(false)}
       />
 
       <DeleteConfirmDialog

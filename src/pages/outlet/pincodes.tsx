@@ -179,6 +179,7 @@ export default function Page() {
                       <TableCell>Pincode Master ID</TableCell>
                       <TableCell>Pincode</TableCell>
                       <TableCell>Status</TableCell>
+                      <TableCell>Store</TableCell>
                       <TableCell>Created At</TableCell>
                       <TableCell align="right">Actions</TableCell>
                     </TableRow>
@@ -186,13 +187,13 @@ export default function Page() {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                        <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                           <CircularProgress />
                         </TableCell>
                       </TableRow>
                     ) : pincodes.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                        <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                           <Typography variant="body2" color="text.secondary">
                             No pincodes found
                           </Typography>
@@ -213,6 +214,15 @@ export default function Page() {
                               color={item.is_enabled === 'Enabled' ? 'success' : 'default'}
                               size="small"
                             />
+                          </TableCell>
+                          <TableCell>
+                            {item.store_code ? (
+                              <Chip label={item.store_code} size="small" variant="outlined" />
+                            ) : (
+                              <Typography variant="caption" color="text.secondary">
+                                Not assigned
+                              </Typography>
+                            )}
                           </TableCell>
                           <TableCell>{formatDate(item.createdAt)}</TableCell>
                           <TableCell align="right">

@@ -311,6 +311,9 @@ export interface Pincode {
   idpincode_master: number;
   pincode: string;
   is_enabled: 'Enabled' | 'Disabled';
+  // Which store serves this pincode. One store maps to many pincodes; null
+  // means enabled but not yet assigned to a store (see models/Pincode.js).
+  store_code?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -320,6 +323,7 @@ export interface PincodesQueryParams {
   page?: number;
   limit?: number;
   search?: string;
+  storeCode?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
@@ -329,6 +333,7 @@ export interface PincodePayload {
   idpincode_master: number;
   pincode: string;
   is_enabled: 'Enabled' | 'Disabled';
+  store_code?: string | null;
 }
 
 // Distance slab for per-km delivery pricing

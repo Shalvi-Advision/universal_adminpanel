@@ -1,4 +1,4 @@
-import type { Pincode, PincodePayload } from 'src/types/api';
+import type { Pincode, StoreCode, PincodePayload } from 'src/types/api';
 
 import { useState, useEffect } from 'react';
 
@@ -16,6 +16,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { getAllStoreCodes } from 'src/services/stores';
 import { createPincode, updatePincode } from 'src/services/pincodes';
 
 interface PincodeDialogProps {
@@ -33,6 +34,17 @@ export function PincodeDialog({ open, pincode, onClose, onSuccess }: PincodeDial
   const [idPincodeMaster, setIdPincodeMaster] = useState<number | ''>('');
   const [pincodeValue, setPincodeValue] = useState('');
   const [isEnabled, setIsEnabled] = useState<'Enabled' | 'Disabled'>('Enabled');
+  const [storeCode, setStoreCode] = useState('');
+  const [storeCodes, setStoreCodes] = useState<StoreCode[]>([]);
+
+  // Store options for the assignment dropdown — loaded once per dialog open,
+  // not per keystroke, since the list rarely changes.
+  useEffect(() => {
+    if (!open) return;
+    getAllStoreCodes()
+      .then((response) => setStoreCodes(response.data || []))
+      .catch(() => setStoreCodes([]));
+  }, [open]);
 
   // Load data when editing
   useEffect(() => {
@@ -40,11 +52,13 @@ export function PincodeDialog({ open, pincode, onClose, onSuccess }: PincodeDial
       setIdPincodeMaster(pincode.idpincode_master);
       setPincodeValue(pincode.pincode);
       setIsEnabled(pincode.is_enabled);
+      setStoreCode(pincode.store_code || '');
     } else {
       // Reset form for create
       setIdPincodeMaster('');
       setPincodeValue('');
       setIsEnabled('Enabled');
+      setStoreCode('');
     }
     setError('');
   }, [pincode, open]);
@@ -81,6 +95,7 @@ export function PincodeDialog({ open, pincode, onClose, onSuccess }: PincodeDial
       idpincode_master: Number(idPincodeMaster),
       pincode: pincodeValue.trim(),
       is_enabled: isEnabled,
+      store_code: storeCode || null,
     };
 
     try {
@@ -169,6 +184,25 @@ export function PincodeDialog({ open, pincode, onClose, onSuccess }: PincodeDial
             >
               <MenuItem value="Enabled">Enabled</MenuItem>
               <MenuItem value="Disabled">Disabled</MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth>
+            <InputLabel>Assign Store</InputLabel>
+            <Select
+              value={storeCode}
+              label="Assign Store"
+              onChange={(e) => setStoreCode(e.target.value)}
+              displayEmpty
+            >
+              <MenuItem value="">
+                <em>Not assigned</em>
+              </MenuItem>
+              {storeCodes.map((store) => (
+                <MenuItem key={store.store_code} value={store.store_code}>
+                  {store.store_name} ({store.store_code})
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Stack>
