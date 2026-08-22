@@ -38,6 +38,14 @@ const formatDateForDisplay = (iso: string) => {
   return `${day}/${month}/${year}`;
 };
 
+// Every cell boxed in solid black — same idea as the order Pick List
+// (order-details-dialog.tsx), which uses 1px solid divider-colour borders on
+// every cell rather than MUI's default row-separator-only look. This report
+// asked for black specifically: it's meant to be printed, and a light grey
+// divider can wash out to nearly invisible on some printers.
+const cellSx = { py: 1, border: '1px solid', borderColor: 'common.black' };
+const headCellSx = { ...cellSx, fontWeight: 700 };
+
 // Same technique as the order Pick List (order-details-dialog.tsx): print
 // relies on visibility rather than display so the page keeps its layout —
 // everything is hidden, then only the report area is switched back on. "Export
@@ -136,6 +144,8 @@ export default function Page() {
 
   const handleExportPdf = () => window.print();
 
+  const totalOrderedQty = rows.reduce((sum, row) => sum + row.ordered_qty, 0);
+
   return (
     <>
       {printStyles}
@@ -213,12 +223,12 @@ export default function Page() {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Sr No.</TableCell>
-                      <TableCell>P-Code</TableCell>
-                      <TableCell>Product Name</TableCell>
-                      <TableCell>Pack Size</TableCell>
-                      <TableCell align="right">Ordered Qty</TableCell>
-                      <TableCell>Total Required Qty</TableCell>
+                      <TableCell sx={headCellSx}>Sr No.</TableCell>
+                      <TableCell sx={headCellSx}>P-Code</TableCell>
+                      <TableCell sx={headCellSx}>Product Name</TableCell>
+                      <TableCell sx={headCellSx}>Pack Size</TableCell>
+                      <TableCell sx={headCellSx} align="right">Ordered Qty</TableCell>
+                      <TableCell sx={headCellSx}>Total Required Qty</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -237,16 +247,29 @@ export default function Page() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      rows.map((row) => (
-                        <TableRow key={row.p_code}>
-                          <TableCell>{row.sr_no}</TableCell>
-                          <TableCell>{row.p_code}</TableCell>
-                          <TableCell>{row.product_name}</TableCell>
-                          <TableCell>{row.pack_size}</TableCell>
-                          <TableCell align="right">{row.ordered_qty}</TableCell>
-                          <TableCell>{row.total_required_qty}</TableCell>
+                      <>
+                        {rows.map((row) => (
+                          <TableRow key={row.p_code}>
+                            <TableCell sx={cellSx}>{row.sr_no}</TableCell>
+                            <TableCell sx={cellSx}>{row.p_code}</TableCell>
+                            <TableCell sx={cellSx}>{row.product_name}</TableCell>
+                            <TableCell sx={cellSx}>{row.pack_size}</TableCell>
+                            <TableCell sx={cellSx} align="right">{row.ordered_qty}</TableCell>
+                            <TableCell sx={cellSx}>{row.total_required_qty}</TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow>
+                          <TableCell sx={{ ...cellSx, fontWeight: 700 }} colSpan={4}>
+                            Total
+                          </TableCell>
+                          <TableCell sx={{ ...cellSx, fontWeight: 700 }} align="right">
+                            {totalOrderedQty}
+                          </TableCell>
+                          {/* Total Required Qty mixes units (Gm, Nos, ...) across
+                              rows, so a single sum here would be meaningless. */}
+                          <TableCell sx={cellSx} />
                         </TableRow>
-                      ))
+                      </>
                     )}
                   </TableBody>
                 </Table>
