@@ -207,6 +207,76 @@ export function UserDetailDialog({ open, userId, onClose }: Props) {
               )}
             </Card>
 
+            {/* Current cart */}
+            <Box>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                Current Cart
+                {detail.cart && (
+                  <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                    (updated {formatDateTime(detail.cart.last_updated)})
+                  </Typography>
+                )}
+              </Typography>
+              {!detail.cart || detail.cart.items.length === 0 ? (
+                <Card sx={{ p: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Cart is empty
+                  </Typography>
+                </Card>
+              ) : (
+                <Card>
+                  <TableContainer sx={{ maxHeight: 320 }}>
+                    <Table stickyHeader size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Product</TableCell>
+                          <TableCell>Store</TableCell>
+                          <TableCell align="center">Qty</TableCell>
+                          <TableCell align="right">Unit Price</TableCell>
+                          <TableCell align="right">Total</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {detail.cart.items.map((item) => (
+                          <TableRow key={item.p_code} hover>
+                            <TableCell>
+                              <Stack direction="row" alignItems="center" spacing={1.5}>
+                                <Avatar src={item.pcode_img || undefined} variant="rounded" sx={{ width: 32, height: 32 }}>
+                                  <Iconify icon={'solar:box-bold-duotone' as any} width={18} />
+                                </Avatar>
+                                <Box>
+                                  <Typography variant="body2">{item.product_name}</Typography>
+                                  {(item.package_size || item.package_unit) && (
+                                    <Typography variant="caption" color="text.secondary">
+                                      {[item.package_size, item.package_unit].filter(Boolean).join(' ')}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              </Stack>
+                            </TableCell>
+                            <TableCell>{item.store_code}</TableCell>
+                            <TableCell align="center">{item.quantity}</TableCell>
+                            <TableCell align="right">{formatCurrency(item.unit_price)}</TableCell>
+                            <TableCell align="right">{formatCurrency(item.total_price)}</TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow>
+                          <TableCell colSpan={4} align="right">
+                            <Typography variant="subtitle2">
+                              Cart Total ({detail.cart.total_quantity} item{detail.cart.total_quantity === 1 ? '' : 's'})
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="subtitle2">{formatCurrency(detail.cart.subtotal)}</Typography>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Card>
+              )}
+            </Box>
+
             {/* Order history */}
             <Box>
               <Typography variant="subtitle1" sx={{ mb: 1 }}>

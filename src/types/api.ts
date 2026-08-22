@@ -74,6 +74,30 @@ export interface UserFavorite {
   } | null;
 }
 
+// A line item within a user's current cart
+export interface UserCartItem {
+  p_code: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  package_size?: number;
+  package_unit?: string;
+  brand_name?: string;
+  pcode_img?: string;
+  store_code: string;
+}
+
+// The user's current (in-progress, not yet checked out) cart
+export interface UserCart {
+  store_code: string;
+  items: UserCartItem[];
+  subtotal: number;
+  total_items: number;
+  total_quantity: number;
+  last_updated: string;
+}
+
 // Notification within a user's drill-down
 export interface UserNotification {
   _id: string;
@@ -102,6 +126,7 @@ export interface UserDetail {
   spendTrend: UserSpendTrendPoint[];
   addresses: UserAddress[];
   favorites: UserFavorite[];
+  cart: UserCart | null;
   notifications: UserNotification[];
   notificationStats: { totalCount: number; unreadCount: number };
 }
