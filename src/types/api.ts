@@ -488,6 +488,9 @@ export interface Product {
   dept_id: string;
   category_id: string;
   sub_category_id: string;
+  // Extra subcategories this product is cross-listed under, beyond its
+  // primary sub_category_id above. Absent/empty when there are none.
+  additional_sub_category_ids?: string[];
   store_quantity: number;
   max_quantity_allowed: number;
   pcode_img: string;
@@ -524,6 +527,7 @@ export interface ProductMasterPayload {
   max_quantity_allowed?: number;
   pcode_img?: string;
   search_keyword?: string;
+  additional_sub_category_ids?: string[];
 }
 
 // Category type matching backend model
@@ -613,6 +617,9 @@ export interface Subcategory {
   // Whether this subcategory shows on the customer mobile app. Defaults
   // true; absent on documents created before this field existed.
   is_visible?: boolean;
+  // Extra categories this subcategory is cross-listed under, beyond its
+  // primary category_id above. Absent/empty when there are none.
+  additional_category_ids?: string[];
   __v?: number;
 }
 
@@ -624,6 +631,7 @@ export interface SubcategoryPayload {
   main_category_name: string;
   image_link?: string;
   is_visible?: boolean;
+  additional_category_ids?: string[];
 }
 
 // Subcategories query parameters for POST endpoint

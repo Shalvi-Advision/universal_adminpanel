@@ -30,6 +30,7 @@ import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { fCurrency } from 'src/utils/format-number';
+import { LOOKUP_LIST_LIMIT } from 'src/utils/lookup-constants';
 
 import { CONFIG } from 'src/config-global';
 import { getAllDepartments } from 'src/services/departments';
