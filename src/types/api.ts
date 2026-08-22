@@ -499,6 +499,9 @@ export interface ProductsQueryParams {
   search?: string;
   page?: number;
   limit?: number;
+  dept_id?: string;
+  category_id?: string;
+  sub_category_id?: string;
 }
 
 // ProductMaster payload for create/update
@@ -556,6 +559,7 @@ export interface CategoriesQueryParams {
   page?: number;
   limit?: number;
   search?: string;
+  deptId?: string;
 }
 
 // Department type matching backend model
@@ -620,6 +624,7 @@ export interface SubcategoriesQueryParams {
   page?: number;
   limit?: number;
   search?: string;
+  categoryId?: string;
 }
 
 // ========================================

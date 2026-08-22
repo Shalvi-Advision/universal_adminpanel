@@ -1,24 +1,30 @@
-import type { Product } from 'src/types/api';
+import type { SelectChangeEvent } from '@mui/material/Select';
+import type { Product, Category, Department, Subcategory } from 'src/types/api';
 
 import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
+import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
 import Table from '@mui/material/Table';
 import Stack from '@mui/material/Stack';
+import Select from '@mui/material/Select';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
+import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
 import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TextField from '@mui/material/TextField';
+import InputLabel from '@mui/material/InputLabel';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Pagination from '@mui/material/Pagination';
+import FormControl from '@mui/material/FormControl';
 import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -26,7 +32,10 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { fCurrency } from 'src/utils/format-number';
 
 import { CONFIG } from 'src/config-global';
+import { getAllDepartments } from 'src/services/departments';
 import { useStoreCode } from 'src/contexts/store-code-context';
+import { getCategoriesByStore } from 'src/services/categories';
+import { getSubcategoriesByStore } from 'src/services/subcategories';
 import { deleteProduct, getProductsByStore } from 'src/services/products';
 
 import { Iconify } from 'src/components/iconify';
@@ -35,6 +44,11 @@ import { PermissionButton } from 'src/components/permission-button/permission-bu
 
 import { ProductDialog } from './components/product-dialog';
 import { DeleteConfirmDialog } from '../dynamic/components/delete-confirm-dialog';
+
+// Dropdown-population calls want the full list, not a paginated page — the
+// by-store endpoints default to limit=20 which would silently truncate any
+// tenant with more departments/categories/subcategories than that.
+const LOOKUP_LIST_LIMIT = 500;
 
 export default function Page() {
   const { storeCode } = useStoreCode();
@@ -50,6 +64,17 @@ export default function Page() {
   const [totalPages, setTotalPages] = useState(1);
   const limit = 20;
 
+  // Department -> Category -> Subcategory cascading filter
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [deptId, setDeptId] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [subCategoryId, setSubCategoryId] = useState('');
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
+
   const fetchProducts = useCallback(async () => {
     if (!storeCode) {
       setProducts([]);
@@ -64,6 +89,9 @@ export default function Page() {
         search: searchQuery || undefined,
         page,
         limit,
+        dept_id: deptId || undefined,
+        category_id: categoryId || undefined,
+        sub_category_id: subCategoryId || undefined,
       });
       if (response.success) {
         setProducts(response.data);
@@ -74,15 +102,107 @@ export default function Page() {
     } finally {
       setLoading(false);
     }
-  }, [storeCode, page, searchQuery]);
+  }, [storeCode, page, searchQuery, deptId, categoryId, subCategoryId]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
+  // Selections belong to whichever store they were loaded for — a store
+  // switch invalidates them all.
+  useEffect(() => {
+    setDeptId('');
+    setCategoryId('');
+    setSubCategoryId('');
+  }, [storeCode]);
+
+  useEffect(() => {
+    if (!storeCode) {
+      setDepartments([]);
+      return undefined;
+    }
+    let active = true;
+    setLoadingDepartments(true);
+    getAllDepartments({ storeCode, limit: LOOKUP_LIST_LIMIT })
+      .then((response) => {
+        if (active && response.success) setDepartments(response.data);
+      })
+      .catch(() => {
+        if (active) setDepartments([]);
+      })
+      .finally(() => {
+        if (active) setLoadingDepartments(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [storeCode]);
+
+  useEffect(() => {
+    if (!storeCode || !deptId) {
+      setCategories([]);
+      return undefined;
+    }
+    let active = true;
+    setLoadingCategories(true);
+    getCategoriesByStore({ store_code: storeCode, deptId, limit: LOOKUP_LIST_LIMIT })
+      .then((response) => {
+        if (active && response.success) setCategories(response.data);
+      })
+      .catch(() => {
+        if (active) setCategories([]);
+      })
+      .finally(() => {
+        if (active) setLoadingCategories(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [storeCode, deptId]);
+
+  useEffect(() => {
+    if (!storeCode || !categoryId) {
+      setSubcategories([]);
+      return undefined;
+    }
+    let active = true;
+    setLoadingSubcategories(true);
+    getSubcategoriesByStore({ store_code: storeCode, categoryId, limit: LOOKUP_LIST_LIMIT })
+      .then((response) => {
+        if (active && response.success) setSubcategories(response.data);
+      })
+      .catch(() => {
+        if (active) setSubcategories([]);
+      })
+      .finally(() => {
+        if (active) setLoadingSubcategories(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [storeCode, categoryId]);
+
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
     setPage(1); // Reset to first page on search
+  };
+
+  const handleDeptChange = (event: SelectChangeEvent) => {
+    setDeptId(event.target.value);
+    setCategoryId('');
+    setSubCategoryId('');
+    setPage(1);
+  };
+
+  const handleCategoryChange = (event: SelectChangeEvent) => {
+    setCategoryId(event.target.value);
+    setSubCategoryId('');
+    setPage(1);
+  };
+
+  const handleSubCategoryChange = (event: SelectChangeEvent) => {
+    setSubCategoryId(event.target.value);
+    setPage(1);
   };
 
   const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
@@ -163,6 +283,97 @@ export default function Page() {
           {storeCode && (
             <Card>
               <Box sx={{ p: 2 }}>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <FormControl fullWidth size="small" required>
+                      <InputLabel id="product-filter-dept-label">Select Department</InputLabel>
+                      <Select
+                        labelId="product-filter-dept-label"
+                        label="Select Department"
+                        value={deptId}
+                        onChange={handleDeptChange}
+                        disabled={loadingDepartments}
+                        endAdornment={
+                          loadingDepartments && (
+                            <CircularProgress size={16} sx={{ mr: 3 }} />
+                          )
+                        }
+                      >
+                        <MenuItem value="">
+                          <em>- Select -</em>
+                        </MenuItem>
+                        {departments.map((dept) => (
+                          <MenuItem key={dept.department_id} value={dept.department_id}>
+                            {dept.department_name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel id="product-filter-category-label">Select Category</InputLabel>
+                      <Select
+                        labelId="product-filter-category-label"
+                        label="Select Category"
+                        value={categoryId}
+                        onChange={handleCategoryChange}
+                        disabled={!deptId || loadingCategories}
+                        endAdornment={
+                          loadingCategories && (
+                            <CircularProgress size={16} sx={{ mr: 3 }} />
+                          )
+                        }
+                      >
+                        <MenuItem value="">
+                          <em>--- Select ---</em>
+                        </MenuItem>
+                        {categories.map((category) => (
+                          <MenuItem
+                            key={category.idcategory_master}
+                            value={category.idcategory_master}
+                          >
+                            {category.category_name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel id="product-filter-subcategory-label">
+                        Select Sub Category
+                      </InputLabel>
+                      <Select
+                        labelId="product-filter-subcategory-label"
+                        label="Select Sub Category"
+                        value={subCategoryId}
+                        onChange={handleSubCategoryChange}
+                        disabled={!categoryId || loadingSubcategories}
+                        endAdornment={
+                          loadingSubcategories && (
+                            <CircularProgress size={16} sx={{ mr: 3 }} />
+                          )
+                        }
+                      >
+                        <MenuItem value="">
+                          <em>--- Select ---</em>
+                        </MenuItem>
+                        {subcategories.map((subcategory) => (
+                          <MenuItem
+                            key={subcategory.idsub_category_master}
+                            value={subcategory.idsub_category_master}
+                          >
+                            {subcategory.sub_category_name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              <Box sx={{ px: 2, pb: 2 }}>
                 <TextField
                   fullWidth
                   placeholder="Search by product name, code, or barcode..."
