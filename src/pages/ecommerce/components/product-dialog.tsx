@@ -1,7 +1,8 @@
-import type { Product, ProductMasterPayload } from 'src/types/api';
+import type { Product, Subcategory, ProductMasterPayload } from 'src/types/api';
 
 import { useState, useEffect } from 'react';
 
+import Chip from '@mui/material/Chip';
 import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
@@ -14,12 +15,16 @@ import Typography from '@mui/material/Typography';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 import DialogTitle from '@mui/material/DialogTitle';
+import Autocomplete from '@mui/material/Autocomplete';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { LOOKUP_LIST_LIMIT } from 'src/utils/lookup-constants';
+
 import { useStoreCode } from 'src/contexts/store-code-context';
 import { createProduct, updateProduct } from 'src/services/products';
+import { getSubcategoriesByStore } from 'src/services/subcategories';
 
 import { ImageUpload } from 'src/components/image-upload/image-upload';
 
@@ -60,6 +65,11 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
   const [deptId, setDeptId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [subCategoryId, setSubCategoryId] = useState('');
+  const [additionalSubCategoryIds, setAdditionalSubCategoryIds] = useState<string[]>([]);
+
+  // Options for the "Additional Subcategories" picker
+  const [subcategoryOptions, setSubcategoryOptions] = useState<Subcategory[]>([]);
+  const [loadingSubcategoryOptions, setLoadingSubcategoryOptions] = useState(false);
 
   // Status
   const [pcodeStatus, setPcodeStatus] = useState('Y');
@@ -85,6 +95,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
       setDeptId(product.dept_id);
       setCategoryId(product.category_id);
       setSubCategoryId(product.sub_category_id);
+      setAdditionalSubCategoryIds(product.additional_sub_category_ids ?? []);
       setPcodeStatus(product.pcode_status || 'Y');
       setPcodeImg(product.pcode_img || '');
     } else {
@@ -104,11 +115,35 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
       setDeptId('');
       setCategoryId('');
       setSubCategoryId('');
+      setAdditionalSubCategoryIds([]);
       setPcodeStatus('Y');
       setPcodeImg('');
     }
     setError('');
   }, [product, open, contextStoreCode]);
+
+  // Populate the "Additional Subcategories" picker options for the current store
+  useEffect(() => {
+    if (!open || !storeCode) {
+      setSubcategoryOptions([]);
+      return undefined;
+    }
+    let active = true;
+    setLoadingSubcategoryOptions(true);
+    getSubcategoriesByStore({ store_code: storeCode, limit: LOOKUP_LIST_LIMIT })
+      .then((response) => {
+        if (active && response.success) setSubcategoryOptions(response.data);
+      })
+      .catch(() => {
+        if (active) setSubcategoryOptions([]);
+      })
+      .finally(() => {
+        if (active) setLoadingSubcategoryOptions(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [open, storeCode]);
 
   const validateForm = (): boolean => {
     if (!pCode.trim()) {
@@ -186,6 +221,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
       dept_id: deptId.trim(),
       category_id: categoryId.trim(),
       sub_category_id: subCategoryId.trim(),
+      additional_sub_category_ids: additionalSubCategoryIds,
       barcode: barcode.trim() || undefined,
       product_description: productDescription.trim() || undefined,
       brand_name: brandName.trim() || undefined,
@@ -405,6 +441,45 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
                 value={subCategoryId}
                 onChange={(e) => setSubCategoryId(e.target.value)}
                 required
+              />
+            </Grid>
+            <Grid size={12}>
+              <Autocomplete
+                multiple
+                options={subcategoryOptions.filter(
+                  (s) => s.idsub_category_master !== subCategoryId.trim()
+                )}
+                getOptionLabel={(option) =>
+                  `${option.sub_category_name} (${option.idsub_category_master})`
+                }
+                isOptionEqualToValue={(option, value) =>
+                  option.idsub_category_master === value.idsub_category_master
+                }
+                value={subcategoryOptions.filter((s) =>
+                  additionalSubCategoryIds.includes(s.idsub_category_master)
+                )}
+                onChange={(_event, newValue) =>
+                  setAdditionalSubCategoryIds(newValue.map((s) => s.idsub_category_master))
+                }
+                loading={loadingSubcategoryOptions}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip
+                      label={option.sub_category_name}
+                      size="small"
+                      {...getTagProps({ index })}
+                      key={option.idsub_category_master}
+                    />
+                  ))
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Additional Subcategories"
+                    placeholder="Also list this product under..."
+                    helperText="Cross-list this product under other subcategories, beyond its primary Subcategory ID above"
+                  />
+                )}
               />
             </Grid>
           </Grid>

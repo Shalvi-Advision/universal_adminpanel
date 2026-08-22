@@ -1,7 +1,8 @@
-import type { Subcategory, SubcategoryPayload } from 'src/types/api';
+import type { Category, Subcategory, SubcategoryPayload } from 'src/types/api';
 
 import { useState, useEffect } from 'react';
 
+import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
@@ -9,11 +10,16 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import TextField from '@mui/material/TextField';
 import DialogTitle from '@mui/material/DialogTitle';
+import Autocomplete from '@mui/material/Autocomplete';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { LOOKUP_LIST_LIMIT } from 'src/utils/lookup-constants';
+
+import { useStoreCode } from 'src/contexts/store-code-context';
+import { getCategoriesByStore } from 'src/services/categories';
 import { createSubcategory, updateSubcategory } from 'src/services/subcategories';
 
 import { ImageUpload } from 'src/components/image-upload/image-upload';
@@ -31,6 +37,7 @@ export function SubcategoryDialog({
   onClose,
   onSuccess,
 }: SubcategoryDialogProps) {
+  const { storeCode } = useStoreCode();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -41,6 +48,11 @@ export function SubcategoryDialog({
   const [mainCategoryName, setMainCategoryName] = useState('');
   const [imageLink, setImageLink] = useState('');
   const [isVisible, setIsVisible] = useState(true);
+  const [additionalCategoryIds, setAdditionalCategoryIds] = useState<string[]>([]);
+
+  // Options for the "Additional Categories" picker
+  const [categoryOptions, setCategoryOptions] = useState<Category[]>([]);
+  const [loadingCategoryOptions, setLoadingCategoryOptions] = useState(false);
 
   // Load data when editing
   useEffect(() => {
@@ -51,6 +63,7 @@ export function SubcategoryDialog({
       setMainCategoryName(subcategory.main_category_name);
       setImageLink(subcategory.image_link ?? '');
       setIsVisible(subcategory.is_visible ?? true);
+      setAdditionalCategoryIds(subcategory.additional_category_ids ?? []);
     } else {
       // Reset form for create
       setIdSubCategoryMaster('');
@@ -59,9 +72,33 @@ export function SubcategoryDialog({
       setMainCategoryName('');
       setImageLink('');
       setIsVisible(true);
+      setAdditionalCategoryIds([]);
     }
     setError('');
   }, [subcategory, open]);
+
+  // Populate the "Additional Categories" picker options for the current store
+  useEffect(() => {
+    if (!open || !storeCode) {
+      setCategoryOptions([]);
+      return undefined;
+    }
+    let active = true;
+    setLoadingCategoryOptions(true);
+    getCategoriesByStore({ store_code: storeCode, limit: LOOKUP_LIST_LIMIT })
+      .then((response) => {
+        if (active && response.success) setCategoryOptions(response.data);
+      })
+      .catch(() => {
+        if (active) setCategoryOptions([]);
+      })
+      .finally(() => {
+        if (active) setLoadingCategoryOptions(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [open, storeCode]);
 
   const validateForm = (): boolean => {
     if (!idSubCategoryMaster.trim()) {
@@ -100,6 +137,7 @@ export function SubcategoryDialog({
       main_category_name: mainCategoryName.trim(),
       image_link: imageLink.trim() || undefined,
       is_visible: isVisible,
+      additional_category_ids: additionalCategoryIds,
     };
 
     try {
@@ -171,6 +209,36 @@ export function SubcategoryDialog({
             value={imageLink}
             onChange={(url) => setImageLink(url)}
             folder="subcategories"
+          />
+
+          <Autocomplete
+            multiple
+            options={categoryOptions.filter((c) => c.idcategory_master !== categoryId.trim())}
+            getOptionLabel={(option) => `${option.category_name} (${option.idcategory_master})`}
+            isOptionEqualToValue={(option, value) => option.idcategory_master === value.idcategory_master}
+            value={categoryOptions.filter((c) => additionalCategoryIds.includes(c.idcategory_master))}
+            onChange={(_event, newValue) =>
+              setAdditionalCategoryIds(newValue.map((c) => c.idcategory_master))
+            }
+            loading={loadingCategoryOptions}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  label={option.category_name}
+                  size="small"
+                  {...getTagProps({ index })}
+                  key={option.idcategory_master}
+                />
+              ))
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Additional Categories"
+                placeholder="Also show this subcategory under..."
+                helperText="Cross-list this subcategory under other categories, beyond its primary Category ID above"
+              />
+            )}
           />
 
           <FormControlLabel
