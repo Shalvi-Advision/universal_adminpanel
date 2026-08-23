@@ -460,6 +460,10 @@ export interface Store {
   min_order_amount: number;
   store_open_time: string;
   store_delivery_time: string;
+  // How many days from today delivery slots start being offered - 0 =
+  // same-day, 1 = next-day only, 2 = day after tomorrow, etc. Distinct from
+  // store_delivery_time above, which is just free-text display copy.
+  delivery_start_offset_days?: number;
   store_offer_name?: string;
   latitude?: string;
   longitude?: string;
@@ -504,6 +508,7 @@ export interface StorePayload {
   min_order_amount: number;
   store_open_time: string;
   store_delivery_time: string;
+  delivery_start_offset_days?: number;
   store_offer_name?: string;
   latitude?: string;
   longitude?: string;

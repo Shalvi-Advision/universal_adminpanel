@@ -12,6 +12,7 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import InputLabel from '@mui/material/InputLabel';
+import Typography from '@mui/material/Typography';
 import FormControl from '@mui/material/FormControl';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
@@ -47,6 +48,9 @@ export function StoreDialog({ open, store, onClose, onSuccess }: StoreDialogProp
   const [minOrderAmount, setMinOrderAmount] = useState<number>(500);
   const [storeOpenTime, setStoreOpenTime] = useState('9 am to 10 pm');
   const [storeDeliveryTime, setStoreDeliveryTime] = useState('Day + 1 day');
+  // Which day delivery slots start being offered on, relative to today -
+  // 0 = same day, 1 = next day only, 2 = day after tomorrow, etc.
+  const [deliveryStartOffsetDays, setDeliveryStartOffsetDays] = useState(0);
   const [storeOfferName, setStoreOfferName] = useState('');
   const [storeMessage, setStoreMessage] = useState('');
 
@@ -72,6 +76,7 @@ export function StoreDialog({ open, store, onClose, onSuccess }: StoreDialogProp
       setMinOrderAmount(store.min_order_amount);
       setStoreOpenTime(store.store_open_time);
       setStoreDeliveryTime(store.store_delivery_time);
+      setDeliveryStartOffsetDays(store.delivery_start_offset_days ?? 0);
       setStoreOfferName(store.store_offer_name || '');
       setStoreMessage(store.store_message || '');
       setLatitude(store.latitude || '');
@@ -91,6 +96,7 @@ export function StoreDialog({ open, store, onClose, onSuccess }: StoreDialogProp
       setMinOrderAmount(500);
       setStoreOpenTime('9 am to 10 pm');
       setStoreDeliveryTime('Day + 1 day');
+      setDeliveryStartOffsetDays(0);
       setStoreOfferName('');
       setStoreMessage('');
       setLatitude('');
@@ -165,6 +171,7 @@ export function StoreDialog({ open, store, onClose, onSuccess }: StoreDialogProp
       min_order_amount: minOrderAmount,
       store_open_time: storeOpenTime.trim(),
       store_delivery_time: storeDeliveryTime.trim(),
+      delivery_start_offset_days: deliveryStartOffsetDays,
       store_offer_name: storeOfferName.trim() || undefined,
       store_message: storeMessage.trim() || undefined,
       latitude: latitude.trim() || undefined,
@@ -347,9 +354,31 @@ export function StoreDialog({ open, store, onClose, onSuccess }: StoreDialogProp
                     value={storeDeliveryTime}
                     onChange={(e) => setStoreDeliveryTime(e.target.value)}
                     placeholder="e.g., Day + 1 day"
+                    helperText="Display text only — set the actual rule below"
                   />
                 </Grid>
               </Grid>
+
+              <FormControl fullWidth>
+                <InputLabel>Delivery Starts After</InputLabel>
+                <Select
+                  value={deliveryStartOffsetDays}
+                  label="Delivery Starts After"
+                  onChange={(e) => setDeliveryStartOffsetDays(Number(e.target.value))}
+                >
+                  <MenuItem value={0}>Same day (Today)</MenuItem>
+                  <MenuItem value={1}>Next day only (Tomorrow)</MenuItem>
+                  <MenuItem value={2}>2 days from now</MenuItem>
+                  <MenuItem value={3}>3 days from now</MenuItem>
+                  <MenuItem value={4}>4 days from now</MenuItem>
+                  <MenuItem value={5}>5 days from now</MenuItem>
+                  <MenuItem value={6}>6 days from now</MenuItem>
+                  <MenuItem value={7}>7 days from now</MenuItem>
+                </Select>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.5 }}>
+                  Which day the checkout delivery-date picker starts from for this store.
+                </Typography>
+              </FormControl>
 
               <TextField
                 fullWidth
