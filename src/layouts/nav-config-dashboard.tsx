@@ -72,6 +72,7 @@ export const navData: NavItem[] = [
       { title: 'Earning Rules', path: '/loyalty/rules', icon: iconify('solar:widget-add-bold-duotone') },
       { title: 'Rewards', path: '/loyalty/rewards', icon: iconify('solar:gift-bold-duotone') },
       { title: 'Tiers', path: '/loyalty/tiers', icon: iconify('solar:crown-star-bold-duotone') },
+      { title: 'Loyalty Card', path: '/loyalty/card-settings', icon: iconify('solar:card-2-bold-duotone') },
       { title: 'Campaigns', path: '/loyalty/campaigns', icon: iconify('solar:fire-bold-duotone') },
       { title: 'Challenges', path: '/loyalty/challenges', icon: iconify('solar:flag-bold-duotone') },
       { title: 'Customers', path: '/loyalty/customers', icon: iconify('solar:users-group-rounded-bold-duotone') },

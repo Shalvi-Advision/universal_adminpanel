@@ -2,17 +2,21 @@ import type { LoyaltyTier } from 'src/types/loyalty';
 
 import { useState, useEffect } from 'react';
 
+import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { createLoyaltyTier, updateLoyaltyTier } from 'src/services/loyalty';
+
+import ColorField from './color-field';
 
 // ----------------------------------------------------------------------
 
@@ -30,6 +34,8 @@ export default function TierDialog({ open, tier, onClose, onSuccess }: Props) {
   const [maximumSpend, setMaximumSpend] = useState('');
   const [pointMultiplier, setPointMultiplier] = useState('1');
   const [rank, setRank] = useState('1');
+  const [cardPrimaryColor, setCardPrimaryColor] = useState('#1A1A1A');
+  const [cardAccentColor, setCardAccentColor] = useState('#D4AF37');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -41,8 +47,11 @@ export default function TierDialog({ open, tier, onClose, onSuccess }: Props) {
       setMaximumSpend(tier.maximumSpend != null ? String(tier.maximumSpend) : '');
       setPointMultiplier(String(tier.pointMultiplier));
       setRank(String(tier.rank));
+      setCardPrimaryColor(tier.cardPrimaryColor || '#1A1A1A');
+      setCardAccentColor(tier.cardAccentColor || '#D4AF37');
     } else if (open) {
       setCode(''); setName(''); setMinimumSpend('0'); setMaximumSpend(''); setPointMultiplier('1'); setRank('1');
+      setCardPrimaryColor('#1A1A1A'); setCardAccentColor('#D4AF37');
     }
     setError('');
   }, [tier, open]);
@@ -68,6 +77,8 @@ export default function TierDialog({ open, tier, onClose, onSuccess }: Props) {
         rank: Number(rank) || 1,
         benefits: tier?.benefits ?? [{ type: 'POINT_MULTIPLIER', value: Number(pointMultiplier) }],
         status: tier?.status ?? ('ACTIVE' as const),
+        cardPrimaryColor: cardPrimaryColor || '#1A1A1A',
+        cardAccentColor: cardAccentColor || '#D4AF37',
       };
       if (tier) {
         await updateLoyaltyTier(tier._id, payload);
@@ -105,6 +116,37 @@ export default function TierDialog({ open, tier, onClose, onSuccess }: Props) {
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField label="Rank" type="number" fullWidth value={rank} onChange={(e) => setRank(e.target.value)} helperText="Ordering, lowest = base tier" />
+          </Grid>
+
+          <Grid size={12}>
+            <Typography variant="subtitle2" sx={{ mt: 1 }}>Loyalty Card Colors</Typography>
+            <Typography variant="caption" color="text.secondary">
+              How this tier&apos;s membership card looks in the app
+            </Typography>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <ColorField label="Primary Color" hint="Card background" value={cardPrimaryColor} onChange={setCardPrimaryColor} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <ColorField label="Accent Color" hint="Stripe, tier name, icons" value={cardAccentColor} onChange={setCardAccentColor} />
+          </Grid>
+          <Grid size={12}>
+            <Box
+              sx={{
+                borderRadius: 2,
+                p: 2,
+                background: `linear-gradient(135deg, ${cardPrimaryColor} 0%, ${cardPrimaryColor} 60%, ${cardAccentColor} 150%)`,
+                color: cardAccentColor,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-end',
+              }}
+            >
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>Card preview</Typography>
+              <Typography variant="subtitle2" sx={{ color: cardAccentColor, fontWeight: 700 }}>
+                {(name || 'TIER').toUpperCase()}
+              </Typography>
+            </Box>
           </Grid>
         </Grid>
       </DialogContent>

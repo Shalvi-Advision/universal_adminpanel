@@ -10,6 +10,7 @@ import type {
   LoyaltyTierPayload,
   LoyaltyRulePayload,
   LoyaltyTransaction,
+  LoyaltyCardSettings,
   LoyaltyRewardPayload,
   LoyaltyDashboardStats,
   LoyaltyAccountSummary,
@@ -75,6 +76,16 @@ export const updateLoyaltyTier = (
   id: string,
   payload: Partial<LoyaltyTierPayload>
 ): Promise<ApiResponse<LoyaltyTier>> => apiClient.put(`/api/admin/loyalty/tiers/${id}`, payload);
+
+// ----------------------------------------------------------------------
+// Loyalty Card settings
+// ----------------------------------------------------------------------
+
+export const getLoyaltyCardSettings = (): Promise<ApiResponse<LoyaltyCardSettings>> =>
+  apiClient.get('/api/admin/loyalty/card-settings');
+export const updateLoyaltyCardSettings = (
+  payload: Partial<LoyaltyCardSettings>
+): Promise<ApiResponse<LoyaltyCardSettings>> => apiClient.put('/api/admin/loyalty/card-settings', payload);
 
 // ----------------------------------------------------------------------
 // Campaigns

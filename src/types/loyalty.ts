@@ -77,9 +77,28 @@ export interface LoyaltyTier {
   benefits: LoyaltyTierBenefit[];
   rank: number;
   status: 'ACTIVE' | 'INACTIVE';
+  cardPrimaryColor: string;
+  cardAccentColor: string;
   createdAt: string;
 }
 export type LoyaltyTierPayload = Omit<LoyaltyTier, '_id' | 'createdAt'>;
+
+export interface LoyaltyCardBenefit {
+  icon: string;
+  title: string;
+  subtitle: string;
+}
+export interface LoyaltyCardSettings {
+  brand_title: string;
+  brand_subtitle: string;
+  member_label: string;
+  card_number_prefix: string;
+  thank_you_message: string;
+  benefits: LoyaltyCardBenefit[];
+  support_phone: string;
+  website: string;
+  terms_text: string;
+}
 
 export interface LoyaltyCampaign {
   _id: string;

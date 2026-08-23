@@ -43,6 +43,7 @@ export const LoyaltyDashboardPage = lazyWithRetry(() => import('src/pages/loyalt
 export const LoyaltyRulesPage = lazyWithRetry(() => import('src/pages/loyalty/rules'));
 export const LoyaltyRewardsPage = lazyWithRetry(() => import('src/pages/loyalty/rewards'));
 export const LoyaltyTiersPage = lazyWithRetry(() => import('src/pages/loyalty/tiers'));
+export const LoyaltyCardSettingsPage = lazyWithRetry(() => import('src/pages/loyalty/card-settings'));
 export const LoyaltyCampaignsPage = lazyWithRetry(() => import('src/pages/loyalty/campaigns'));
 export const LoyaltyChallengesPage = lazyWithRetry(() => import('src/pages/loyalty/challenges'));
 export const LoyaltyCustomersPage = lazyWithRetry(() => import('src/pages/loyalty/customers'));
@@ -270,6 +271,14 @@ export const routesSection: RouteObject[] = [
         element: (
           <PermissionGuard section="loyalty">
             <LoyaltyTiersPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'loyalty/card-settings',
+        element: (
+          <PermissionGuard section="loyalty">
+            <LoyaltyCardSettingsPage />
           </PermissionGuard>
         ),
       },
