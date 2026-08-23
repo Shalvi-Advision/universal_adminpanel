@@ -1,9 +1,10 @@
-import type { LoyaltyCardBenefit } from 'src/types/loyalty';
+import type { LoyaltyTier, LoyaltyCardBenefit } from 'src/types/loyalty';
 
 import { useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
 import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
@@ -17,9 +18,11 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { CONFIG } from 'src/config-global';
 import { usePermissions } from 'src/contexts/permissions-context';
-import { getLoyaltyCardSettings, updateLoyaltyCardSettings } from 'src/services/loyalty';
+import { getLoyaltyTiers, getLoyaltyCardSettings, updateLoyaltyCardSettings } from 'src/services/loyalty';
 
 import { Iconify } from 'src/components/iconify';
+
+import { LoyaltyCardPreview } from './components/card-preview';
 
 // ----------------------------------------------------------------------
 
@@ -33,6 +36,12 @@ const ICON_OPTIONS = [
 
 const emptyBenefit: LoyaltyCardBenefit = { icon: 'card_giftcard', title: '', subtitle: '' };
 
+// Used only when the tenant has no tiers yet (or none selected) so the
+// preview still renders something reasonable - matches the GOLD tier's
+// defaults in scripts/seed_loyalty_defaults.js.
+const DEFAULT_PRIMARY_COLOR = '#1A1A1A';
+const DEFAULT_ACCENT_COLOR = '#D4AF37';
+
 export default function Page() {
   const { hasPermission } = usePermissions();
   const canEdit = hasPermission('loyalty', 'edit');
@@ -41,6 +50,9 @@ export default function Page() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const [tiers, setTiers] = useState<LoyaltyTier[]>([]);
+  const [previewTierId, setPreviewTierId] = useState('');
 
   const [brandTitle, setBrandTitle] = useState('');
   const [brandSubtitle, setBrandSubtitle] = useState('');
@@ -69,7 +81,21 @@ export default function Page() {
       })
       .catch((err: any) => setError(err.message || 'Failed to load loyalty card settings'))
       .finally(() => setLoading(false));
+
+    getLoyaltyTiers()
+      .then((res) => {
+        if (!res.success) return;
+        const sorted = [...res.data].sort((a, b) => a.rank - b.rank);
+        setTiers(sorted);
+        const firstActive = sorted.find((t) => t.status === 'ACTIVE') || sorted[0];
+        if (firstActive) setPreviewTierId(firstActive._id);
+      })
+      .catch(() => {
+        // Non-fatal - the preview just falls back to default colors below.
+      });
   }, []);
+
+  const previewTier = tiers.find((t) => t._id === previewTierId);
 
   const updateBenefit = (index: number, patch: Partial<LoyaltyCardBenefit>) => {
     setBenefits((prev) => prev.map((b, i) => (i === index ? { ...b, ...patch } : b)));
@@ -124,6 +150,46 @@ export default function Page() {
 
           {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
           {success && <Alert severity="success" onClose={() => setSuccess('')}>{success}</Alert>}
+
+          <Card sx={{ p: 3 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={1.5} sx={{ mb: 2 }}>
+              <Typography variant="subtitle1">Preview</Typography>
+              {tiers.length > 0 && (
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {tiers.map((tier) => (
+                    <Chip
+                      key={tier._id}
+                      label={tier.name}
+                      size="small"
+                      onClick={() => setPreviewTierId(tier._id)}
+                      variant={tier._id === previewTierId ? 'filled' : 'outlined'}
+                      sx={{
+                        borderColor: tier.cardAccentColor,
+                        ...(tier._id === previewTierId && {
+                          bgcolor: tier.cardPrimaryColor,
+                          color: tier.cardAccentColor,
+                        }),
+                      }}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </Stack>
+            <LoyaltyCardPreview
+              brandTitle={brandTitle}
+              brandSubtitle={brandSubtitle}
+              memberLabel={memberLabel}
+              cardNumberPrefix={cardNumberPrefix}
+              thankYouMessage={thankYouMessage}
+              benefits={benefits}
+              supportPhone={supportPhone}
+              website={website}
+              termsText={termsText}
+              primaryColor={previewTier?.cardPrimaryColor || DEFAULT_PRIMARY_COLOR}
+              accentColor={previewTier?.cardAccentColor || DEFAULT_ACCENT_COLOR}
+              tierName={previewTier?.name || 'GOLD'}
+            />
+          </Card>
 
           <Card sx={{ p: 3 }}>
             <Typography variant="subtitle1" sx={{ mb: 2 }}>Front of Card</Typography>
