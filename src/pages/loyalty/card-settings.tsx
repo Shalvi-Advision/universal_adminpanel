@@ -22,6 +22,7 @@ import { getLoyaltyTiers, getLoyaltyCardSettings, updateLoyaltyCardSettings } fr
 
 import { Iconify } from 'src/components/iconify';
 
+import ColorField from './components/color-field';
 import { LoyaltyCardPreview } from './components/card-preview';
 
 // ----------------------------------------------------------------------
@@ -36,11 +37,10 @@ const ICON_OPTIONS = [
 
 const emptyBenefit: LoyaltyCardBenefit = { icon: 'card_giftcard', title: '', subtitle: '' };
 
-// Used only when the tenant has no tiers yet (or none selected) so the
-// preview still renders something reasonable - matches the GOLD tier's
-// defaults in scripts/seed_loyalty_defaults.js.
-const DEFAULT_PRIMARY_COLOR = '#1A1A1A';
-const DEFAULT_ACCENT_COLOR = '#D4AF37';
+// Sentinel previewTierId meaning "show the tenant's default colors below,
+// not a real tier" - distinct from '' so it can't collide with a tier that
+// somehow has an empty _id.
+const DEFAULT_PREVIEW = '__default__';
 
 export default function Page() {
   const { hasPermission } = usePermissions();
@@ -52,7 +52,7 @@ export default function Page() {
   const [success, setSuccess] = useState('');
 
   const [tiers, setTiers] = useState<LoyaltyTier[]>([]);
-  const [previewTierId, setPreviewTierId] = useState('');
+  const [previewTierId, setPreviewTierId] = useState(DEFAULT_PREVIEW);
 
   const [brandTitle, setBrandTitle] = useState('');
   const [brandSubtitle, setBrandSubtitle] = useState('');
@@ -63,6 +63,8 @@ export default function Page() {
   const [supportPhone, setSupportPhone] = useState('');
   const [website, setWebsite] = useState('');
   const [termsText, setTermsText] = useState('');
+  const [cardPrimaryColor, setCardPrimaryColor] = useState('#1A1A1A');
+  const [cardAccentColor, setCardAccentColor] = useState('#D4AF37');
 
   useEffect(() => {
     getLoyaltyCardSettings()
@@ -78,6 +80,8 @@ export default function Page() {
         setSupportPhone(d.support_phone);
         setWebsite(d.website);
         setTermsText(d.terms_text);
+        setCardPrimaryColor(d.card_primary_color || '#1A1A1A');
+        setCardAccentColor(d.card_accent_color || '#D4AF37');
       })
       .catch((err: any) => setError(err.message || 'Failed to load loyalty card settings'))
       .finally(() => setLoading(false));
@@ -85,13 +89,10 @@ export default function Page() {
     getLoyaltyTiers()
       .then((res) => {
         if (!res.success) return;
-        const sorted = [...res.data].sort((a, b) => a.rank - b.rank);
-        setTiers(sorted);
-        const firstActive = sorted.find((t) => t.status === 'ACTIVE') || sorted[0];
-        if (firstActive) setPreviewTierId(firstActive._id);
+        setTiers([...res.data].sort((a, b) => a.rank - b.rank));
       })
       .catch(() => {
-        // Non-fatal - the preview just falls back to default colors below.
+        // Non-fatal - the preview just falls back to the Default chip above.
       });
   }, []);
 
@@ -118,6 +119,8 @@ export default function Page() {
         support_phone: supportPhone,
         website,
         terms_text: termsText,
+        card_primary_color: cardPrimaryColor,
+        card_accent_color: cardAccentColor,
       });
       setSuccess('Loyalty card settings saved');
     } catch (err: any) {
@@ -143,8 +146,8 @@ export default function Page() {
           <Box>
             <Typography variant="h4">Loyalty Card</Typography>
             <Typography variant="body2" color="text.secondary">
-              Content shared across every tier&apos;s membership card. Per-tier colors are set on each tier under
-              Loyalty &gt; Tiers.
+              Content shared across every tier&apos;s membership card, plus the default colors used before a member
+              reaches a tier. Per-tier colors are set on each tier under Loyalty &gt; Tiers.
             </Typography>
           </Box>
 
@@ -154,26 +157,37 @@ export default function Page() {
           <Card sx={{ p: 3 }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={1.5} sx={{ mb: 2 }}>
               <Typography variant="subtitle1">Preview</Typography>
-              {tiers.length > 0 && (
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  {tiers.map((tier) => (
-                    <Chip
-                      key={tier._id}
-                      label={tier.name}
-                      size="small"
-                      onClick={() => setPreviewTierId(tier._id)}
-                      variant={tier._id === previewTierId ? 'filled' : 'outlined'}
-                      sx={{
-                        borderColor: tier.cardAccentColor,
-                        ...(tier._id === previewTierId && {
-                          bgcolor: tier.cardPrimaryColor,
-                          color: tier.cardAccentColor,
-                        }),
-                      }}
-                    />
-                  ))}
-                </Stack>
-              )}
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                <Chip
+                  label="Default"
+                  size="small"
+                  onClick={() => setPreviewTierId(DEFAULT_PREVIEW)}
+                  variant={previewTierId === DEFAULT_PREVIEW ? 'filled' : 'outlined'}
+                  sx={{
+                    borderColor: cardAccentColor,
+                    ...(previewTierId === DEFAULT_PREVIEW && {
+                      bgcolor: cardPrimaryColor,
+                      color: cardAccentColor,
+                    }),
+                  }}
+                />
+                {tiers.map((tier) => (
+                  <Chip
+                    key={tier._id}
+                    label={tier.name}
+                    size="small"
+                    onClick={() => setPreviewTierId(tier._id)}
+                    variant={tier._id === previewTierId ? 'filled' : 'outlined'}
+                    sx={{
+                      borderColor: tier.cardAccentColor,
+                      ...(tier._id === previewTierId && {
+                        bgcolor: tier.cardPrimaryColor,
+                        color: tier.cardAccentColor,
+                      }),
+                    }}
+                  />
+                ))}
+              </Stack>
             </Stack>
             <LoyaltyCardPreview
               brandTitle={brandTitle}
@@ -185,10 +199,26 @@ export default function Page() {
               supportPhone={supportPhone}
               website={website}
               termsText={termsText}
-              primaryColor={previewTier?.cardPrimaryColor || DEFAULT_PRIMARY_COLOR}
-              accentColor={previewTier?.cardAccentColor || DEFAULT_ACCENT_COLOR}
-              tierName={previewTier?.name || 'GOLD'}
+              primaryColor={previewTier?.cardPrimaryColor || cardPrimaryColor}
+              accentColor={previewTier?.cardAccentColor || cardAccentColor}
+              tierName={previewTier?.name || 'MEMBER'}
             />
+          </Card>
+
+          <Card sx={{ p: 3 }}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>Default Card Colors</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Used for a member&apos;s card before they reach any tier. Once a customer qualifies for a tier, its
+              colors (Loyalty &gt; Tiers) take over.
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <ColorField label="Primary Color" value={cardPrimaryColor} onChange={setCardPrimaryColor} hint="Card background" />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <ColorField label="Accent Color" value={cardAccentColor} onChange={setCardAccentColor} hint="Text, icons, footer bar" />
+              </Grid>
+            </Grid>
           </Card>
 
           <Card sx={{ p: 3 }}>

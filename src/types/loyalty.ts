@@ -98,6 +98,8 @@ export interface LoyaltyCardSettings {
   support_phone: string;
   website: string;
   terms_text: string;
+  card_primary_color: string;
+  card_accent_color: string;
 }
 
 export interface LoyaltyCampaign {
