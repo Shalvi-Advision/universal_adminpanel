@@ -14,6 +14,7 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Tooltip from '@mui/material/Tooltip';
 import TableRow from '@mui/material/TableRow';
+import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -27,8 +28,9 @@ import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { CONFIG } from 'src/config-global';
-import { getAllUsers, changeUserRole } from 'src/services/users';
+import { getUserData } from 'src/services/auth';
 import { usePermissions } from 'src/contexts/permissions-context';
+import { blockUser, deleteUser, getAllUsers, unblockUser, changeUserRole } from 'src/services/users';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
@@ -39,6 +41,9 @@ import { UserDetailDialog } from 'src/sections/users/user-detail-dialog';
 
 export default function Page() {
   const { isSuperAdmin } = usePermissions();
+  // Destructive actions are never offered against the signed-in account
+  // itself - the API refuses them anyway, so hiding them avoids a dead button.
+  const currentUserId = getUserData()?.id;
 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +58,15 @@ export default function Page() {
   // Customer drill-down dialog
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
+
+  // Block / unblock dialog (super admin only)
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [blockReason, setBlockReason] = useState('');
+  const [blocking, setBlocking] = useState(false);
+
+  // Delete dialog (super admin only)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -83,6 +97,60 @@ export default function Page() {
     if (!id) return;
     setDetailUserId(id);
     setDetailDialogOpen(true);
+  };
+
+  const handleOpenBlockDialog = (user: User) => {
+    setSelectedUser(user);
+    setBlockReason('');
+    setBlockDialogOpen(true);
+  };
+
+  const handleOpenDeleteDialog = (user: User) => {
+    setSelectedUser(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleToggleBlock = async () => {
+    const id = selectedUser?._id || selectedUser?.id;
+    if (!id) return;
+    const wasBlocked = !!selectedUser?.isBlocked;
+    const label = selectedUser?.name || selectedUser?.mobile || 'User';
+
+    try {
+      setBlocking(true);
+      setError('');
+      if (wasBlocked) {
+        await unblockUser(id);
+      } else {
+        await blockUser(id, blockReason.trim() || undefined);
+      }
+      setSuccess(`${label} has been ${wasBlocked ? 'unblocked' : 'blocked'}`);
+      setBlockDialogOpen(false);
+      fetchUsers();
+    } catch (err: any) {
+      setError(err.message || `Failed to ${wasBlocked ? 'unblock' : 'block'} user`);
+    } finally {
+      setBlocking(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    const id = selectedUser?._id || selectedUser?.id;
+    if (!id) return;
+    const label = selectedUser?.name || selectedUser?.mobile || 'User';
+
+    try {
+      setDeleting(true);
+      setError('');
+      await deleteUser(id);
+      setSuccess(`${label} has been deleted`);
+      setDeleteDialogOpen(false);
+      fetchUsers();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete user');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleChangeRole = async () => {
@@ -205,12 +273,18 @@ export default function Page() {
                             />
                           </TableCell>
                           <TableCell>
-                            <Chip
-                              variant="outlined"
-                              label={user.isVerified ? 'Verified' : 'Pending'}
-                              color={user.isVerified ? 'success' : 'warning'}
-                              size="small"
-                            />
+                            {user.isBlocked ? (
+                              <Tooltip title={user.blockedReason || 'Blocked - cannot sign in'}>
+                                <Chip label="Blocked" color="error" size="small" />
+                              </Tooltip>
+                            ) : (
+                              <Chip
+                                variant="outlined"
+                                label={user.isVerified ? 'Verified' : 'Pending'}
+                                color={user.isVerified ? 'success' : 'warning'}
+                                size="small"
+                              />
+                            )}
                           </TableCell>
                           <TableCell align="center">
                             <Tooltip title={user.pushEnabled ? 'Push notifications enabled' : 'Push notifications not enabled'}>
@@ -278,6 +352,37 @@ export default function Page() {
                                   </IconButton>
                                 </Tooltip>
                               )}
+                              {/* Blocking and deleting are super-admin-only, and
+                                  never offered on a super admin or on yourself. */}
+                              {isSuperAdmin &&
+                                !user.isSuperAdmin &&
+                                (user._id || user.id) !== currentUserId && (
+                                  <>
+                                    <Tooltip title={user.isBlocked ? 'Unblock user' : 'Block user'}>
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => handleOpenBlockDialog(user)}
+                                        color={user.isBlocked ? 'success' : 'warning'}
+                                      >
+                                        <Iconify
+                                          icon={user.isBlocked
+                                            ? ('solar:lock-unlocked-bold-duotone' as any)
+                                            : ('solar:lock-bold-duotone' as any)}
+                                          width={20}
+                                        />
+                                      </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title="Delete user">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => handleOpenDeleteDialog(user)}
+                                        color="error"
+                                      >
+                                        <Iconify icon={'solar:trash-bin-trash-bold-duotone' as any} width={20} />
+                                      </IconButton>
+                                    </Tooltip>
+                                  </>
+                                )}
                             </Stack>
                           </TableCell>
                         </TableRow>
@@ -342,6 +447,99 @@ export default function Page() {
               disabled={changingRole}
             >
               {changingRole ? 'Changing...' : selectedUser?.role === 'admin' ? 'Demote to User' : 'Promote to Admin'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Block / Unblock Confirmation (super admin only) */}
+        <Dialog open={blockDialogOpen} onClose={() => setBlockDialogOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>{selectedUser?.isBlocked ? 'Unblock User' : 'Block User'}</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ pt: 1 }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Avatar sx={{ bgcolor: selectedUser?.isBlocked ? 'error.main' : 'grey.400' }}>
+                  {(selectedUser?.name || 'U')[0].toUpperCase()}
+                </Avatar>
+                <Box>
+                  <Typography variant="subtitle1">{selectedUser?.name || 'N/A'}</Typography>
+                  <Typography variant="body2" color="text.secondary">{selectedUser?.mobile}</Typography>
+                </Box>
+              </Stack>
+
+              {selectedUser?.isBlocked ? (
+                <>
+                  {selectedUser?.blockedReason && (
+                    <Typography variant="body2" color="text.secondary">
+                      Blocked reason: {selectedUser.blockedReason}
+                    </Typography>
+                  )}
+                  <Alert severity="info">
+                    This user will be able to sign in and use the app again.
+                  </Alert>
+                </>
+              ) : (
+                <>
+                  <TextField
+                    label="Reason (optional)"
+                    placeholder="Why is this account being blocked?"
+                    value={blockReason}
+                    onChange={(e) => setBlockReason(e.target.value)}
+                    fullWidth
+                    multiline
+                    rows={2}
+                  />
+                  <Alert severity="warning">
+                    The user will be signed out of every device and cannot sign in until
+                    unblocked. Their orders and data are kept.
+                  </Alert>
+                </>
+              )}
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setBlockDialogOpen(false)}>Cancel</Button>
+            <Button
+              variant="contained"
+              color={selectedUser?.isBlocked ? 'success' : 'warning'}
+              onClick={handleToggleBlock}
+              disabled={blocking}
+            >
+              {blocking
+                ? selectedUser?.isBlocked
+                  ? 'Unblocking...'
+                  : 'Blocking...'
+                : selectedUser?.isBlocked
+                  ? 'Unblock User'
+                  : 'Block User'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Delete Confirmation (super admin only) */}
+        <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>Delete User</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ pt: 1 }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Avatar sx={{ bgcolor: 'error.main' }}>
+                  {(selectedUser?.name || 'U')[0].toUpperCase()}
+                </Avatar>
+                <Box>
+                  <Typography variant="subtitle1">{selectedUser?.name || 'N/A'}</Typography>
+                  <Typography variant="body2" color="text.secondary">{selectedUser?.mobile}</Typography>
+                </Box>
+              </Stack>
+
+              <Alert severity="error">
+                This permanently deletes the account and cannot be undone. Users with
+                active orders cannot be deleted - block them instead.
+              </Alert>
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="contained" color="error" onClick={handleDeleteUser} disabled={deleting}>
+              {deleting ? 'Deleting...' : 'Delete User'}
             </Button>
           </DialogActions>
         </Dialog>

@@ -10,6 +10,11 @@ export interface User {
   role?: 'user' | 'admin';
   isVerified?: boolean;
   isSuperAdmin?: boolean;
+  // Block state. Only a super admin can change it; a blocked user cannot sign
+  // in and any token they already hold is rejected.
+  isBlocked?: boolean;
+  blockedAt?: string | null;
+  blockedReason?: string | null;
   allowed_project_codes?: string[];
   permissions?: import('./permissions').UserPermissions;
   addresses?: any[];

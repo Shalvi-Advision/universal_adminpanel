@@ -40,7 +40,10 @@ import { Scrollbar } from 'src/components/scrollbar';
 
 const SECTIONS: { key: PermissionSection; label: string; actions: string[] }[] = [
   { key: 'dashboard', label: 'Dashboard', actions: ['view'] },
-  { key: 'users', label: 'Users', actions: ['view', 'create', 'edit', 'delete'] },
+  // No 'delete' here on purpose: deleting, blocking and unblocking a user are
+  // super-admin-only actions on the API (routes/admin/users.js) and cannot be
+  // delegated, so a Delete toggle would grant nothing.
+  { key: 'users', label: 'Users', actions: ['view', 'create', 'edit'] },
   { key: 'orders', label: 'Orders', actions: ['view', 'create', 'edit', 'delete'] },
   { key: 'notifications', label: 'Notifications', actions: ['view', 'create', 'edit', 'delete'] },
   { key: 'ecommerce', label: 'Ecommerce', actions: ['view', 'create', 'edit', 'delete'] },

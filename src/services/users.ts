@@ -33,6 +33,24 @@ export async function getUserDetail(userId: string): Promise<ApiResponse<UserDet
   return apiClient.get<ApiResponse<UserDetail>>(`/api/admin/users/${userId}`);
 }
 
+// Delete a user permanently. Super admin only - the API rejects everyone else.
+export async function deleteUser(userId: string): Promise<ApiResponse<null>> {
+  return apiClient.delete<ApiResponse<null>>(`/api/admin/users/${userId}`);
+}
+
+// Block a user (they can no longer sign in). Super admin only.
+export async function blockUser(
+  userId: string,
+  reason?: string
+): Promise<ApiResponse<User>> {
+  return apiClient.patch<ApiResponse<User>>(`/api/admin/users/${userId}/block`, { reason });
+}
+
+// Lift a block. Super admin only.
+export async function unblockUser(userId: string): Promise<ApiResponse<User>> {
+  return apiClient.patch<ApiResponse<User>>(`/api/admin/users/${userId}/unblock`, {});
+}
+
 // Change user role (admin/user)
 export async function changeUserRole(
   userId: string,
