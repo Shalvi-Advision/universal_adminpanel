@@ -256,49 +256,57 @@ export default function OrdersPage() {
 
     const activeColor = useMemo(() => STATUS_COLORS[statusFilter], [statusFilter]);
 
-    const renderStatusCell = (order: Order) => {
+    // Order Status (what the order currently is) and the actions that move it
+    // forward are rendered as two separate cells — they used to be stacked in
+    // one "Order Status" column, which read as if Pending/Accept/Cancel were
+    // all statuses rather than one status plus two available actions on it.
+    const renderStatusChip = (order: Order) => {
+        const status = normalizeOrderStatus(order.order_status);
+
+        return (
+            <Chip
+                size="small"
+                label={ORDER_STATUS_LABELS[status]}
+                onClick={canEditOrders ? () => openStatusDialog(order) : undefined}
+                sx={{
+                    cursor: canEditOrders ? 'pointer' : 'default',
+                    fontWeight: 600,
+                    color: '#fff',
+                    bgcolor: STATUS_COLORS[status],
+                }}
+            />
+        );
+    };
+
+    const renderStatusActions = (order: Order) => {
         const status = normalizeOrderStatus(order.order_status);
         const isOpen = status !== 'delivered' && status !== 'cancelled';
 
+        if (!canEditOrders || !isOpen) return null;
+
         return (
-            <Stack spacing={1} alignItems="flex-start">
-                <Chip
+            <Stack spacing={0.75} alignItems="flex-start">
+                {status === 'pending' || status === 'payment_processing' ? (
+                    <Button
+                        size="small"
+                        variant="contained"
+                        color="success"
+                        disabled={updating}
+                        onClick={() => applyStatus(order, 'accepted')}
+                    >
+                        Accept
+                    </Button>
+                ) : null}
+
+                <Button
                     size="small"
-                    label={ORDER_STATUS_LABELS[status]}
-                    onClick={canEditOrders ? () => openStatusDialog(order) : undefined}
-                    sx={{
-                        cursor: canEditOrders ? 'pointer' : 'default',
-                        fontWeight: 600,
-                        color: '#fff',
-                        bgcolor: STATUS_COLORS[status],
-                    }}
-                />
-
-                {canEditOrders && isOpen && (
-                    <Stack spacing={0.75} alignItems="flex-start">
-                        {status === 'pending' || status === 'payment_processing' ? (
-                            <Button
-                                size="small"
-                                variant="contained"
-                                color="success"
-                                disabled={updating}
-                                onClick={() => applyStatus(order, 'accepted')}
-                            >
-                                Accept
-                            </Button>
-                        ) : null}
-
-                        <Button
-                            size="small"
-                            variant="contained"
-                            color="error"
-                            disabled={updating}
-                            onClick={() => applyStatus(order, 'cancelled')}
-                        >
-                            Cancel Order
-                        </Button>
-                    </Stack>
-                )}
+                    variant="contained"
+                    color="error"
+                    disabled={updating}
+                    onClick={() => applyStatus(order, 'cancelled')}
+                >
+                    Cancel Order
+                </Button>
             </Stack>
         );
     };
@@ -448,18 +456,19 @@ export default function OrdersPage() {
                                             <TableCell>Payment Mode</TableCell>
                                             <TableCell>Fulfillment</TableCell>
                                             <TableCell>Order Status</TableCell>
+                                            <TableCell>Actions</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {loading ? (
                                             <TableRow>
-                                                <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
+                                                <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
                                                     <CircularProgress />
                                                 </TableCell>
                                             </TableRow>
                                         ) : orders.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
+                                                <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
                                                     <Typography variant="body2" color="text.secondary">
                                                         No {ORDER_STATUS_LABELS[statusFilter].toLowerCase()} orders
                                                     </Typography>
@@ -579,8 +588,12 @@ export default function OrdersPage() {
                                                             />
                                                         </TableCell>
 
-                                                        <TableCell sx={{ minWidth: 170 }}>
-                                                            {renderStatusCell(order)}
+                                                        <TableCell>
+                                                            {renderStatusChip(order)}
+                                                        </TableCell>
+
+                                                        <TableCell sx={{ minWidth: 150 }}>
+                                                            {renderStatusActions(order)}
                                                         </TableCell>
                                                     </TableRow>
                                                 );
