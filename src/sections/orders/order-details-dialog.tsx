@@ -16,7 +16,7 @@ import GlobalStyles from '@mui/material/GlobalStyles';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 
-import { orderStatusLabel, normalizeOrderStatus } from 'src/services/orders';
+import { orderStatusLabel, getNextOrderStatus, normalizeOrderStatus } from 'src/services/orders';
 
 import {
     formatDate,
@@ -106,9 +106,10 @@ export function OrderDetailsDialog({
     const totals = getOrderTotals(items);
     const deliveryCharges = order.order_summary?.delivery_charges ?? 0;
 
-    // Only the first step of the workflow is an "Accept"; past that the status
-    // dialog on the list handles the rest of the transitions.
-    const canAccept = canEdit && status === 'pending';
+    // The same one-step-forward action the list's Actions column offers, so an
+    // admin working inside the details view can walk the order through the
+    // whole workflow without going back to the table.
+    const nextStep = canEdit ? getNextOrderStatus(status) : null;
     const canCancel = canEdit && status !== 'cancelled' && status !== 'delivered';
 
     const storeName = order.store_name || order.store_code;
@@ -315,14 +316,14 @@ export function OrderDetailsDialog({
                     &lt;&lt; Back
                 </Button>
 
-                {canAccept && (
+                {nextStep && (
                     <Button
                         variant="contained"
                         color="success"
                         disabled={busy}
-                        onClick={() => onChangeStatus(order, 'accepted')}
+                        onClick={() => onChangeStatus(order, nextStep.status)}
                     >
-                        Accept
+                        {nextStep.label}
                     </Button>
                 )}
 

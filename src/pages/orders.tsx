@@ -37,6 +37,7 @@ import {
     getOrders,
     ORDER_STATUSES,
     updateOrderStatus,
+    getNextOrderStatus,
     updatePaymentStatus,
     ORDER_STATUS_LABELS,
     normalizeOrderStatus,
@@ -195,9 +196,9 @@ export default function OrdersPage() {
         setDetailDialogOpen(true);
     };
 
-    // Quick actions from the status column — Accept and Cancel Order, as in the
-    // legacy panel. Both move the order into another tab, so the list and the
-    // badges are refetched.
+    // Quick actions from the Actions column — one step forward along the
+    // workflow, or Cancel Order. Both move the order into another tab, so the
+    // list and the badges are refetched.
     const applyStatus = useCallback(
         async (order: Order, status: OrderStatus) => {
             try {
@@ -284,19 +285,25 @@ export default function OrdersPage() {
 
         if (!canEditOrders || !isOpen) return null;
 
+        // One button per step of the workflow rather than an Accept that only
+        // appeared on Pending: the admin walks an order all the way to
+        // Delivered from this column, each click naming the tab it moves to.
+        const nextStep = getNextOrderStatus(status);
+
         return (
             <Stack spacing={0.75} alignItems="flex-start">
-                {status === 'pending' || status === 'payment_processing' ? (
+                {nextStep && (
                     <Button
                         size="small"
                         variant="contained"
                         color="success"
                         disabled={updating}
-                        onClick={() => applyStatus(order, 'accepted')}
+                        onClick={() => applyStatus(order, nextStep.status)}
+                        sx={{ whiteSpace: 'nowrap' }}
                     >
-                        Accept
+                        {nextStep.label}
                     </Button>
-                ) : null}
+                )}
 
                 <Button
                     size="small"
@@ -304,6 +311,7 @@ export default function OrdersPage() {
                     color="error"
                     disabled={updating}
                     onClick={() => applyStatus(order, 'cancelled')}
+                    sx={{ whiteSpace: 'nowrap' }}
                 >
                     Cancel Order
                 </Button>

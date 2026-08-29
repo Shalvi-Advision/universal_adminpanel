@@ -151,6 +151,38 @@ export function orderStatusLabel(raw?: string): string {
     const status = normalizeOrderStatus(raw);
     return ORDER_STATUS_LABELS[status] ?? status;
 }
+
+// The forward path an admin walks an order down, one step per click, keyed by
+// the status the order is in now. A status absent from this map is terminal
+// (delivered, cancelled) and offers no next step.
+//
+// `label` names the destination, so the button always says which tab the order
+// is about to land in. The first step is the exception: "Accept" is the wording
+// this panel and the legacy one have always used there, and it reads as an
+// action rather than as a state.
+//
+// The backend does not enforce a transition graph — PATCH /:id/status accepts
+// any value in the vocabulary — so this map is the only thing defining the
+// happy path. Deliberately forward-only: correcting a mistake means going
+// through the status dialog on the chip, which still allows any status.
+export const NEXT_ORDER_STATUS: Partial<
+    Record<OrderStatus, { status: OrderStatus; label: string }>
+> = {
+    pending: { status: 'accepted', label: 'Accept' },
+    payment_processing: { status: 'accepted', label: 'Accept' },
+    accepted: { status: 'accepted_by_store', label: 'Accepted By Store' },
+    accepted_by_store: { status: 'in_packaging', label: 'In Packaging' },
+    in_packaging: { status: 'out_for_delivery', label: 'Out for Delivery' },
+    out_for_delivery: { status: 'delivered', label: 'Delivered' },
+};
+
+// The step an order can be advanced to, or null once it has reached the end of
+// the workflow. Folds legacy spellings on the way in.
+export function getNextOrderStatus(
+    raw?: string
+): { status: OrderStatus; label: string } | null {
+    return NEXT_ORDER_STATUS[normalizeOrderStatus(raw)] ?? null;
+}
 export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 
 export interface OrdersQueryParams {
