@@ -487,6 +487,7 @@ export interface Store {
   delivery_distance_slabs?: DeliveryDistanceSlab[];
   handling_fee?: number;
   package_fee?: number;
+  packing_fee_enabled_for_pickup?: boolean;
   createdAt?: string;
   updatedAt?: string;
   __v?: number;
@@ -532,6 +533,7 @@ export interface StorePayload {
   delivery_distance_slabs?: DeliveryDistanceSlab[];
   handling_fee?: number;
   package_fee?: number;
+  packing_fee_enabled_for_pickup?: boolean;
 }
 
 // Delivery Slot type matching backend model

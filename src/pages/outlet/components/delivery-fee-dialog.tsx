@@ -6,6 +6,7 @@ import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Divider from '@mui/material/Divider';
@@ -15,6 +16,7 @@ import IconButton from '@mui/material/IconButton';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { updateStore } from 'src/services/stores';
@@ -49,6 +51,7 @@ export function DeliveryFeeDialog({ open, store, onClose, onSuccess }: DeliveryF
   const [slabs, setSlabs] = useState<DeliveryDistanceSlab[]>([]);
   const [handlingFee, setHandlingFee] = useState(0);
   const [packageFee, setPackageFee] = useState(0);
+  const [packingFeeEnabledForPickup, setPackingFeeEnabledForPickup] = useState(false);
 
   useEffect(() => {
     if (!store) return;
@@ -70,6 +73,7 @@ export function DeliveryFeeDialog({ open, store, onClose, onSuccess }: DeliveryF
     );
     setHandlingFee(store.handling_fee ?? 0);
     setPackageFee(store.package_fee ?? 0);
+    setPackingFeeEnabledForPickup(store.packing_fee_enabled_for_pickup ?? false);
     setError('');
   }, [store, open]);
 
@@ -131,6 +135,7 @@ export function DeliveryFeeDialog({ open, store, onClose, onSuccess }: DeliveryF
         delivery_distance_slabs: slabs,
         handling_fee: handlingFee,
         package_fee: packageFee,
+        packing_fee_enabled_for_pickup: packingFeeEnabledForPickup,
       });
       onSuccess();
     } catch (err: any) {
@@ -294,7 +299,7 @@ export function DeliveryFeeDialog({ open, store, onClose, onSuccess }: DeliveryF
 
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-              Additional fees (always added)
+              Additional fees (always added for delivery orders)
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6 }}>
@@ -316,6 +321,21 @@ export function DeliveryFeeDialog({ open, store, onClose, onSuccess }: DeliveryF
                 />
               </Grid>
             </Grid>
+            <FormControlLabel
+              sx={{ mt: 1 }}
+              control={
+                <Switch
+                  checked={packingFeeEnabledForPickup}
+                  onChange={(e) => setPackingFeeEnabledForPickup(e.target.checked)}
+                />
+              }
+              label="Charge packing fee on self-pickup orders"
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 1.5 }}>
+              When off, self-pickup orders are charged only the cart subtotal — no delivery,
+              handling, or packing fee. When on, the &quot;Package fee ₹&quot; above is charged
+              as a packing fee.
+            </Typography>
           </Box>
         </Stack>
       </DialogContent>
