@@ -27,6 +27,8 @@ import {
     getOrderTotals,
     getLineAmounts,
     getPaymentStatusColor,
+    getFulfillmentTypeLabel,
+    getFulfillmentTypeColor,
 } from './order-format';
 
 // ----------------------------------------------------------------------
@@ -157,6 +159,17 @@ export function OrderDetailsDialog({
                         </Stack>
 
                         {labelledValue('Payment Mode', order.payment_info?.payment_mode_name || '—')}
+
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <Typography variant="body2" fontWeight={700}>
+                                Fulfillment :
+                            </Typography>
+                            <Chip
+                                size="small"
+                                label={getFulfillmentTypeLabel(order.fulfillment_type)}
+                                color={getFulfillmentTypeColor(order.fulfillment_type)}
+                            />
+                        </Stack>
 
                         <Stack direction="row" spacing={1} alignItems="center">
                             <Typography variant="body2" fontWeight={700}>

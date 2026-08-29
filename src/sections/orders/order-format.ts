@@ -27,6 +27,17 @@ export const getPaymentStatusColor = (
     return (status && colors[status]) || 'default';
 };
 
+export type FulfillmentType = 'delivery' | 'pickup';
+
+// Historical orders predate this field; the Order schema itself defaults to
+// 'delivery', so an absent value is read the same way here.
+export const getFulfillmentTypeLabel = (type?: FulfillmentType): string =>
+    type === 'pickup' ? 'Self Pickup' : 'Home Delivery';
+
+export const getFulfillmentTypeColor = (
+    type?: FulfillmentType
+): 'info' | 'secondary' => (type === 'pickup' ? 'secondary' : 'info');
+
 export const formatDateTime = (value?: string) => {
     if (!value) return '—';
     return new Date(value).toLocaleString('en-IN', {

@@ -39,6 +39,7 @@ export interface Order {
         total_amount: number;
     };
     order_status: OrderStatus;
+    fulfillment_type?: 'delivery' | 'pickup';
     payment_info: {
         payment_mode_id?: number;
         payment_mode_name?: string;

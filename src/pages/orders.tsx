@@ -53,6 +53,8 @@ import {
     formatDateTime,
     formatCurrency,
     getPaymentStatusColor,
+    getFulfillmentTypeLabel,
+    getFulfillmentTypeColor,
 } from 'src/sections/orders/order-format';
 
 // ----------------------------------------------------------------------
@@ -444,19 +446,20 @@ export default function OrdersPage() {
                                             <TableCell>Order Amount</TableCell>
                                             <TableCell>Payment Status</TableCell>
                                             <TableCell>Payment Mode</TableCell>
+                                            <TableCell>Fulfillment</TableCell>
                                             <TableCell>Order Status</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {loading ? (
                                             <TableRow>
-                                                <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                                                <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
                                                     <CircularProgress />
                                                 </TableCell>
                                             </TableRow>
                                         ) : orders.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                                                <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
                                                     <Typography variant="body2" color="text.secondary">
                                                         No {ORDER_STATUS_LABELS[statusFilter].toLowerCase()} orders
                                                     </Typography>
@@ -566,6 +569,14 @@ export default function OrdersPage() {
 
                                                         <TableCell>
                                                             {order.payment_info?.payment_mode_name || '—'}
+                                                        </TableCell>
+
+                                                        <TableCell>
+                                                            <Chip
+                                                                size="small"
+                                                                label={getFulfillmentTypeLabel(order.fulfillment_type)}
+                                                                color={getFulfillmentTypeColor(order.fulfillment_type)}
+                                                            />
                                                         </TableCell>
 
                                                         <TableCell sx={{ minWidth: 170 }}>
