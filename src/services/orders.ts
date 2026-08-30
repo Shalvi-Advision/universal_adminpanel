@@ -114,7 +114,6 @@ export const ORDER_STATUSES = [
     'in_packaging',
     'out_for_delivery',
     'delivered',
-    'payment_processing',
     'cancelled',
 ] as const;
 
@@ -127,11 +126,12 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     in_packaging: 'In Packaging',
     out_for_delivery: 'Out for Delivery',
     delivered: 'Delivered',
-    payment_processing: 'Payment Processing',
     cancelled: 'Cancelled',
 };
 
-// Pre-rename values still present on documents the migration has not touched.
+// Pre-rename values still present on documents the migration has not touched,
+// plus payment_processing, a tab that was retired: an order that still carries
+// it reads as Pending here exactly as it does on the API side.
 const LEGACY_STATUS_MAP: Record<string, OrderStatus> = {
     placed: 'pending',
     confirmed: 'accepted',
@@ -139,6 +139,7 @@ const LEGACY_STATUS_MAP: Record<string, OrderStatus> = {
     packed: 'in_packaging',
     shipped: 'out_for_delivery',
     refunded: 'cancelled',
+    payment_processing: 'pending',
 };
 
 // Reads a raw order_status off an order, folding legacy spellings.
@@ -169,7 +170,6 @@ export const NEXT_ORDER_STATUS: Partial<
     Record<OrderStatus, { status: OrderStatus; label: string }>
 > = {
     pending: { status: 'accepted', label: 'Accept' },
-    payment_processing: { status: 'accepted', label: 'Accept' },
     accepted: { status: 'accepted_by_store', label: 'Accepted By Store' },
     accepted_by_store: { status: 'in_packaging', label: 'In Packaging' },
     in_packaging: { status: 'out_for_delivery', label: 'Out for Delivery' },

@@ -10,7 +10,6 @@ export const STATUS_COLORS: Record<OrderStatus, string> = {
     in_packaging: '#17696A',
     out_for_delivery: '#1565C0',
     delivered: '#78909C',
-    payment_processing: '#00695C',
     cancelled: '#D32F2F',
 };
 
