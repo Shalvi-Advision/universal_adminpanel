@@ -22,6 +22,7 @@ import { HeaderSection } from '../core/header-section';
 import { LayoutSection } from '../core/layout-section';
 import { AccountPopover } from '../components/account-popover';
 import { ProjectSelector } from '../components/project-selector';
+import { SubscriptionLock } from '../components/subscription-lock';
 import { SubscriptionBadge } from '../components/subscription-badge';
 import { NotificationsPopover } from '../components/notifications-popover';
 
@@ -126,7 +127,11 @@ export function DashboardLayout({
 
   const renderFooter = () => null;
 
-  const renderMain = () => <MainSection {...slotProps?.main}>{children}</MainSection>;
+  const renderMain = () => (
+    <MainSection {...slotProps?.main}>
+      <SubscriptionLock>{children}</SubscriptionLock>
+    </MainSection>
+  );
 
   return (
     <LayoutSection
