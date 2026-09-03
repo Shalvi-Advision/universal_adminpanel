@@ -22,6 +22,7 @@ import { HeaderSection } from '../core/header-section';
 import { LayoutSection } from '../core/layout-section';
 import { AccountPopover } from '../components/account-popover';
 import { ProjectSelector } from '../components/project-selector';
+import { SubscriptionBadge } from '../components/subscription-badge';
 import { NotificationsPopover } from '../components/notifications-popover';
 
 import type { MainSectionProps } from '../core/main-section';
@@ -95,6 +96,9 @@ export function DashboardLayout({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
           {/** @slot Project switcher */}
           <ProjectSelector />
+
+          {/** @slot Subscription badge */}
+          <SubscriptionBadge />
 
           {/** @slot Searchbar */}
           <Searchbar />

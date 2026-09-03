@@ -1,4 +1,5 @@
 import type { SelectChangeEvent } from '@mui/material/Select';
+import type { MySubscriptionStatus } from 'src/services/subscriptions';
 import type { Product, Category, Department, Subcategory } from 'src/types/api';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -37,6 +38,7 @@ import { getAllDepartments } from 'src/services/departments';
 import { useStoreCode } from 'src/contexts/store-code-context';
 import { getCategoriesByStore } from 'src/services/categories';
 import { getSubcategoriesByStore } from 'src/services/subcategories';
+import { getMySubscriptionStatus } from 'src/services/subscriptions';
 import { deleteProduct, getProductsByStore } from 'src/services/products';
 
 import { Iconify } from 'src/components/iconify';
@@ -70,6 +72,34 @@ export default function Page() {
   const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingSubcategories, setLoadingSubcategories] = useState(false);
+
+  // Subscription status gates product creation — checked once on mount,
+  // independent of the store/filter-driven product list fetch above.
+  const [subscriptionStatus, setSubscriptionStatus] = useState<MySubscriptionStatus | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getMySubscriptionStatus()
+      .then((response) => {
+        if (active && response.success) setSubscriptionStatus(response.data);
+      })
+      .catch(() => {
+        if (active) setSubscriptionStatus(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const subscriptionBlocked =
+    !!subscriptionStatus?.hasSubscription &&
+    (subscriptionStatus.isExpired ||
+      (subscriptionStatus.productLimit !== null &&
+        subscriptionStatus.currentProductCount >= subscriptionStatus.productLimit));
+
+  const subscriptionBlockMessage = subscriptionStatus?.isExpired
+    ? 'Your subscription has expired — contact your administrator to renew.'
+    : `Product limit of ${subscriptionStatus?.productLimit} reached for your current plan.`;
 
   const fetchProducts = useCallback(async () => {
     if (!storeCode) {
@@ -257,6 +287,7 @@ export default function Page() {
                   variant="contained"
                   startIcon={<Iconify icon={"mingcute:add-line" as any} />}
                   onClick={handleCreate}
+                  disabled={subscriptionBlocked}
                 >
                   Create Product
                 </Button>
@@ -268,6 +299,10 @@ export default function Page() {
             <Alert severity="warning">
               Please select a store code from the Ecommerce section in the sidebar to view products.
             </Alert>
+          )}
+
+          {subscriptionBlocked && (
+            <Alert severity="error">{subscriptionBlockMessage}</Alert>
           )}
 
           {error && (

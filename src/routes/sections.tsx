@@ -7,7 +7,7 @@ import { varAlpha } from 'minimal-shared/utils';
 import Box from '@mui/material/Box';
 import LinearProgress, { linearProgressClasses } from '@mui/material/LinearProgress';
 
-import { ProtectedRoute, PermissionGuard } from 'src/routes/components';
+import { ProtectedRoute, PermissionGuard, SuperAdminGuard } from 'src/routes/components';
 
 import { lazyWithRetry } from 'src/utils/lazy-with-retry';
 
@@ -63,6 +63,9 @@ export const DynamicSeasonalCategoriesPage = lazyWithRetry(
 );
 export const OffersPage = lazyWithRetry(() => import('src/pages/offers'));
 export const AdminPermissionsPage = lazyWithRetry(() => import('src/pages/admin-permissions'));
+export const ManageSubscriptionsPage = lazyWithRetry(
+  () => import('src/pages/manage-subscriptions')
+);
 export const BrandingPage = lazyWithRetry(() => import('src/pages/branding'));
 export const SplashScreenPage = lazyWithRetry(() => import('src/pages/screens/splash'));
 export const OnboardingScreenPage = lazyWithRetry(() => import('src/pages/screens/onboarding'));
@@ -419,7 +422,14 @@ export const routesSection: RouteObject[] = [
         ),
       },
       // Integrations is super-admin only; the backend enforces it too.
-      { path: 'integrations', element: <IntegrationsPage /> },
+      {
+        path: 'integrations',
+        element: (
+          <SuperAdminGuard>
+            <IntegrationsPage />
+          </SuperAdminGuard>
+        ),
+      },
       {
         path: 'digital-cart',
         element: (
@@ -436,7 +446,22 @@ export const routesSection: RouteObject[] = [
           </PermissionGuard>
         ),
       },
-      { path: 'admin-permissions', element: <AdminPermissionsPage /> },
+      {
+        path: 'admin-permissions',
+        element: (
+          <SuperAdminGuard>
+            <AdminPermissionsPage />
+          </SuperAdminGuard>
+        ),
+      },
+      {
+        path: 'manage-subscriptions',
+        element: (
+          <SuperAdminGuard>
+            <ManageSubscriptionsPage />
+          </SuperAdminGuard>
+        ),
+      },
     ],
   },
   {

@@ -257,4 +257,10 @@ export const navData: NavItem[] = [
     icon: iconify('solar:shield-keyhole-bold-duotone'),
     superAdminOnly: true,
   },
+  {
+    title: 'Manage Subscriptions',
+    path: '/manage-subscriptions',
+    icon: iconify('solar:calendar-mark-bold-duotone'),
+    superAdminOnly: true,
+  },
 ];
