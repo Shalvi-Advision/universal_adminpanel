@@ -1,3 +1,4 @@
+import type { BulkPoolUploadResult } from 'src/services/image-cdn';
 import type { ImageSyncRun, ImageCdnCoverage, ImageCdnMissingProduct } from 'src/types/api';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -28,6 +29,7 @@ import { CONFIG } from 'src/config-global';
 import {
   getImageCdnRuns,
   runImageCdnSync,
+  bulkUploadToPool,
   getImageCdnMissing,
   getImageCdnCoverage,
   uploadImageCdnImage,
@@ -77,6 +79,96 @@ function StatTile({ label, value, tone }: { label: string; value: string | numbe
       <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
         {label}
       </Typography>
+    </Card>
+  );
+}
+
+function BulkPoolUploadCard() {
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [result, setResult] = useState<BulkPoolUploadResult | null>(null);
+  const [error, setError] = useState('');
+
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFiles(Array.from(e.target.files ?? []));
+    setResult(null);
+    setError('');
+  };
+
+  const handleUpload = async () => {
+    if (files.length === 0) return;
+    try {
+      setUploading(true);
+      setError('');
+      setResult(null);
+      setProgress({ done: 0, total: files.length });
+      const res = await bulkUploadToPool(files, 15, (done, total) => setProgress({ done, total }));
+      setResult(res);
+      setFiles([]);
+    } catch (err: any) {
+      setError(err.message || 'Bulk upload failed');
+    } finally {
+      setUploading(false);
+      setProgress(null);
+    }
+  };
+
+  return (
+    <Card sx={{ p: 2.5 }}>
+      <Stack spacing={2}>
+        <Box>
+          <Typography variant="h6">Bulk add to pool</Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+            Restocks the shared image pool directly — not tied to this tenant. Files must already be
+            named <code>&lt;barcode&gt;_1.jpg</code> (or <code>_2</code>, or bare{' '}
+            <code>&lt;barcode&gt;.jpg</code>). Run &quot;Sync now&quot; afterwards to pick up matches
+            for this tenant.
+          </Typography>
+        </Box>
+
+        {error && <Alert severity="error">{error}</Alert>}
+
+        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+          <Button component="label" variant="outlined" startIcon={<Iconify icon="mingcute:add-line" />}>
+            {files.length > 0 ? `${files.length} file(s) selected` : 'Choose photos'}
+            <input type="file" accept="image/*" multiple hidden onChange={handleFilesSelected} />
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleUpload}
+            disabled={files.length === 0 || uploading}
+            startIcon={uploading ? <CircularProgress size={16} /> : undefined}
+          >
+            {uploading
+              ? `Uploading ${progress?.done ?? 0}/${progress?.total ?? files.length}…`
+              : `Upload ${files.length || ''}`.trim()}
+          </Button>
+        </Stack>
+
+        {result && (
+          <Alert severity={result.skipped.length ? 'warning' : 'success'}>
+            Added {result.saved.length} image(s) to the pool
+            {result.skipped.length ? `, ${result.skipped.length} skipped` : ''}.
+            {result.skipped.length > 0 && (
+              <Box component="ul" sx={{ m: '8px 0 0', pl: 2.5 }}>
+                {result.skipped.slice(0, 10).map((s) => (
+                  <li key={s.filename}>
+                    <Typography variant="caption">
+                      {s.filename} — {s.reason}
+                    </Typography>
+                  </li>
+                ))}
+                {result.skipped.length > 10 && (
+                  <li>
+                    <Typography variant="caption">…and {result.skipped.length - 10} more</Typography>
+                  </li>
+                )}
+              </Box>
+            )}
+          </Alert>
+        )}
+      </Stack>
     </Card>
   );
 }
@@ -284,6 +376,8 @@ export default function Page() {
                 <StatTile label="Missing" value={coverage?.missing ?? 0} tone="bad" />
                 <StatTile label="Coverage" value={`${coverage?.coverage_pct ?? 0}%`} />
               </Stack>
+
+              <BulkPoolUploadCard />
 
               <Card>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 2.5, pb: 1.5 }}>
