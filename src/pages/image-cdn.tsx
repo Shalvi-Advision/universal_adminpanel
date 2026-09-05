@@ -22,6 +22,8 @@ import DialogActions from '@mui/material/DialogActions';
 import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { getSelectedProjectCode } from 'src/utils/project-code';
+
 import { CONFIG } from 'src/config-global';
 import {
   getImageCdnRuns,
@@ -35,6 +37,30 @@ import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
 // ----------------------------------------------------------------------
+
+// One CSV field, quoted only when it needs to be (a bare number like a
+// p_code or barcode reads fine unquoted; a product name can contain a comma
+// or a quote, so those always get quoted-and-escaped).
+function csvField(value: string | undefined): string {
+  const s = value ?? '';
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function downloadCsv(filename: string, rows: ImageCdnMissingProduct[]) {
+  const lines = [
+    'p_code,product_name,barcode',
+    ...rows.map((r) => [csvField(r.p_code), csvField(r.product_name), csvField(r.barcode)].join(',')),
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
 function StatTile({ label, value, tone }: { label: string; value: string | number; tone?: 'good' | 'bad' }) {
   return (
@@ -155,6 +181,7 @@ export default function Page() {
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState('');
   const [uploadTarget, setUploadTarget] = useState<UploadTarget>(null);
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -189,6 +216,24 @@ export default function Page() {
       setError(err.message || 'Sync failed');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  // Exports the FULL missing list, not just the (possibly truncated) 200
+  // rows held in state for the on-screen table — a fresh, uncapped fetch so
+  // the CSV always matches the real "Missing" stat tile above it.
+  const handleExportCsv = async () => {
+    try {
+      setExporting(true);
+      setError('');
+      const res = await getImageCdnMissing(10000);
+      const projectCode = getSelectedProjectCode() || 'export';
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadCsv(`${projectCode}-missing-images-${stamp}.csv`, res.data);
+    } catch (err: any) {
+      setError(err.message || 'Export failed');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -243,9 +288,22 @@ export default function Page() {
               <Card>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 2.5, pb: 1.5 }}>
                   <Typography variant="h6">Missing images</Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {missing.length} shown
-                  </Typography>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      {missing.length} shown
+                    </Typography>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={handleExportCsv}
+                      disabled={exporting || (coverage?.missing ?? 0) === 0}
+                      startIcon={
+                        exporting ? <CircularProgress size={14} /> : <Iconify icon="eva:arrow-ios-downward-fill" />
+                      }
+                    >
+                      {exporting ? 'Exporting…' : 'Export CSV'}
+                    </Button>
+                  </Stack>
                 </Stack>
                 <Scrollbar sx={{ maxHeight: 480 }}>
                   <TableContainer sx={{ overflow: 'unset' }}>
