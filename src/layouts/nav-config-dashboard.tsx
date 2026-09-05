@@ -16,6 +16,8 @@ export type NavItem = {
   children?: NavItem[];
   permissionSection?: PermissionSection;
   superAdminOnly?: boolean;
+  // Separate from superAdminOnly on purpose — see permissions-context.tsx.
+  imageCdnAccessOnly?: boolean;
 };
 
 export const navData: NavItem[] = [
@@ -262,5 +264,11 @@ export const navData: NavItem[] = [
     path: '/manage-subscriptions',
     icon: iconify('solar:calendar-mark-bold-duotone'),
     superAdminOnly: true,
+  },
+  {
+    title: 'Image CDN',
+    path: '/image-cdn',
+    icon: iconify('solar:gallery-wide-bold-duotone'),
+    imageCdnAccessOnly: true,
   },
 ];

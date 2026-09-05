@@ -10,6 +10,10 @@ import { getUserData } from 'src/services/auth';
 interface PermissionsContextType {
   permissions: UserPermissions;
   isSuperAdmin: boolean;
+  // NOT implied by isSuperAdmin — the backend flag it mirrors
+  // (User.imageCdnAccess) is deliberately excluded from every other
+  // permission bypass, so most super admins should still see this as false.
+  hasImageCdnAccess: boolean;
   hasPermission: (section: PermissionSection, action: PermissionAction) => boolean;
   canAccessSection: (section: PermissionSection) => boolean;
 }
@@ -17,6 +21,7 @@ interface PermissionsContextType {
 const PermissionsContext = createContext<PermissionsContextType>({
   permissions: {},
   isSuperAdmin: false,
+  hasImageCdnAccess: false,
   hasPermission: () => false,
   canAccessSection: () => false,
 });
@@ -36,6 +41,7 @@ interface PermissionsProviderProps {
 export function PermissionsProvider({ children }: PermissionsProviderProps) {
   const userData = getUserData();
   const isSuperAdmin = userData?.isSuperAdmin ?? false;
+  const hasImageCdnAccess = userData?.imageCdnAccess ?? false;
   const permissions: UserPermissions = userData?.permissions ?? {};
 
   const hasPermission = useCallback(
@@ -52,8 +58,8 @@ export function PermissionsProvider({ children }: PermissionsProviderProps) {
   );
 
   const value = useMemo(
-    () => ({ permissions, isSuperAdmin, hasPermission, canAccessSection }),
-    [permissions, isSuperAdmin, hasPermission, canAccessSection]
+    () => ({ permissions, isSuperAdmin, hasImageCdnAccess, hasPermission, canAccessSection }),
+    [permissions, isSuperAdmin, hasImageCdnAccess, hasPermission, canAccessSection]
   );
 
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>;

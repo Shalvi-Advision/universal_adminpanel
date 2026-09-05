@@ -50,7 +50,7 @@ export function DashboardLayout({
   layoutQuery = 'lg',
 }: DashboardLayoutProps) {
   const theme = useTheme();
-  const { canAccessSection, isSuperAdmin } = usePermissions();
+  const { canAccessSection, isSuperAdmin, hasImageCdnAccess } = usePermissions();
 
   const filteredNavData = useMemo(() => {
     // Recursive: a superAdminOnly or permission-gated entry nested under a
@@ -60,13 +60,14 @@ export function DashboardLayout({
       items
         .filter((item) => {
           if (item.superAdminOnly) return isSuperAdmin;
+          if (item.imageCdnAccessOnly) return hasImageCdnAccess;
           if (item.permissionSection) return canAccessSection(item.permissionSection);
           return true;
         })
         .map((item) => (item.children ? { ...item, children: filter(item.children) } : item));
 
     return filter(navData);
-  }, [canAccessSection, isSuperAdmin]);
+  }, [canAccessSection, isSuperAdmin, hasImageCdnAccess]);
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 

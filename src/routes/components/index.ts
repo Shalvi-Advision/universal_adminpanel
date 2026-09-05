@@ -7,3 +7,5 @@ export * from './protected-route';
 export * from './permission-guard';
 
 export * from './superadmin-guard';
+
+export * from './image-cdn-guard';

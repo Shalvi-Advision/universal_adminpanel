@@ -17,6 +17,9 @@ export interface User {
   blockedReason?: string | null;
   allowed_project_codes?: string[];
   permissions?: import('./permissions').UserPermissions;
+  // Gate for the Image CDN tools. Deliberately separate from isSuperAdmin —
+  // see src/contexts/permissions-context.tsx.
+  imageCdnAccess?: boolean;
   addresses?: any[];
   favorites?: any[];
   createdAt?: string;
@@ -1057,4 +1060,35 @@ export interface OffersQueryParams {
   is_active?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+}
+
+// Image CDN — see routes/admin/image-cdn.js on the backend. "Matched" means
+// pcode_img/pcode_img_2 is actually set, which only ever happens once a real
+// file has been copied into this tenant's public folder (a sync or a manual
+// upload) — never a guessed URL.
+export interface ImageCdnCoverage {
+  project_code: string;
+  total: number;
+  matched_primary: number;
+  matched_secondary: number;
+  missing: number;
+  coverage_pct: number;
+}
+
+export interface ImageCdnMissingProduct {
+  p_code: string;
+  barcode?: string;
+  product_name: string;
+}
+
+export interface ImageSyncRun {
+  _id: string;
+  project_code: string;
+  triggered_by_email?: string;
+  ran_at: string;
+  total_products: number;
+  matched_primary: number;
+  matched_secondary: number;
+  missing_count: number;
+  duration_ms?: number;
 }

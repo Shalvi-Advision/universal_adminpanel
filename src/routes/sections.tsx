@@ -7,7 +7,7 @@ import { varAlpha } from 'minimal-shared/utils';
 import Box from '@mui/material/Box';
 import LinearProgress, { linearProgressClasses } from '@mui/material/LinearProgress';
 
-import { ProtectedRoute, PermissionGuard, SuperAdminGuard } from 'src/routes/components';
+import { ImageCdnGuard, ProtectedRoute, PermissionGuard, SuperAdminGuard } from 'src/routes/components';
 
 import { lazyWithRetry } from 'src/utils/lazy-with-retry';
 
@@ -73,6 +73,7 @@ export const HomeScreenPage = lazyWithRetry(() => import('src/pages/screens/home
 export const ContentScreenPage = lazyWithRetry(() => import('src/pages/screens/content'));
 export const AppConfigPage = lazyWithRetry(() => import('src/pages/app-config'));
 export const IntegrationsPage = lazyWithRetry(() => import('src/pages/integrations'));
+export const ImageCdnPage = lazyWithRetry(() => import('src/pages/image-cdn'));
 export const DigitalCartPage = lazyWithRetry(() => import('src/pages/digital-cart'));
 export const DigitalCartUiPage = lazyWithRetry(() => import('src/pages/digital-cart-ui'));
 export const Page404 = lazyWithRetry(() => import('src/pages/page-not-found'));
@@ -460,6 +461,17 @@ export const routesSection: RouteObject[] = [
           <SuperAdminGuard>
             <ManageSubscriptionsPage />
           </SuperAdminGuard>
+        ),
+      },
+      // Gated on imageCdnAccess, not isSuperAdmin — most super admins should
+      // not see this either. The backend's requireImageCdnAccess enforces
+      // the same thing.
+      {
+        path: 'image-cdn',
+        element: (
+          <ImageCdnGuard>
+            <ImageCdnPage />
+          </ImageCdnGuard>
         ),
       },
     ],
