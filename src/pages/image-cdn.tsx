@@ -1,10 +1,11 @@
-import type { BulkPoolUploadResult } from 'src/services/image-cdn';
+import type { BulkPoolUploadResult, BulkMissingUploadResult } from 'src/services/image-cdn';
 import type { ImageSyncRun, ImageCdnCoverage, ImageCdnMissingProduct } from 'src/types/api';
 
 import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Table from '@mui/material/Table';
 import Stack from '@mui/material/Stack';
@@ -33,6 +34,7 @@ import {
   getImageCdnMissing,
   getImageCdnCoverage,
   uploadImageCdnImage,
+  bulkUploadMissingImages,
 } from 'src/services/image-cdn';
 
 import { Iconify } from 'src/components/iconify';
@@ -150,11 +152,31 @@ function BulkPoolUploadCard() {
           <Alert severity={result.skipped.length ? 'warning' : 'success'}>
             Added {result.saved.length} image(s) to the pool
             {result.skipped.length ? `, ${result.skipped.length} skipped` : ''}.
+            {result.saved.length > 0 && (
+              <Box component="ul" sx={{ m: '8px 0 0', pl: 2.5 }}>
+                {result.saved.slice(0, 10).map((s) => (
+                  <li key={s.filename}>
+                    <Typography variant="caption">
+                      {s.barcode}_{s.suffix}.webp
+                      <Box component="span" sx={{ color: 'text.secondary' }}>
+                        {' '}
+                        (from {s.filename})
+                      </Box>
+                    </Typography>
+                  </li>
+                ))}
+                {result.saved.length > 10 && (
+                  <li>
+                    <Typography variant="caption">…and {result.saved.length - 10} more</Typography>
+                  </li>
+                )}
+              </Box>
+            )}
             {result.skipped.length > 0 && (
               <Box component="ul" sx={{ m: '8px 0 0', pl: 2.5 }}>
                 {result.skipped.slice(0, 10).map((s) => (
                   <li key={s.filename}>
-                    <Typography variant="caption">
+                    <Typography variant="caption" color="error">
                       {s.filename} — {s.reason}
                     </Typography>
                   </li>
@@ -265,6 +287,137 @@ function UploadDialog({
   );
 }
 
+function BulkMissingUploadDialog({
+  open,
+  onClose,
+  onDone,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [result, setResult] = useState<BulkMissingUploadResult | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setFiles([]);
+      setResult(null);
+      setError('');
+    }
+  }, [open]);
+
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFiles(Array.from(e.target.files ?? []));
+    setResult(null);
+    setError('');
+  };
+
+  const handleUpload = async () => {
+    if (files.length === 0) return;
+    try {
+      setUploading(true);
+      setError('');
+      setResult(null);
+      setProgress({ done: 0, total: files.length });
+      const res = await bulkUploadMissingImages(files, 15, (done, total) => setProgress({ done, total }));
+      setResult(res);
+      setFiles([]);
+      if (res.saved.length > 0) onDone();
+    } catch (err: any) {
+      setError(err.message || 'Bulk upload failed');
+    } finally {
+      setUploading(false);
+      setProgress(null);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Bulk upload for missing images</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            Closes gaps in this tenant&apos;s list directly — files must be named{' '}
+            <code>&lt;p_code&gt;_1.jpg</code> (or <code>_2</code>, or bare <code>&lt;p_code&gt;.jpg</code>)
+            using the P-Code column from the table below. Takes effect immediately, no sync needed.
+          </Typography>
+
+          {error && <Alert severity="error">{error}</Alert>}
+
+          <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+            <Button component="label" variant="outlined" startIcon={<Iconify icon="mingcute:add-line" />}>
+              {files.length > 0 ? `${files.length} file(s) selected` : 'Choose photos'}
+              <input type="file" accept="image/*" multiple hidden onChange={handleFilesSelected} />
+            </Button>
+          </Stack>
+
+          {result && (
+            <Alert severity={result.skipped.length ? 'warning' : 'success'}>
+              Uploaded {result.saved.length} image(s)
+              {result.skipped.length ? `, ${result.skipped.length} skipped` : ''}.
+              {result.saved.length > 0 && (
+                <Box component="ul" sx={{ m: '8px 0 0', pl: 2.5 }}>
+                  {result.saved.slice(0, 10).map((s) => (
+                    <li key={s.filename}>
+                      <Typography variant="caption">
+                        {s.p_code}_{s.suffix}.webp
+                        <Box component="span" sx={{ color: 'text.secondary' }}>
+                          {' '}
+                          (from {s.filename})
+                        </Box>
+                      </Typography>
+                    </li>
+                  ))}
+                  {result.saved.length > 10 && (
+                    <li>
+                      <Typography variant="caption">…and {result.saved.length - 10} more</Typography>
+                    </li>
+                  )}
+                </Box>
+              )}
+              {result.skipped.length > 0 && (
+                <Box component="ul" sx={{ m: '8px 0 0', pl: 2.5 }}>
+                  {result.skipped.slice(0, 10).map((s) => (
+                    <li key={s.filename}>
+                      <Typography variant="caption" color="error">
+                        {s.filename} — {s.reason}
+                      </Typography>
+                    </li>
+                  ))}
+                  {result.skipped.length > 10 && (
+                    <li>
+                      <Typography variant="caption">…and {result.skipped.length - 10} more</Typography>
+                    </li>
+                  )}
+                </Box>
+              )}
+            </Alert>
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={uploading}>
+          Close
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleUpload}
+          disabled={files.length === 0 || uploading}
+          startIcon={uploading ? <CircularProgress size={16} /> : undefined}
+        >
+          {uploading
+            ? `Uploading ${progress?.done ?? 0}/${progress?.total ?? files.length}…`
+            : `Upload ${files.length || ''}`.trim()}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 export default function Page() {
   const [coverage, setCoverage] = useState<ImageCdnCoverage | null>(null);
   const [missing, setMissing] = useState<ImageCdnMissingProduct[]>([]);
@@ -274,6 +427,8 @@ export default function Page() {
   const [error, setError] = useState('');
   const [uploadTarget, setUploadTarget] = useState<UploadTarget>(null);
   const [exporting, setExporting] = useState(false);
+  const [bulkMissingOpen, setBulkMissingOpen] = useState(false);
+  const projectCode = getSelectedProjectCode();
 
   const load = useCallback(async () => {
     try {
@@ -319,9 +474,9 @@ export default function Page() {
       setExporting(true);
       setError('');
       const res = await getImageCdnMissing(10000);
-      const projectCode = getSelectedProjectCode() || 'export';
+      const exportProjectCode = getSelectedProjectCode() || 'export';
       const stamp = new Date().toISOString().slice(0, 10);
-      downloadCsv(`${projectCode}-missing-images-${stamp}.csv`, res.data);
+      downloadCsv(`${exportProjectCode}-missing-images-${stamp}.csv`, res.data);
     } catch (err: any) {
       setError(err.message || 'Export failed');
     } finally {
@@ -380,12 +535,31 @@ export default function Page() {
               <BulkPoolUploadCard />
 
               <Card>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 2.5, pb: 1.5 }}>
-                  <Typography variant="h6">Missing images</Typography>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  flexWrap="wrap"
+                  gap={1}
+                  sx={{ p: 2.5, pb: 1.5 }}
+                >
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Typography variant="h6">Missing images</Typography>
+                    {projectCode && <Chip label={projectCode} size="small" variant="outlined" />}
+                  </Stack>
                   <Stack direction="row" spacing={2} alignItems="center">
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                       {missing.length} shown
                     </Typography>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => setBulkMissingOpen(true)}
+                      disabled={(coverage?.missing ?? 0) === 0}
+                      startIcon={<Iconify icon="mingcute:add-line" />}
+                    >
+                      Bulk upload
+                    </Button>
                     <Button
                       size="small"
                       variant="outlined"
@@ -495,6 +669,12 @@ export default function Page() {
           setUploadTarget(null);
           load();
         }}
+      />
+
+      <BulkMissingUploadDialog
+        open={bulkMissingOpen}
+        onClose={() => setBulkMissingOpen(false)}
+        onDone={load}
       />
     </>
   );

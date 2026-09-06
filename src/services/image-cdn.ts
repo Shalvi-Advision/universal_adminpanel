@@ -78,18 +78,21 @@ export interface BulkPoolUploadResult {
   skipped: { filename: string; reason: string }[];
 }
 
-// One request's worth of files (server caps a single call at 25). Restocks
-// the shared pool only — tenant-agnostic, no project_code involved, run
-// "Sync now" per tenant afterwards to pick up what these newly-added
-// barcodes match.
-async function bulkUploadBatch(files: File[]): Promise<BulkPoolUploadResult> {
+export interface BulkMissingUploadResult {
+  saved: { filename: string; p_code: string; suffix: 1 | 2; url: string }[];
+  skipped: { filename: string; reason: string }[];
+}
+
+// One request's worth of files (server caps a single call at 25) against a
+// given bulk-upload endpoint.
+async function postBulkImages<T>(endpoint: string, files: File[]): Promise<T> {
   const token = sessionStorage.getItem('authToken');
   if (!token) throw new Error('Authentication required');
 
   const formData = new FormData();
   files.forEach((file) => formData.append('images', file));
 
-  const response = await fetch(`${API_BASE_URL}/api/admin/image-cdn/pool/bulk-upload`, {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -109,22 +112,57 @@ async function bulkUploadBatch(files: File[]): Promise<BulkPoolUploadResult> {
 
 // Chunks a large file selection into batches of `batchSize` (well under the
 // server's 25-per-request cap, so one oversized request never risks the
-// whole selection) and posts them one at a time, reporting progress and
-// accumulating each batch's saved/skipped list into one summary.
+// whole selection), posts them one at a time against `endpoint`, and
+// accumulates each batch's saved/skipped list into one summary.
+async function chunkedBulkUpload<R extends { saved: unknown[]; skipped: unknown[] }>(
+  endpoint: string,
+  files: File[],
+  batchSize: number,
+  onProgress?: (done: number, total: number) => void
+): Promise<R> {
+  const result = { saved: [], skipped: [] } as unknown as R;
+
+  for (let i = 0; i < files.length; i += batchSize) {
+    const batch = files.slice(i, i + batchSize);
+    const batchResult = await postBulkImages<R>(endpoint, batch);
+    (result.saved as unknown[]).push(...batchResult.saved);
+    (result.skipped as unknown[]).push(...batchResult.skipped);
+    onProgress?.(Math.min(i + batchSize, files.length), files.length);
+  }
+
+  return result;
+}
+
+// Restocks the shared pool only — tenant-agnostic, no project_code
+// involved, run "Sync now" per tenant afterwards to pick up what these
+// newly-added barcodes match. Files named <barcode>_1.<ext> (or _2, or
+// bare <barcode>.<ext>).
 export async function bulkUploadToPool(
   files: File[],
   batchSize = 15,
   onProgress?: (done: number, total: number) => void
 ): Promise<BulkPoolUploadResult> {
-  const result: BulkPoolUploadResult = { saved: [], skipped: [] };
+  return chunkedBulkUpload<BulkPoolUploadResult>(
+    '/api/admin/image-cdn/pool/bulk-upload',
+    files,
+    batchSize,
+    onProgress
+  );
+}
 
-  for (let i = 0; i < files.length; i += batchSize) {
-    const batch = files.slice(i, i + batchSize);
-    const batchResult = await bulkUploadBatch(batch);
-    result.saved.push(...batchResult.saved);
-    result.skipped.push(...batchResult.skipped);
-    onProgress?.(Math.min(i + batchSize, files.length), files.length);
-  }
-
-  return result;
+// Bulk version of uploadImageCdnImage — closes this tenant's missing-list
+// gaps immediately (no separate sync needed). Files named <p_code>_1.<ext>
+// (or _2, or bare <p_code>.<ext>) — THIS tenant's own product codes, not
+// barcodes.
+export async function bulkUploadMissingImages(
+  files: File[],
+  batchSize = 15,
+  onProgress?: (done: number, total: number) => void
+): Promise<BulkMissingUploadResult> {
+  return chunkedBulkUpload<BulkMissingUploadResult>(
+    '/api/admin/image-cdn/missing/bulk-upload',
+    files,
+    batchSize,
+    onProgress
+  );
 }
