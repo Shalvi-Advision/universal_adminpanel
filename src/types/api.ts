@@ -1082,6 +1082,9 @@ export interface ImageCdnMissingProduct {
   p_code: string;
   barcode?: string;
   product_name: string;
+  // Most relevant ImageSuggestion for this product, if any (pending outranks
+  // rejected outranks accepted) — see routes/admin/image-cdn.js's /missing.
+  suggestion?: { status: 'pending' | 'accepted' | 'rejected'; source: 'cross_tenant' | 'web_search' } | null;
 }
 
 export interface ImageSyncRun {

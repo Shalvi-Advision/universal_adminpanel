@@ -71,6 +71,29 @@ function downloadCsv(filename: string, rows: ImageCdnMissingProduct[]) {
   URL.revokeObjectURL(url);
 }
 
+// One glance at the Missing Images table shouldn't require also opening the
+// Suggested matches queue to know whether a candidate is already waiting —
+// pending is the one that actually needs a click (Accept/Reject); rejected
+// just explains why this row is still empty (someone already looked and
+// said no); accepted is a rare edge case (a still-missing secondary image).
+function SuggestionCell({ suggestion }: { suggestion: ImageCdnMissingProduct['suggestion'] }) {
+  if (!suggestion) {
+    return (
+      <Typography variant="body2" sx={{ color: 'text.disabled' }}>
+        —
+      </Typography>
+    );
+  }
+  const sourceLabel = suggestion.source === 'cross_tenant' ? 'pool match' : 'web search';
+  if (suggestion.status === 'pending') {
+    return <Chip size="small" color="info" variant="outlined" label={`Pending (${sourceLabel})`} />;
+  }
+  if (suggestion.status === 'rejected') {
+    return <Chip size="small" variant="outlined" label={`Rejected (${sourceLabel})`} />;
+  }
+  return <Chip size="small" color="success" variant="outlined" label={`Accepted (${sourceLabel})`} />;
+}
+
 function StatTile({ label, value, tone }: { label: string; value: string | number; tone?: 'good' | 'bad' }) {
   return (
     <Card sx={{ p: 2.5, flex: 1, minWidth: 150 }}>
@@ -695,19 +718,20 @@ export default function Page() {
                           <TableCell>P-Code</TableCell>
                           <TableCell>Product</TableCell>
                           <TableCell>Barcode</TableCell>
+                          <TableCell>Suggestion</TableCell>
                           <TableCell align="right">Action</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {missingLoading ? (
                           <TableRow>
-                            <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                            <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                               <CircularProgress size={20} />
                             </TableCell>
                           </TableRow>
                         ) : missing.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                            <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                               Nothing missing — every product has a primary image.
                             </TableCell>
                           </TableRow>
@@ -725,6 +749,9 @@ export default function Page() {
                               <TableCell>{product.product_name}</TableCell>
                               <TableCell sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
                                 {product.barcode || '—'}
+                              </TableCell>
+                              <TableCell>
+                                <SuggestionCell suggestion={product.suggestion} />
                               </TableCell>
                               <TableCell align="right">
                                 <IconButton
