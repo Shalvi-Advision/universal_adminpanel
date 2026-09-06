@@ -192,21 +192,37 @@ export async function generateCrossTenantSuggestions(): Promise<{
   return apiClient.post('/api/admin/image-cdn/suggestions/generate');
 }
 
-// Real cost — the admin picks exactly how many missing products to spend
-// a Gemini web search on (50, 100, whatever). Only ever spends on products
-// with no existing web_search suggestion yet.
-export async function generateWebSearchSuggestions(limit: number): Promise<{
+// Real cost — either search exactly the products the admin selected from
+// the Missing Images list (pCodes, takes priority), or auto-pick the next
+// N missing products without hand-picking (limit). Only ever spends on
+// products with no existing web_search suggestion yet.
+export async function generateWebSearchSuggestions(
+  opts: { pCodes: string[] } | { limit: number }
+): Promise<{
   success: boolean;
   message: string;
   data: { requested: number; processed: number; found: number; not_found: number; errored: number };
 }> {
-  return apiClient.post('/api/admin/image-cdn/suggestions/web-search', { limit });
+  const body = 'pCodes' in opts ? { p_codes: opts.pCodes } : { limit: opts.limit };
+  return apiClient.post('/api/admin/image-cdn/suggestions/web-search', body);
 }
 
 export async function getImageSuggestions(
   status: 'pending' | 'accepted' | 'rejected' = 'pending'
 ): Promise<{ success: boolean; count: number; data: ImageSuggestion[] }> {
   return apiClient.get(`/api/admin/image-cdn/suggestions?status=${status}`);
+}
+
+export interface ImageSuggestionStats {
+  pending: number;
+  accepted: number;
+  rejected: number;
+  pending_cross_tenant: number;
+  pending_web_search: number;
+}
+
+export async function getImageSuggestionStats(): Promise<{ success: boolean; data: ImageSuggestionStats }> {
+  return apiClient.get('/api/admin/image-cdn/suggestions/stats');
 }
 
 export async function acceptImageSuggestion(

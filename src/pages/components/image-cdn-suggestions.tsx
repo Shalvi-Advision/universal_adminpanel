@@ -1,3 +1,4 @@
+import type { ImageSuggestionStats } from 'src/services/image-cdn';
 import type { ImageSuggestion, ImageCdnSettings } from 'src/types/api';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -19,6 +20,7 @@ import {
   getImageSuggestions,
   acceptImageSuggestion,
   rejectImageSuggestion,
+  getImageSuggestionStats,
   generateWebSearchSuggestions,
   getImageSuggestionPreviewUrl,
   generateCrossTenantSuggestions,
@@ -87,14 +89,40 @@ function VerdictChip({ label, verdict }: { label: string; verdict: 'MATCH' | 'NO
   );
 }
 
+function StatChip({ label, value }: { label: string; value: number }) {
+  return (
+    <Box sx={{ textAlign: 'center', px: 1.5 }}>
+      <Typography variant="h6" sx={{ fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
+        {value}
+      </Typography>
+      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+        {label}
+      </Typography>
+    </Box>
+  );
+}
+
 // Every suggestion here — from either source — sits behind this one Accept
 // / Reject gate. See the "Image Match Suggestions" architecture plan.
-export function SuggestedMatchesSection() {
+//
+// selectedPCodes: products the admin ticked in the Missing Images table.
+// When non-empty, "Find & download from web" searches exactly those and
+// takes priority over the "how many" auto-pick field. onSelectionUsed is
+// called after a successful selection-based search so the parent can clear
+// the checkboxes.
+export function SuggestedMatchesSection({
+  selectedPCodes,
+  onSelectionUsed,
+}: {
+  selectedPCodes: string[];
+  onSelectionUsed: () => void;
+}) {
   const [settings, setSettings] = useState<ImageCdnSettings | null>(null);
   const [geminiKeyInput, setGeminiKeyInput] = useState('');
   const [savingKey, setSavingKey] = useState(false);
   const [keyMessage, setKeyMessage] = useState('');
 
+  const [stats, setStats] = useState<ImageSuggestionStats | null>(null);
   const [generating, setGenerating] = useState(false);
   const [webSearching, setWebSearching] = useState(false);
   const [webSearchLimit, setWebSearchLimit] = useState(50);
@@ -114,6 +142,15 @@ export function SuggestedMatchesSection() {
     }
   }, []);
 
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await getImageSuggestionStats();
+      setStats(res.data);
+    } catch {
+      // Non-fatal — the KPI row just stays hidden.
+    }
+  }, []);
+
   const loadSuggestions = useCallback(async () => {
     try {
       setLoadingSuggestions(true);
@@ -128,8 +165,9 @@ export function SuggestedMatchesSection() {
 
   useEffect(() => {
     loadSettings();
+    loadStats();
     loadSuggestions();
-  }, [loadSettings, loadSuggestions]);
+  }, [loadSettings, loadStats, loadSuggestions]);
 
   const handleSaveKey = async () => {
     try {
@@ -153,7 +191,7 @@ export function SuggestedMatchesSection() {
       setMessage('');
       const res = await generateCrossTenantSuggestions();
       setMessage(res.message);
-      await loadSuggestions();
+      await Promise.all([loadSuggestions(), loadStats()]);
     } catch (err: any) {
       setError(err.message || 'Failed to generate suggestions');
     } finally {
@@ -166,9 +204,13 @@ export function SuggestedMatchesSection() {
       setWebSearching(true);
       setError('');
       setMessage('');
-      const res = await generateWebSearchSuggestions(webSearchLimit);
+      const usingSelection = selectedPCodes.length > 0;
+      const res = await generateWebSearchSuggestions(
+        usingSelection ? { pCodes: selectedPCodes } : { limit: webSearchLimit }
+      );
       setMessage(res.message);
-      await loadSuggestions();
+      await Promise.all([loadSuggestions(), loadStats()]);
+      if (usingSelection) onSelectionUsed();
     } catch (err: any) {
       setError(err.message || 'Web search failed');
     } finally {
@@ -182,6 +224,7 @@ export function SuggestedMatchesSection() {
       setError('');
       await acceptImageSuggestion(id);
       setSuggestions((prev) => prev.filter((s) => s._id !== id));
+      loadStats();
     } catch (err: any) {
       setError(err.message || 'Accept failed');
     } finally {
@@ -195,6 +238,7 @@ export function SuggestedMatchesSection() {
       setError('');
       await rejectImageSuggestion(id);
       setSuggestions((prev) => prev.filter((s) => s._id !== id));
+      loadStats();
     } catch (err: any) {
       setError(err.message || 'Reject failed');
     } finally {
@@ -202,19 +246,31 @@ export function SuggestedMatchesSection() {
     }
   };
 
+  const hasSelection = selectedPCodes.length > 0;
+
   return (
     <Card sx={{ p: 2.5 }}>
       <Stack spacing={2.5}>
-        <Box>
-          <Typography variant="h6">Suggested matches</Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Finds candidate photos for missing products two ways: matching against images already in our
-            barcode pool (free), or a live web search you control the size of (real cost). Accepting a
-            match saves it into the pool under its own barcode too, not just this product — so it&apos;s
-            findable directly next time, for this tenant or any other. Every suggestion lands here for
-            review first — nothing is ever applied automatically.
-          </Typography>
-        </Box>
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2}>
+          <Box>
+            <Typography variant="h6">Suggested matches</Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+              Finds candidate photos for missing products two ways: matching against images already in our
+              barcode pool (free), or a live web search (real cost) — pick products in the Missing Images
+              table below and search just those, or auto-pick a batch. Accepting a match saves it into the
+              pool under its own barcode too, not just this product — so it&apos;s findable directly next
+              time, for this tenant or any other. Every suggestion lands here for review first — nothing is
+              ever applied automatically.
+            </Typography>
+          </Box>
+          {stats && (
+            <Stack direction="row" divider={<Box sx={{ width: '1px', bgcolor: 'divider' }} />}>
+              <StatChip label="Pending review" value={stats.pending} />
+              <StatChip label="Accepted" value={stats.accepted} />
+              <StatChip label="Rejected" value={stats.rejected} />
+            </Stack>
+          )}
+        </Stack>
 
         <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
           <TextField
@@ -266,28 +322,45 @@ export function SuggestedMatchesSection() {
             {generating ? 'Generating…' : 'Generate suggestions from image pool'}
           </Button>
 
-          <TextField
-            size="small"
-            type="number"
-            label="How many"
-            value={webSearchLimit}
-            onChange={(e) => setWebSearchLimit(Math.max(1, parseInt(e.target.value, 10) || 1))}
-            sx={{ width: 110 }}
-            slotProps={{ htmlInput: { min: 1, max: 1000 } }}
-          />
+          {!hasSelection && (
+            <TextField
+              size="small"
+              type="number"
+              label="How many"
+              value={webSearchLimit}
+              onChange={(e) => setWebSearchLimit(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              sx={{ width: 110 }}
+              slotProps={{ htmlInput: { min: 1, max: 1000 } }}
+            />
+          )}
           <Button
             variant="outlined"
             onClick={handleWebSearch}
             disabled={webSearching || !settings?.gemini_configured}
             startIcon={webSearching ? <CircularProgress size={16} /> : <Iconify icon="eva:search-fill" />}
           >
-            {webSearching ? 'Searching…' : `Find & download from web (${webSearchLimit})`}
+            {webSearching
+              ? 'Searching…'
+              : hasSelection
+                ? `Find & download for ${selectedPCodes.length} selected`
+                : `Find & download from web (${webSearchLimit})`}
           </Button>
+          {hasSelection && (
+            <Button size="small" onClick={onSelectionUsed} disabled={webSearching}>
+              Clear selection
+            </Button>
+          )}
         </Stack>
         {!settings?.gemini_configured && (
           <Typography variant="caption" sx={{ color: 'text.secondary', mt: -1 }}>
             Set a Gemini API key above to enable web search — it has a real cost per request, billed to
             that key.
+          </Typography>
+        )}
+        {hasSelection && settings?.gemini_configured && (
+          <Typography variant="caption" sx={{ color: 'text.secondary', mt: -1 }}>
+            Tick products in the Missing Images table below to search specific ones instead of an
+            auto-picked batch — untick all to go back to the batch mode.
           </Typography>
         )}
 

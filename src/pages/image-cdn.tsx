@@ -11,6 +11,7 @@ import Table from '@mui/material/Table';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import Checkbox from '@mui/material/Checkbox';
 import TableRow from '@mui/material/TableRow';
 import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
@@ -430,6 +431,7 @@ export default function Page() {
   const [uploadTarget, setUploadTarget] = useState<UploadTarget>(null);
   const [exporting, setExporting] = useState(false);
   const [bulkMissingOpen, setBulkMissingOpen] = useState(false);
+  const [selectedPCodes, setSelectedPCodes] = useState<string[]>([]);
   const projectCode = getSelectedProjectCode();
 
   const load = useCallback(async () => {
@@ -444,12 +446,28 @@ export default function Page() {
       setCoverage(coverageRes.data);
       setMissing(missingRes.data);
       setRuns(runsRes.data);
+      // A fresh load (store/project switch, or after a sync) may no longer
+      // contain the rows a stale selection points at.
+      setSelectedPCodes([]);
     } catch (err: any) {
       setError(err.message || 'Failed to load image CDN status');
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const handleToggleSelect = (pCode: string) => {
+    setSelectedPCodes((prev) =>
+      prev.includes(pCode) ? prev.filter((c) => c !== pCode) : [...prev, pCode]
+    );
+  };
+
+  const allVisibleSelected = missing.length > 0 && missing.every((m) => selectedPCodes.includes(m.p_code));
+  const someVisibleSelected = missing.some((m) => selectedPCodes.includes(m.p_code));
+
+  const handleToggleSelectAllVisible = () => {
+    setSelectedPCodes(allVisibleSelected ? [] : missing.map((m) => m.p_code));
+  };
 
   useEffect(() => {
     load();
@@ -536,7 +554,10 @@ export default function Page() {
 
               <BulkPoolUploadCard />
 
-              <SuggestedMatchesSection />
+              <SuggestedMatchesSection
+                selectedPCodes={selectedPCodes}
+                onSelectionUsed={() => setSelectedPCodes([])}
+              />
 
               <Card>
                 <Stack
@@ -555,6 +576,14 @@ export default function Page() {
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                       {missing.length} shown
                     </Typography>
+                    {selectedPCodes.length > 0 && (
+                      <Chip
+                        size="small"
+                        color="primary"
+                        label={`${selectedPCodes.length} selected`}
+                        onDelete={() => setSelectedPCodes([])}
+                      />
+                    )}
                     <Button
                       size="small"
                       variant="outlined"
@@ -582,6 +611,15 @@ export default function Page() {
                     <Table stickyHeader size="small">
                       <TableHead>
                         <TableRow>
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              size="small"
+                              checked={allVisibleSelected}
+                              indeterminate={someVisibleSelected && !allVisibleSelected}
+                              onChange={handleToggleSelectAllVisible}
+                              disabled={missing.length === 0}
+                            />
+                          </TableCell>
                           <TableCell>P-Code</TableCell>
                           <TableCell>Product</TableCell>
                           <TableCell>Barcode</TableCell>
@@ -591,13 +629,20 @@ export default function Page() {
                       <TableBody>
                         {missing.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                            <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                               Nothing missing — every product has a primary image.
                             </TableCell>
                           </TableRow>
                         ) : (
                           missing.map((product) => (
-                            <TableRow key={product.p_code} hover>
+                            <TableRow key={product.p_code} hover selected={selectedPCodes.includes(product.p_code)}>
+                              <TableCell padding="checkbox">
+                                <Checkbox
+                                  size="small"
+                                  checked={selectedPCodes.includes(product.p_code)}
+                                  onChange={() => handleToggleSelect(product.p_code)}
+                                />
+                              </TableCell>
                               <TableCell sx={{ fontFamily: 'monospace' }}>{product.p_code}</TableCell>
                               <TableCell>{product.product_name}</TableCell>
                               <TableCell sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
