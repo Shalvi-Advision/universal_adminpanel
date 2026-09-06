@@ -17,6 +17,7 @@ import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
+import Pagination from '@mui/material/Pagination';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -432,6 +433,9 @@ export default function Page() {
   const [exporting, setExporting] = useState(false);
   const [bulkMissingOpen, setBulkMissingOpen] = useState(false);
   const [selectedPCodes, setSelectedPCodes] = useState<string[]>([]);
+  const [missingPage, setMissingPage] = useState(1);
+  const [missingTotalPages, setMissingTotalPages] = useState(1);
+  const [missingLoading, setMissingLoading] = useState(false);
   const projectCode = getSelectedProjectCode();
 
   const load = useCallback(async () => {
@@ -440,11 +444,13 @@ export default function Page() {
       setError('');
       const [coverageRes, missingRes, runsRes] = await Promise.all([
         getImageCdnCoverage(),
-        getImageCdnMissing(200),
+        getImageCdnMissing(200, 1),
         getImageCdnRuns(10),
       ]);
       setCoverage(coverageRes.data);
       setMissing(missingRes.data);
+      setMissingPage(missingRes.page);
+      setMissingTotalPages(missingRes.pages);
       setRuns(runsRes.data);
       // A fresh load (store/project switch, or after a sync) may no longer
       // contain the rows a stale selection points at.
@@ -453,6 +459,24 @@ export default function Page() {
       setError(err.message || 'Failed to load image CDN status');
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  // Paging doesn't need the full-page spinner (coverage tiles, recent
+  // syncs, etc. all stay put) — just the Missing Images table refetches.
+  const loadMissingPage = useCallback(async (page: number) => {
+    try {
+      setMissingLoading(true);
+      setError('');
+      const res = await getImageCdnMissing(200, page);
+      setMissing(res.data);
+      setMissingPage(res.page);
+      setMissingTotalPages(res.pages);
+      setSelectedPCodes([]);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load missing images');
+    } finally {
+      setMissingLoading(false);
     }
   }, []);
 
@@ -574,7 +598,7 @@ export default function Page() {
                   </Stack>
                   <Stack direction="row" spacing={2} alignItems="center">
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      {missing.length} shown
+                      {missing.length} shown{missingTotalPages > 1 ? ` (page ${missingPage} of ${missingTotalPages})` : ''}
                     </Typography>
                     {selectedPCodes.length > 0 && (
                       <Chip
@@ -627,7 +651,13 @@ export default function Page() {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {missing.length === 0 ? (
+                        {missingLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                              <CircularProgress size={20} />
+                            </TableCell>
+                          </TableRow>
+                        ) : missing.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                               Nothing missing — every product has a primary image.
@@ -665,6 +695,19 @@ export default function Page() {
                     </Table>
                   </TableContainer>
                 </Scrollbar>
+                {missingTotalPages > 1 && (
+                  <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
+                    <Pagination
+                      count={missingTotalPages}
+                      page={missingPage}
+                      onChange={(_event, value) => loadMissingPage(value)}
+                      disabled={missingLoading}
+                      color="primary"
+                      showFirstButton
+                      showLastButton
+                    />
+                  </Box>
+                )}
               </Card>
 
               <Card>

@@ -21,9 +21,17 @@ export async function getImageCdnCoverage(): Promise<{ success: boolean; data: I
 }
 
 export async function getImageCdnMissing(
-  limit = 200
-): Promise<{ success: boolean; count: number; data: ImageCdnMissingProduct[] }> {
-  return apiClient.get(`/api/admin/image-cdn/missing?limit=${limit}`);
+  limit = 200,
+  page = 1
+): Promise<{
+  success: boolean;
+  count: number;
+  total: number;
+  page: number;
+  pages: number;
+  data: ImageCdnMissingProduct[];
+}> {
+  return apiClient.get(`/api/admin/image-cdn/missing?limit=${limit}&page=${page}`);
 }
 
 export async function runImageCdnSync(): Promise<{
