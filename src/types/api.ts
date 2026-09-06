@@ -633,6 +633,9 @@ export interface ProductsQueryParams {
   dept_id?: string;
   category_id?: string;
   sub_category_id?: string;
+  // Defaults to 'all' server-side — omit to see every product regardless
+  // of pcode_status, matching what search itself no longer hides.
+  status?: 'active' | 'inactive' | 'all';
 }
 
 // ProductMaster payload for create/update

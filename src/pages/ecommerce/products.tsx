@@ -69,6 +69,10 @@ export default function Page() {
   const [deptId, setDeptId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [subCategoryId, setSubCategoryId] = useState('');
+  // Default 'all': the list (and search) used to hardcode active-only on
+  // the backend with no way to ask for anything else — an inactive product
+  // was simply unfindable, search included. 'all' matches that fix.
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingSubcategories, setLoadingSubcategories] = useState(false);
@@ -118,6 +122,7 @@ export default function Page() {
         dept_id: deptId || undefined,
         category_id: categoryId || undefined,
         sub_category_id: subCategoryId || undefined,
+        status: statusFilter,
       });
       if (response.success) {
         setProducts(response.data);
@@ -128,7 +133,7 @@ export default function Page() {
     } finally {
       setLoading(false);
     }
-  }, [storeCode, page, searchQuery, deptId, categoryId, subCategoryId]);
+  }, [storeCode, page, searchQuery, deptId, categoryId, subCategoryId, statusFilter]);
 
   useEffect(() => {
     fetchProducts();
@@ -228,6 +233,11 @@ export default function Page() {
 
   const handleSubCategoryChange = (event: SelectChangeEvent) => {
     setSubCategoryId(event.target.value);
+    setPage(1);
+  };
+
+  const handleStatusChange = (event: SelectChangeEvent) => {
+    setStatusFilter(event.target.value as 'all' | 'active' | 'inactive');
     setPage(1);
   };
 
@@ -405,21 +415,36 @@ export default function Page() {
               </Box>
 
               <Box sx={{ px: 2, pb: 2 }}>
-                <TextField
-                  fullWidth
-                  placeholder="Search by product name, code, or barcode..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  slotProps={{
-                    input: {
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <TextField
+                    fullWidth
+                    placeholder="Search by product name, code, barcode, or brand..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                  />
+                  <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 } }}>
+                    <InputLabel id="product-filter-status-label">Status</InputLabel>
+                    <Select
+                      labelId="product-filter-status-label"
+                      label="Status"
+                      value={statusFilter}
+                      onChange={handleStatusChange}
+                    >
+                      <MenuItem value="all">All</MenuItem>
+                      <MenuItem value="active">Active only</MenuItem>
+                      <MenuItem value="inactive">Inactive only</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Stack>
               </Box>
 
               <Scrollbar>
