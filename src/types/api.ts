@@ -1095,3 +1095,35 @@ export interface ImageSyncRun {
   missing_count: number;
   duration_ms?: number;
 }
+
+// Image Match Suggestions — see the "Image Match Suggestions" architecture
+// plan. A candidate image proposed for one product, from either a
+// cross-tenant name match (free) or a live Gemini web search (real cost).
+// Never auto-applied — always reviewed here before pcode_img is touched.
+export interface ImageSuggestionVisionVerdict {
+  verdict: 'MATCH' | 'NO_MATCH' | null;
+  reason?: string;
+}
+
+export interface ImageSuggestion {
+  _id: string;
+  project_code: string;
+  p_code: string;
+  product_name: string;
+  suffix: 1 | 2;
+  source: 'cross_tenant' | 'web_search';
+  suggested_barcode: string;
+  suggested_from_project?: string;
+  suggested_from_name?: string;
+  text_score?: number;
+  source_url?: string;
+  vision_gemini: ImageSuggestionVisionVerdict;
+  vision_deepseek: ImageSuggestionVisionVerdict;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
+}
+
+export interface ImageCdnSettings {
+  gemini_configured: boolean;
+  gemini_updated_at: string | null;
+}

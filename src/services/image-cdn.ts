@@ -1,5 +1,7 @@
 import type {
   ImageSyncRun,
+  ImageSuggestion,
+  ImageCdnSettings,
   ImageCdnCoverage,
   ImageCdnMissingProduct,
 } from 'src/types/api';
@@ -165,4 +167,75 @@ export async function bulkUploadMissingImages(
     batchSize,
     onProgress
   );
+}
+
+// ----------------------------------------------------------------------
+// Image Match Suggestions — platform-wide Gemini key + the two suggestion
+// sources (free cross-tenant matching, paid web search) + the review
+// queue. See the "Image Match Suggestions" architecture plan.
+
+export async function getImageCdnSettings(): Promise<{ success: boolean; data: ImageCdnSettings }> {
+  return apiClient.get('/api/admin/image-cdn/settings');
+}
+
+// Write-only — the key is never read back. Pass '' to clear it.
+export async function setGeminiApiKey(geminiApiKey: string): Promise<{ success: boolean; message: string }> {
+  return apiClient.post('/api/admin/image-cdn/settings', { gemini_api_key: geminiApiKey });
+}
+
+// Free — cross-tenant text matching + vision pre-filter.
+export async function generateCrossTenantSuggestions(): Promise<{
+  success: boolean;
+  message: string;
+  data: { total_missing: number; created: number; skipped_existing: number };
+}> {
+  return apiClient.post('/api/admin/image-cdn/suggestions/generate');
+}
+
+// Real cost — the admin picks exactly how many missing products to spend
+// a Gemini web search on (50, 100, whatever). Only ever spends on products
+// with no existing web_search suggestion yet.
+export async function generateWebSearchSuggestions(limit: number): Promise<{
+  success: boolean;
+  message: string;
+  data: { requested: number; processed: number; found: number; not_found: number; errored: number };
+}> {
+  return apiClient.post('/api/admin/image-cdn/suggestions/web-search', { limit });
+}
+
+export async function getImageSuggestions(
+  status: 'pending' | 'accepted' | 'rejected' = 'pending'
+): Promise<{ success: boolean; count: number; data: ImageSuggestion[] }> {
+  return apiClient.get(`/api/admin/image-cdn/suggestions?status=${status}`);
+}
+
+export async function acceptImageSuggestion(
+  id: string
+): Promise<{ success: boolean; message: string; data: { url: string } }> {
+  return apiClient.post(`/api/admin/image-cdn/suggestions/${id}/accept`);
+}
+
+export async function rejectImageSuggestion(id: string): Promise<{ success: boolean; message: string }> {
+  return apiClient.post(`/api/admin/image-cdn/suggestions/${id}/reject`);
+}
+
+// The preview endpoint requires auth (it streams straight from the pool,
+// never a public CDN URL before acceptance — see the backend route's own
+// comment), so a plain <img src="..."> can't carry the header. Fetch it as
+// a blob and hand back an object URL instead; callers must revoke it when
+// done with it (e.g. on unmount) to avoid leaking memory.
+export async function getImageSuggestionPreviewUrl(id: string): Promise<string> {
+  const token = sessionStorage.getItem('authToken');
+  if (!token) throw new Error('Authentication required');
+
+  const response = await fetch(`${API_BASE_URL}/api/admin/image-cdn/suggestions/${id}/preview`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Project-Code': getSelectedProjectCode(),
+    },
+  });
+
+  if (!response.ok) throw new Error('Failed to load preview image');
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
 }

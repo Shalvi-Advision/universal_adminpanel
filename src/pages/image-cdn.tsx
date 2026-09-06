@@ -40,6 +40,8 @@ import {
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
+import { SuggestedMatchesSection } from './components/image-cdn-suggestions';
+
 // ----------------------------------------------------------------------
 
 // One CSV field, quoted only when it needs to be (a bare number like a
@@ -533,6 +535,8 @@ export default function Page() {
               </Stack>
 
               <BulkPoolUploadCard />
+
+              <SuggestedMatchesSection />
 
               <Card>
                 <Stack
