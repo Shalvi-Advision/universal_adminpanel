@@ -1,4 +1,5 @@
 import type {
+  WebSearchJob,
   ImageSyncRun,
   ImageSuggestion,
   ImageCdnSettings,
@@ -204,15 +205,34 @@ export async function generateCrossTenantSuggestions(): Promise<{
 // the Missing Images list (pCodes, takes priority), or auto-pick the next
 // N missing products without hand-picking (limit). Only ever spends on
 // products with no existing web_search suggestion yet.
-export async function generateWebSearchSuggestions(
+//
+// Queued: this only starts the job and returns its id — the search itself
+// runs in the background (see the route's own comment on why). Poll
+// getWebSearchJob(jobId) for progress instead of awaiting a final result
+// here. A 409 means one is already running for this tenant; its id comes
+// back in the error's `data.data.job_id` (see ApiError) so the caller can
+// just start polling that one instead of erroring out.
+export async function startWebSearchJob(
   opts: { pCodes: string[] } | { limit: number }
 ): Promise<{
   success: boolean;
   message: string;
-  data: { requested: number; processed: number; found: number; not_found: number; errored: number };
+  data: { job_id: string; status: WebSearchJob['status']; requested: number };
 }> {
   const body = 'pCodes' in opts ? { p_codes: opts.pCodes } : { limit: opts.limit };
   return apiClient.post('/api/admin/image-cdn/suggestions/web-search', body);
+}
+
+// Newest first, no per-product results (use getWebSearchJob for that) — for
+// the "is one already running / what happened last time" checks.
+export async function listWebSearchJobs(
+  limit = 10
+): Promise<{ success: boolean; count: number; data: WebSearchJob[] }> {
+  return apiClient.get(`/api/admin/image-cdn/suggestions/web-search/jobs?limit=${limit}`);
+}
+
+export async function getWebSearchJob(jobId: string): Promise<{ success: boolean; data: WebSearchJob }> {
+  return apiClient.get(`/api/admin/image-cdn/suggestions/web-search/jobs/${jobId}`);
 }
 
 export async function getImageSuggestions(

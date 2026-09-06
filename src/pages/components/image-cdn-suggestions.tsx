@@ -1,8 +1,8 @@
 import type { ChangeEvent } from 'react';
 import type { ImageSuggestionStats } from 'src/services/image-cdn';
-import type { ImageSuggestion, ImageCdnSettings } from 'src/types/api';
+import type { WebSearchJob, ImageSuggestion, ImageCdnSettings } from 'src/types/api';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -15,16 +15,21 @@ import TextField from '@mui/material/TextField';
 import Pagination from '@mui/material/Pagination';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import LinearProgress from '@mui/material/LinearProgress';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { ApiError } from 'src/utils/api-client';
+
 import {
+  getWebSearchJob,
   setGeminiApiKey,
+  listWebSearchJobs,
+  startWebSearchJob,
   getImageCdnSettings,
   getImageSuggestions,
   acceptImageSuggestion,
   rejectImageSuggestion,
   getImageSuggestionStats,
-  generateWebSearchSuggestions,
   getImageSuggestionPreviewUrl,
   generateCrossTenantSuggestions,
 } from 'src/services/image-cdn';
@@ -143,7 +148,8 @@ export function SuggestedMatchesSection({
 
   const [stats, setStats] = useState<ImageSuggestionStats | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [webSearching, setWebSearching] = useState(false);
+  const [activeJob, setActiveJob] = useState<WebSearchJob | null>(null);
+  const jobPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [webSearchLimit, setWebSearchLimit] = useState(50);
   const [suggestions, setSuggestions] = useState<ImageSuggestion[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
@@ -210,11 +216,82 @@ export function SuggestedMatchesSection({
     }
   }, []);
 
+  // One line describing a finished job's full breakdown — surfaces exactly
+  // why "searched N of M selected" can be less than M (already had a
+  // suggestion, no longer missing, or genuinely errored), which used to be
+  // invisible and read as a bug.
+  const summarizeJob = (job: WebSearchJob) => {
+    const parts = [`Found ${job.found} of ${job.processed} searched`];
+    if (job.already_tried > 0) parts.push(`${job.already_tried} already had a suggestion`);
+    if (job.not_missing > 0) parts.push(`${job.not_missing} no longer missing`);
+    if (job.errored > 0) parts.push(`${job.errored} errored`);
+    return parts.join(' — ');
+  };
+
+  const stopPolling = () => {
+    if (jobPollRef.current) {
+      clearInterval(jobPollRef.current);
+      jobPollRef.current = null;
+    }
+  };
+
+  // Polls a running job every few seconds instead of holding the original
+  // request open — see the backend route's own comment on why ("Find &
+  // download" for even 10 products can take well past a minute). The admin
+  // is free to navigate away, accept/reject other suggestions, or close the
+  // tab entirely; re-opening the page picks the same job back up (see the
+  // mount effect below) since it's tracked server-side, not in this
+  // component's state.
+  const pollJob = useCallback(
+    async (jobId: string) => {
+      stopPolling();
+      const tick = async () => {
+        try {
+          const res = await getWebSearchJob(jobId);
+          setActiveJob(res.data);
+          if (res.data.status !== 'running') {
+            stopPolling();
+            await Promise.all([loadSuggestions(1), loadStats()]);
+            if (res.data.status === 'completed') {
+              setMessage(summarizeJob(res.data));
+            } else {
+              setError(`Search job failed: ${res.data.error_message || 'unknown error'}`);
+            }
+          }
+        } catch {
+          // A single flaky poll isn't worth tearing down the whole thing —
+          // just try again on the next tick.
+        }
+      };
+      await tick();
+      jobPollRef.current = setInterval(tick, 4000);
+    },
+    [loadSuggestions, loadStats]
+  );
+
   useEffect(() => {
     loadSettings();
     loadStats();
     loadSuggestions(1);
-  }, [loadSettings, loadStats, loadSuggestions]);
+
+    // Resumes tracking a job that was already running when this page (or
+    // browser tab) was opened — the search keeps going server-side
+    // regardless of whether anyone's watching it.
+    (async () => {
+      try {
+        const res = await listWebSearchJobs(1);
+        const latest = res.data[0];
+        if (latest?.status === 'running') {
+          setActiveJob(latest);
+          pollJob(latest._id);
+        }
+      } catch {
+        // Non-fatal — the admin can still start a fresh search.
+      }
+    })();
+
+    return stopPolling;
+  }, [loadSettings, loadStats, loadSuggestions, pollJob]);
 
   const handlePageChange = (_event: ChangeEvent<unknown>, value: number) => {
     loadSuggestions(value);
@@ -252,20 +329,25 @@ export function SuggestedMatchesSection({
 
   const handleWebSearch = async () => {
     try {
-      setWebSearching(true);
       setError('');
       setMessage('');
       const usingSelection = selectedPCodes.length > 0;
-      const res = await generateWebSearchSuggestions(
-        usingSelection ? { pCodes: selectedPCodes } : { limit: webSearchLimit }
-      );
-      setMessage(res.message);
-      await Promise.all([loadSuggestions(1), loadStats()]);
+      const res = await startWebSearchJob(usingSelection ? { pCodes: selectedPCodes } : { limit: webSearchLimit });
+      // The selection's job is done once it's queued — the checkboxes
+      // don't need to stay ticked while the search itself runs in the
+      // background.
       if (usingSelection) onSelectionUsed();
+      await pollJob(res.data.job_id);
     } catch (err: any) {
-      setError(err.message || 'Web search failed');
-    } finally {
-      setWebSearching(false);
+      // Someone (this admin in another tab, or a teammate) already has a
+      // job running for this tenant — track that one instead of erroring
+      // out, since starting a second would just be rejected again.
+      if (err instanceof ApiError && err.status === 409 && err.data?.data?.job_id) {
+        setMessage('A search job was already running for this tenant — now tracking it.');
+        await pollJob(err.data.data.job_id);
+        return;
+      }
+      setError(err.message || 'Failed to start web search');
     }
   };
 
@@ -299,6 +381,7 @@ export function SuggestedMatchesSection({
   };
 
   const hasSelection = selectedPCodes.length > 0;
+  const jobRunning = activeJob?.status === 'running';
 
   return (
     <Card sx={{ p: 2.5 }}>
@@ -388,21 +471,38 @@ export function SuggestedMatchesSection({
           <Button
             variant="outlined"
             onClick={handleWebSearch}
-            disabled={webSearching || !settings?.gemini_configured}
-            startIcon={webSearching ? <CircularProgress size={16} /> : <Iconify icon="eva:search-fill" />}
+            disabled={jobRunning || !settings?.gemini_configured}
+            startIcon={jobRunning ? <CircularProgress size={16} /> : <Iconify icon="eva:search-fill" />}
           >
-            {webSearching
+            {jobRunning
               ? 'Searching…'
               : hasSelection
                 ? `Find & download for ${selectedPCodes.length} selected`
                 : `Find & download from web (${webSearchLimit})`}
           </Button>
           {hasSelection && (
-            <Button size="small" onClick={onSelectionUsed} disabled={webSearching}>
+            <Button size="small" onClick={onSelectionUsed} disabled={jobRunning}>
               Clear selection
             </Button>
           )}
         </Stack>
+
+        {activeJob && jobRunning && (
+          <Box sx={{ px: 0.5 }}>
+            <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                Searching the web — {activeJob.processed} of {activeJob.batch_total || activeJob.requested} processed,{' '}
+                {activeJob.found} found so far. Feel free to keep working — this keeps running in the
+                background and picks back up here if you leave and come back.
+              </Typography>
+            </Stack>
+            <LinearProgress
+              variant={activeJob.batch_total > 0 ? 'determinate' : 'indeterminate'}
+              value={activeJob.batch_total > 0 ? (activeJob.processed / activeJob.batch_total) * 100 : undefined}
+            />
+          </Box>
+        )}
+
         {!settings?.gemini_configured && (
           <Typography variant="caption" sx={{ color: 'text.secondary', mt: -1 }}>
             Set a Gemini API key above to enable web search — it has a real cost per request, billed to

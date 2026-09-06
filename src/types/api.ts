@@ -1127,3 +1127,33 @@ export interface ImageCdnSettings {
   gemini_configured: boolean;
   gemini_updated_at: string | null;
 }
+
+// A queued "Find & download from web" run — see routes/admin/image-cdn.js's
+// web-search/jobs endpoints. Runs in the background on the server; the
+// admin panel polls this instead of holding the original request open.
+export interface WebSearchJobResult {
+  p_code: string;
+  status: 'FOUND' | 'NONE_FOUND' | 'URL_DID_NOT_RESOLVE' | 'ALREADY_HAS_SUGGESTION' | 'NOT_MISSING' | 'ERROR';
+  url?: string;
+  reason?: string;
+  existing_status?: string;
+}
+
+export interface WebSearchJob {
+  _id: string;
+  project_code: string;
+  status: 'running' | 'completed' | 'failed';
+  requested: number;
+  batch_total: number;
+  processed: number;
+  found: number;
+  not_found: number;
+  already_tried: number;
+  not_missing: number;
+  errored: number;
+  results?: WebSearchJobResult[];
+  triggered_by_email?: string;
+  error_message?: string;
+  createdAt: string;
+  finished_at?: string;
+}
