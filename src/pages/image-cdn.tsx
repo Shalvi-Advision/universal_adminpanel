@@ -12,6 +12,7 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Checkbox from '@mui/material/Checkbox';
+import Collapse from '@mui/material/Collapse';
 import TableRow from '@mui/material/TableRow';
 import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
@@ -89,12 +90,38 @@ function StatTile({ label, value, tone }: { label: string; value: string | numbe
   );
 }
 
+// Remembers whether the admin left this card open — it's an occasional
+// restock action, not the main workflow, so it defaults to collapsed and
+// stays out of the way of the page below it once the admin has seen it.
+const BULK_POOL_EXPANDED_KEY = 'imageCdn.bulkPool.expanded';
+
+function readStoredBulkPoolExpanded(): boolean {
+  try {
+    return localStorage.getItem(BULK_POOL_EXPANDED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 function BulkPoolUploadCard() {
+  const [expanded, setExpanded] = useState(readStoredBulkPoolExpanded);
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [result, setResult] = useState<BulkPoolUploadResult | null>(null);
   const [error, setError] = useState('');
+
+  const toggleExpanded = () => {
+    setExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(BULK_POOL_EXPANDED_KEY, next ? '1' : '0');
+      } catch {
+        // Non-fatal — just falls back to defaulting collapsed next visit.
+      }
+      return next;
+    });
+  };
 
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFiles(Array.from(e.target.files ?? []));
@@ -123,77 +150,98 @@ function BulkPoolUploadCard() {
   return (
     <Card sx={{ p: 2.5 }}>
       <Stack spacing={2}>
-        <Box>
-          <Typography variant="h6">Bulk add to pool</Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Restocks the shared image pool directly — not tied to this tenant. Files must already be
-            named <code>&lt;barcode&gt;_1.jpg</code> (or <code>_2</code>, or bare{' '}
-            <code>&lt;barcode&gt;.jpg</code>). Run &quot;Sync now&quot; afterwards to pick up matches
-            for this tenant.
-          </Typography>
-        </Box>
-
-        {error && <Alert severity="error">{error}</Alert>}
-
-        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
-          <Button component="label" variant="outlined" startIcon={<Iconify icon="mingcute:add-line" />}>
-            {files.length > 0 ? `${files.length} file(s) selected` : 'Choose photos'}
-            <input type="file" accept="image/*" multiple hidden onChange={handleFilesSelected} />
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleUpload}
-            disabled={files.length === 0 || uploading}
-            startIcon={uploading ? <CircularProgress size={16} /> : undefined}
-          >
-            {uploading
-              ? `Uploading ${progress?.done ?? 0}/${progress?.total ?? files.length}…`
-              : `Upload ${files.length || ''}`.trim()}
-          </Button>
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          onClick={toggleExpanded}
+          sx={{ cursor: 'pointer', userSelect: 'none' }}
+        >
+          <IconButton size="small" tabIndex={-1}>
+            <Iconify icon={expanded ? 'eva:arrow-ios-upward-fill' : 'eva:arrow-ios-forward-fill'} />
+          </IconButton>
+          <Box>
+            <Typography variant="h6">Bulk add to pool</Typography>
+            {!expanded && (
+              <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
+                Restock the shared image pool from a batch of files — click to expand.
+              </Typography>
+            )}
+          </Box>
         </Stack>
 
-        {result && (
-          <Alert severity={result.skipped.length ? 'warning' : 'success'}>
-            Added {result.saved.length} image(s) to the pool
-            {result.skipped.length ? `, ${result.skipped.length} skipped` : ''}.
-            {result.saved.length > 0 && (
-              <Box component="ul" sx={{ m: '8px 0 0', pl: 2.5 }}>
-                {result.saved.slice(0, 10).map((s) => (
-                  <li key={s.filename}>
-                    <Typography variant="caption">
-                      {s.barcode}_{s.suffix}.webp
-                      <Box component="span" sx={{ color: 'text.secondary' }}>
-                        {' '}
-                        (from {s.filename})
-                      </Box>
-                    </Typography>
-                  </li>
-                ))}
-                {result.saved.length > 10 && (
-                  <li>
-                    <Typography variant="caption">…and {result.saved.length - 10} more</Typography>
-                  </li>
+        <Collapse in={expanded}>
+          <Stack spacing={2}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              Restocks the shared image pool directly — not tied to this tenant. Files must already be
+              named <code>&lt;barcode&gt;_1.jpg</code> (or <code>_2</code>, or bare{' '}
+              <code>&lt;barcode&gt;.jpg</code>). Run &quot;Sync now&quot; afterwards to pick up matches
+              for this tenant.
+            </Typography>
+
+            {error && <Alert severity="error">{error}</Alert>}
+
+            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+              <Button component="label" variant="outlined" startIcon={<Iconify icon="mingcute:add-line" />}>
+                {files.length > 0 ? `${files.length} file(s) selected` : 'Choose photos'}
+                <input type="file" accept="image/*" multiple hidden onChange={handleFilesSelected} />
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleUpload}
+                disabled={files.length === 0 || uploading}
+                startIcon={uploading ? <CircularProgress size={16} /> : undefined}
+              >
+                {uploading
+                  ? `Uploading ${progress?.done ?? 0}/${progress?.total ?? files.length}…`
+                  : `Upload ${files.length || ''}`.trim()}
+              </Button>
+            </Stack>
+
+            {result && (
+              <Alert severity={result.skipped.length ? 'warning' : 'success'}>
+                Added {result.saved.length} image(s) to the pool
+                {result.skipped.length ? `, ${result.skipped.length} skipped` : ''}.
+                {result.saved.length > 0 && (
+                  <Box component="ul" sx={{ m: '8px 0 0', pl: 2.5 }}>
+                    {result.saved.slice(0, 10).map((s) => (
+                      <li key={s.filename}>
+                        <Typography variant="caption">
+                          {s.barcode}_{s.suffix}.webp
+                          <Box component="span" sx={{ color: 'text.secondary' }}>
+                            {' '}
+                            (from {s.filename})
+                          </Box>
+                        </Typography>
+                      </li>
+                    ))}
+                    {result.saved.length > 10 && (
+                      <li>
+                        <Typography variant="caption">…and {result.saved.length - 10} more</Typography>
+                      </li>
+                    )}
+                  </Box>
                 )}
-              </Box>
-            )}
-            {result.skipped.length > 0 && (
-              <Box component="ul" sx={{ m: '8px 0 0', pl: 2.5 }}>
-                {result.skipped.slice(0, 10).map((s) => (
-                  <li key={s.filename}>
-                    <Typography variant="caption" color="error">
-                      {s.filename} — {s.reason}
-                    </Typography>
-                  </li>
-                ))}
-                {result.skipped.length > 10 && (
-                  <li>
-                    <Typography variant="caption">…and {result.skipped.length - 10} more</Typography>
-                  </li>
+                {result.skipped.length > 0 && (
+                  <Box component="ul" sx={{ m: '8px 0 0', pl: 2.5 }}>
+                    {result.skipped.slice(0, 10).map((s) => (
+                      <li key={s.filename}>
+                        <Typography variant="caption" color="error">
+                          {s.filename} — {s.reason}
+                        </Typography>
+                      </li>
+                    ))}
+                    {result.skipped.length > 10 && (
+                      <li>
+                        <Typography variant="caption">…and {result.skipped.length - 10} more</Typography>
+                      </li>
+                    )}
+                  </Box>
                 )}
-              </Box>
+              </Alert>
             )}
-          </Alert>
-        )}
+          </Stack>
+        </Collapse>
       </Stack>
     </Card>
   );
