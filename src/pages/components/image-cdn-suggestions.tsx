@@ -21,6 +21,7 @@ import {
   rejectImageSuggestion,
   generateWebSearchSuggestions,
   getImageSuggestionPreviewUrl,
+  generateCrossTenantSuggestions,
 } from 'src/services/image-cdn';
 
 import { Iconify } from 'src/components/iconify';
@@ -94,6 +95,7 @@ export function SuggestedMatchesSection() {
   const [savingKey, setSavingKey] = useState(false);
   const [keyMessage, setKeyMessage] = useState('');
 
+  const [generating, setGenerating] = useState(false);
   const [webSearching, setWebSearching] = useState(false);
   const [webSearchLimit, setWebSearchLimit] = useState(50);
   const [suggestions, setSuggestions] = useState<ImageSuggestion[]>([]);
@@ -144,6 +146,21 @@ export function SuggestedMatchesSection() {
     }
   };
 
+  const handleGenerate = async () => {
+    try {
+      setGenerating(true);
+      setError('');
+      setMessage('');
+      const res = await generateCrossTenantSuggestions();
+      setMessage(res.message);
+      await loadSuggestions();
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate suggestions');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const handleWebSearch = async () => {
     try {
       setWebSearching(true);
@@ -191,8 +208,11 @@ export function SuggestedMatchesSection() {
         <Box>
           <Typography variant="h6">Suggested matches</Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Finds candidate photos for missing products via a live web search you control the size of.
-            Every suggestion lands here for review first — nothing is ever applied automatically.
+            Finds candidate photos for missing products two ways: matching against images already in our
+            barcode pool (free), or a live web search you control the size of (real cost). Accepting a
+            match saves it into the pool under its own barcode too, not just this product — so it&apos;s
+            findable directly next time, for this tenant or any other. Every suggestion lands here for
+            review first — nothing is ever applied automatically.
           </Typography>
         </Box>
 
@@ -237,6 +257,15 @@ export function SuggestedMatchesSection() {
         )}
 
         <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+          <Button
+            variant="contained"
+            onClick={handleGenerate}
+            disabled={generating}
+            startIcon={generating ? <CircularProgress size={16} /> : <Iconify icon="solar:restart-bold" />}
+          >
+            {generating ? 'Generating…' : 'Generate suggestions from image pool'}
+          </Button>
+
           <TextField
             size="small"
             type="number"
@@ -247,7 +276,7 @@ export function SuggestedMatchesSection() {
             slotProps={{ htmlInput: { min: 1, max: 1000 } }}
           />
           <Button
-            variant="contained"
+            variant="outlined"
             onClick={handleWebSearch}
             disabled={webSearching || !settings?.gemini_configured}
             startIcon={webSearching ? <CircularProgress size={16} /> : <Iconify icon="eva:search-fill" />}
