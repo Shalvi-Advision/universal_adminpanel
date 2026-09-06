@@ -1,3 +1,4 @@
+import type { ChangeEvent } from 'react';
 import type { ImageSuggestionStats } from 'src/services/image-cdn';
 import type { ImageSuggestion, ImageCdnSettings } from 'src/types/api';
 
@@ -9,7 +10,9 @@ import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
+import Collapse from '@mui/material/Collapse';
 import TextField from '@mui/material/TextField';
+import Pagination from '@mui/material/Pagination';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -29,6 +32,22 @@ import {
 import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
+
+const PAGE_SIZE = 10;
+
+// Remembers whether the admin left the review list open or collapsed —
+// with 90+ pending suggestions being normal, re-opening the page shouldn't
+// force scrolling past a wall of cards every time.
+const EXPANDED_STORAGE_KEY = 'imageCdn.suggestions.listExpanded';
+
+function readStoredExpanded(): boolean {
+  try {
+    const raw = localStorage.getItem(EXPANDED_STORAGE_KEY);
+    return raw === null ? true : raw === '1';
+  } catch {
+    return true;
+  }
+}
 
 // The preview endpoint requires auth, so it can't be a plain <img src>.
 // Fetches once as a blob and revokes the object URL on unmount.
@@ -132,6 +151,23 @@ export function SuggestedMatchesSection({
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
+  const [listExpanded, setListExpanded] = useState(readStoredExpanded);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const toggleListExpanded = () => {
+    setListExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(EXPANDED_STORAGE_KEY, next ? '1' : '0');
+      } catch {
+        // Non-fatal — just falls back to defaulting open next visit.
+      }
+      return next;
+    });
+  };
+
   const loadSettings = useCallback(async () => {
     try {
       const res = await getImageCdnSettings();
@@ -151,11 +187,22 @@ export function SuggestedMatchesSection({
     }
   }, []);
 
-  const loadSuggestions = useCallback(async () => {
+  // Fetches one page of the review queue. If accepting/rejecting emptied
+  // out the last item on a page beyond the first, steps back a page rather
+  // than leaving the admin staring at an empty list with pages still above
+  // it in the pager.
+  const loadSuggestions = useCallback(async (targetPage = 1) => {
     try {
       setLoadingSuggestions(true);
-      const res = await getImageSuggestions('pending');
+      const res = await getImageSuggestions('pending', targetPage, PAGE_SIZE);
+      if (res.data.length === 0 && targetPage > 1) {
+        await loadSuggestions(targetPage - 1);
+        return;
+      }
       setSuggestions(res.data);
+      setPage(res.page);
+      setTotalPages(res.pages);
+      setTotalCount(res.total);
     } catch (err: any) {
       setError(err.message || 'Failed to load suggestions');
     } finally {
@@ -166,8 +213,12 @@ export function SuggestedMatchesSection({
   useEffect(() => {
     loadSettings();
     loadStats();
-    loadSuggestions();
+    loadSuggestions(1);
   }, [loadSettings, loadStats, loadSuggestions]);
+
+  const handlePageChange = (_event: ChangeEvent<unknown>, value: number) => {
+    loadSuggestions(value);
+  };
 
   const handleSaveKey = async () => {
     try {
@@ -191,7 +242,7 @@ export function SuggestedMatchesSection({
       setMessage('');
       const res = await generateCrossTenantSuggestions();
       setMessage(res.message);
-      await Promise.all([loadSuggestions(), loadStats()]);
+      await Promise.all([loadSuggestions(1), loadStats()]);
     } catch (err: any) {
       setError(err.message || 'Failed to generate suggestions');
     } finally {
@@ -209,7 +260,7 @@ export function SuggestedMatchesSection({
         usingSelection ? { pCodes: selectedPCodes } : { limit: webSearchLimit }
       );
       setMessage(res.message);
-      await Promise.all([loadSuggestions(), loadStats()]);
+      await Promise.all([loadSuggestions(1), loadStats()]);
       if (usingSelection) onSelectionUsed();
     } catch (err: any) {
       setError(err.message || 'Web search failed');
@@ -223,8 +274,10 @@ export function SuggestedMatchesSection({
       setActioningId(id);
       setError('');
       await acceptImageSuggestion(id);
-      setSuggestions((prev) => prev.filter((s) => s._id !== id));
-      loadStats();
+      // Re-fetches this page rather than just filtering the item out
+      // locally, so the next item from later pages slides up to fill the
+      // gap instead of leaving the page one short.
+      await Promise.all([loadSuggestions(page), loadStats()]);
     } catch (err: any) {
       setError(err.message || 'Accept failed');
     } finally {
@@ -237,8 +290,7 @@ export function SuggestedMatchesSection({
       setActioningId(id);
       setError('');
       await rejectImageSuggestion(id);
-      setSuggestions((prev) => prev.filter((s) => s._id !== id));
-      loadStats();
+      await Promise.all([loadSuggestions(page), loadStats()]);
     } catch (err: any) {
       setError(err.message || 'Reject failed');
     } finally {
@@ -365,80 +417,106 @@ export function SuggestedMatchesSection({
         )}
 
         <Box>
-          {loadingSuggestions ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress size={24} />
-            </Box>
-          ) : suggestions.length === 0 ? (
-            <Typography variant="body2" sx={{ color: 'text.secondary', py: 2 }}>
-              No pending suggestions — generate some above.
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            onClick={toggleListExpanded}
+            sx={{ cursor: 'pointer', userSelect: 'none', py: 0.5 }}
+          >
+            <IconButton size="small" tabIndex={-1}>
+              <Iconify icon={listExpanded ? 'eva:arrow-ios-upward-fill' : 'eva:arrow-ios-forward-fill'} />
+            </IconButton>
+            <Typography variant="subtitle2">
+              Review queue{totalCount > 0 ? ` (${totalCount} pending)` : ''}
             </Typography>
-          ) : (
-            <Stack spacing={1.5}>
-              {suggestions.map((s) => (
-                <Stack
-                  key={s._id}
-                  direction="row"
-                  spacing={2}
-                  alignItems="center"
-                  sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}
-                >
-                  <SuggestionThumbnail id={s._id} />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="subtitle2" noWrap>
-                      {s.product_name}{' '}
-                      <Typography component="span" variant="caption" sx={{ color: 'text.secondary' }}>
-                        ({s.p_code})
+          </Stack>
+
+          <Collapse in={listExpanded}>
+            {loadingSuggestions ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : suggestions.length === 0 ? (
+              <Typography variant="body2" sx={{ color: 'text.secondary', py: 2 }}>
+                No pending suggestions — generate some above.
+              </Typography>
+            ) : (
+              <Stack spacing={1.5} sx={{ pt: 1 }}>
+                {suggestions.map((s) => (
+                  <Stack
+                    key={s._id}
+                    direction="row"
+                    spacing={2}
+                    alignItems="center"
+                    sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}
+                  >
+                    <SuggestionThumbnail id={s._id} />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="subtitle2" noWrap>
+                        {s.product_name}{' '}
+                        <Typography component="span" variant="caption" sx={{ color: 'text.secondary' }}>
+                          ({s.p_code})
+                        </Typography>
                       </Typography>
-                    </Typography>
-                    <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 0.5, rowGap: 0.5 }}>
-                      <Chip
-                        size="small"
-                        variant="outlined"
-                        label={s.source === 'cross_tenant' ? `From ${s.suggested_from_project}` : 'Web search'}
-                      />
-                      {s.source === 'cross_tenant' && s.suggested_from_name && (
-                        <Typography variant="caption" sx={{ color: 'text.secondary', alignSelf: 'center' }}>
-                          &quot;{s.suggested_from_name}&quot;
+                      <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 0.5, rowGap: 0.5 }}>
+                        <Chip
+                          size="small"
+                          variant="outlined"
+                          label={s.source === 'cross_tenant' ? `From ${s.suggested_from_project}` : 'Web search'}
+                        />
+                        {s.source === 'cross_tenant' && s.suggested_from_name && (
+                          <Typography variant="caption" sx={{ color: 'text.secondary', alignSelf: 'center' }}>
+                            &quot;{s.suggested_from_name}&quot;
+                          </Typography>
+                        )}
+                        {typeof s.text_score === 'number' && (
+                          <Chip size="small" variant="outlined" label={`score ${s.text_score}`} />
+                        )}
+                        <VerdictChip label="Gemini" verdict={s.vision_gemini?.verdict ?? null} />
+                        <VerdictChip label="DeepSeek" verdict={s.vision_deepseek?.verdict ?? null} />
+                      </Stack>
+                      {s.vision_gemini?.reason && (
+                        <Typography
+                          variant="caption"
+                          sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}
+                        >
+                          {s.vision_gemini.reason}
                         </Typography>
                       )}
-                      {typeof s.text_score === 'number' && (
-                        <Chip size="small" variant="outlined" label={`score ${s.text_score}`} />
-                      )}
-                      <VerdictChip label="Gemini" verdict={s.vision_gemini?.verdict ?? null} />
-                      <VerdictChip label="DeepSeek" verdict={s.vision_deepseek?.verdict ?? null} />
-                    </Stack>
-                    {s.vision_gemini?.reason && (
-                      <Typography
-                        variant="caption"
-                        sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}
+                    </Box>
+                    <Stack direction="row" spacing={1}>
+                      <IconButton
+                        color="success"
+                        size="small"
+                        disabled={actioningId === s._id}
+                        onClick={() => handleAccept(s._id)}
                       >
-                        {s.vision_gemini.reason}
-                      </Typography>
-                    )}
-                  </Box>
-                  <Stack direction="row" spacing={1}>
-                    <IconButton
-                      color="success"
-                      size="small"
-                      disabled={actioningId === s._id}
-                      onClick={() => handleAccept(s._id)}
-                    >
-                      <Iconify icon="eva:checkmark-fill" />
-                    </IconButton>
-                    <IconButton
-                      color="error"
-                      size="small"
-                      disabled={actioningId === s._id}
-                      onClick={() => handleReject(s._id)}
-                    >
-                      <Iconify icon="mingcute:close-line" />
-                    </IconButton>
+                        <Iconify icon="eva:checkmark-fill" />
+                      </IconButton>
+                      <IconButton
+                        color="error"
+                        size="small"
+                        disabled={actioningId === s._id}
+                        onClick={() => handleReject(s._id)}
+                      >
+                        <Iconify icon="mingcute:close-line" />
+                      </IconButton>
+                    </Stack>
                   </Stack>
-                </Stack>
-              ))}
-            </Stack>
-          )}
+                ))}
+              </Stack>
+            )}
+
+            {!loadingSuggestions && totalPages > 1 && (
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ pt: 2 }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Page {page} of {totalPages} — {totalCount} pending total
+                </Typography>
+                <Pagination page={page} count={totalPages} onChange={handlePageChange} size="small" color="primary" />
+              </Stack>
+            )}
+          </Collapse>
         </Box>
       </Stack>
     </Card>

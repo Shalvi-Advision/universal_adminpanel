@@ -216,9 +216,18 @@ export async function generateWebSearchSuggestions(
 }
 
 export async function getImageSuggestions(
-  status: 'pending' | 'accepted' | 'rejected' = 'pending'
-): Promise<{ success: boolean; count: number; data: ImageSuggestion[] }> {
-  return apiClient.get(`/api/admin/image-cdn/suggestions?status=${status}`);
+  status: 'pending' | 'accepted' | 'rejected' = 'pending',
+  page = 1,
+  limit = 20
+): Promise<{
+  success: boolean;
+  count: number;
+  total: number;
+  page: number;
+  pages: number;
+  data: ImageSuggestion[];
+}> {
+  return apiClient.get(`/api/admin/image-cdn/suggestions?status=${status}&page=${page}&limit=${limit}`);
 }
 
 export interface ImageSuggestionStats {
