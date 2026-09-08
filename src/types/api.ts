@@ -942,6 +942,13 @@ export interface BannerPayload {
 // Seasonal Category Subcategory Item
 export interface SeasonalCategoryItem {
   sub_category_id: string;
+  // Which collection sub_category_id is an id into. Category and Subcategory
+  // ids are both small per-tenant sequences that commonly collide (a "4" can
+  // be a real category and an unrelated real subcategory at once), so this
+  // makes the admin's choice explicit instead of the backend guessing.
+  // Defaults to 'subcategory' server-side when omitted, matching every tile
+  // saved before this field existed.
+  reference_type?: 'category' | 'subcategory';
   store_code?: string;
   position: number;
   redirect_url?: string;
@@ -1136,7 +1143,14 @@ export interface ImageCdnSettings {
 // admin panel polls this instead of holding the original request open.
 export interface WebSearchJobResult {
   p_code: string;
-  status: 'FOUND' | 'NONE_FOUND' | 'URL_DID_NOT_RESOLVE' | 'ALREADY_HAS_SUGGESTION' | 'NOT_MISSING' | 'ERROR';
+  status:
+    | 'FOUND'
+    | 'NONE_FOUND'
+    | 'URL_DID_NOT_RESOLVE'
+    | 'ALREADY_HAS_SUGGESTION'
+    | 'NOT_MISSING'
+    | 'BUDGET_STOPPED'
+    | 'ERROR';
   url?: string;
   reason?: string;
   existing_status?: string;
@@ -1153,6 +1167,13 @@ export interface WebSearchJob {
   not_found: number;
   already_tried: number;
   not_missing: number;
+  // How many of batch_total were left un-searched because budget_inr was
+  // hit first (see config/geminiPricing.js on the backend).
+  budget_stopped: number;
+  // Optional admin-set INR ceiling for this job; null/undefined = no cap.
+  budget_inr?: number | null;
+  // Running (then final) spend estimate — an estimate, not real billing.
+  estimated_cost_inr: number;
   errored: number;
   results?: WebSearchJobResult[];
   triggered_by_email?: string;

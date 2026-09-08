@@ -40,6 +40,13 @@ import { Iconify } from 'src/components/iconify';
 
 const PAGE_SIZE = 10;
 
+// Client-side mirror of the backend's config/geminiPricing.js default —
+// used ONLY to pre-fill the budget field and show a pre-run estimate. The
+// real guardrail is enforced server-side against its own (possibly
+// env-overridden) value; if the two drift apart the worst case is a
+// slightly-off estimate here, never an unenforced cap.
+const ESTIMATED_COST_PER_ATTEMPT_INR = 32;
+
 // Remembers whether the admin left the review list open or collapsed —
 // with 90+ pending suggestions being normal, re-opening the page shouldn't
 // force scrolling past a wall of cards every time.
@@ -151,6 +158,11 @@ export function SuggestedMatchesSection({
   const [activeJob, setActiveJob] = useState<WebSearchJob | null>(null);
   const jobPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [webSearchLimit, setWebSearchLimit] = useState(50);
+  // Pre-fills to a worst-case estimate (see ESTIMATED_COST_PER_ATTEMPT_INR)
+  // so the guardrail is opt-out, not opt-in — tracks the limit/selection
+  // size until the admin edits it by hand, then stays put.
+  const [budgetInr, setBudgetInr] = useState<number | ''>(webSearchLimit * ESTIMATED_COST_PER_ATTEMPT_INR);
+  const [budgetTouched, setBudgetTouched] = useState(false);
   const [suggestions, setSuggestions] = useState<ImageSuggestion[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [actioningId, setActioningId] = useState<string | null>(null);
@@ -221,9 +233,10 @@ export function SuggestedMatchesSection({
   // suggestion, no longer missing, or genuinely errored), which used to be
   // invisible and read as a bug.
   const summarizeJob = (job: WebSearchJob) => {
-    const parts = [`Found ${job.found} of ${job.processed} searched`];
+    const parts = [`Found ${job.found} of ${job.processed} searched (~₹${job.estimated_cost_inr} spent)`];
     if (job.already_tried > 0) parts.push(`${job.already_tried} already had a suggestion`);
     if (job.not_missing > 0) parts.push(`${job.not_missing} no longer missing`);
+    if (job.budget_stopped > 0) parts.push(`${job.budget_stopped} skipped — budget cap reached`);
     if (job.errored > 0) parts.push(`${job.errored} errored`);
     return parts.join(' — ');
   };
@@ -293,6 +306,15 @@ export function SuggestedMatchesSection({
     return stopPolling;
   }, [loadSettings, loadStats, loadSuggestions, pollJob]);
 
+  // Keeps the pre-filled budget tracking "how many" (or the selection size)
+  // until the admin edits the budget field by hand — after that it's
+  // theirs to manage, this stops overwriting it.
+  useEffect(() => {
+    if (budgetTouched) return;
+    const attempts = selectedPCodes.length > 0 ? selectedPCodes.length : webSearchLimit;
+    setBudgetInr(attempts * ESTIMATED_COST_PER_ATTEMPT_INR);
+  }, [webSearchLimit, selectedPCodes.length, budgetTouched]);
+
   const handlePageChange = (_event: ChangeEvent<unknown>, value: number) => {
     loadSuggestions(value);
   };
@@ -332,7 +354,11 @@ export function SuggestedMatchesSection({
       setError('');
       setMessage('');
       const usingSelection = selectedPCodes.length > 0;
-      const res = await startWebSearchJob(usingSelection ? { pCodes: selectedPCodes } : { limit: webSearchLimit });
+      const budget = typeof budgetInr === 'number' && budgetInr > 0 ? budgetInr : undefined;
+      const res = await startWebSearchJob({
+        ...(usingSelection ? { pCodes: selectedPCodes } : { limit: webSearchLimit }),
+        budgetInr: budget,
+      });
       // The selection's job is done once it's queued — the checkboxes
       // don't need to stay ticked while the search itself runs in the
       // background.
@@ -468,6 +494,20 @@ export function SuggestedMatchesSection({
               slotProps={{ htmlInput: { min: 1, max: 1000 } }}
             />
           )}
+          <TextField
+            size="small"
+            type="number"
+            label="Budget cap (₹)"
+            value={budgetInr}
+            onChange={(e) => {
+              setBudgetTouched(true);
+              const v = e.target.value;
+              setBudgetInr(v === '' ? '' : Math.max(0, parseFloat(v) || 0));
+            }}
+            sx={{ width: 140 }}
+            helperText="0 = no cap"
+            slotProps={{ htmlInput: { min: 0 } }}
+          />
           <Button
             variant="outlined"
             onClick={handleWebSearch}
@@ -487,13 +527,22 @@ export function SuggestedMatchesSection({
           )}
         </Stack>
 
+        {!jobRunning && settings?.gemini_configured && (
+          <Typography variant="caption" sx={{ color: 'text.secondary', mt: -1 }}>
+            Worst-case estimate: up to ₹{(hasSelection ? selectedPCodes.length : webSearchLimit) * ESTIMATED_COST_PER_ATTEMPT_INR}{' '}
+            for {hasSelection ? selectedPCodes.length : webSearchLimit} attempt(s) — every attempt costs the same
+            whether or not it finds an image. The budget cap above stops the job early once it&apos;s reached.
+          </Typography>
+        )}
+
         {activeJob && jobRunning && (
           <Box sx={{ px: 0.5 }}>
             <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 Searching the web — {activeJob.processed} of {activeJob.batch_total || activeJob.requested} processed,{' '}
-                {activeJob.found} found so far. Feel free to keep working — this keeps running in the
-                background and picks back up here if you leave and come back.
+                {activeJob.found} found, ~₹{activeJob.estimated_cost_inr} spent so far
+                {activeJob.budget_inr ? ` of ₹${activeJob.budget_inr} budget` : ''}. Feel free to keep working —
+                this keeps running in the background and picks back up here if you leave and come back.
               </Typography>
             </Stack>
             <LinearProgress

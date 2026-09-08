@@ -212,14 +212,20 @@ export async function generateCrossTenantSuggestions(): Promise<{
 // here. A 409 means one is already running for this tenant; its id comes
 // back in the error's `data.data.job_id` (see ApiError) so the caller can
 // just start polling that one instead of erroring out.
+// `budgetInr`, when given, is an optional spend guardrail on top of
+// pCodes/limit — the job stops issuing new searches once its running cost
+// estimate would exceed this (see config/geminiPricing.js on the backend).
 export async function startWebSearchJob(
-  opts: { pCodes: string[] } | { limit: number }
+  opts: ({ pCodes: string[] } | { limit: number }) & { budgetInr?: number }
 ): Promise<{
   success: boolean;
   message: string;
-  data: { job_id: string; status: WebSearchJob['status']; requested: number };
+  data: { job_id: string; status: WebSearchJob['status']; requested: number; budget_inr: number | null };
 }> {
-  const body = 'pCodes' in opts ? { p_codes: opts.pCodes } : { limit: opts.limit };
+  const body = {
+    ...('pCodes' in opts ? { p_codes: opts.pCodes } : { limit: opts.limit }),
+    ...(opts.budgetInr ? { budget_inr: opts.budgetInr } : {}),
+  };
   return apiClient.post('/api/admin/image-cdn/suggestions/web-search', body);
 }
 
