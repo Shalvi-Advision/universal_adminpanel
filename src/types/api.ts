@@ -1127,6 +1127,9 @@ export interface ImageSuggestion {
   suggested_from_name?: string;
   text_score?: number;
   source_url?: string;
+  // Only set for web_search — which lookup found it (free barcode lookup,
+  // cheap paid search, or the more expensive Gemini fallback).
+  found_via?: 'open_food_facts' | 'google_cse' | 'gemini_grounding' | null;
   vision_gemini: ImageSuggestionVisionVerdict;
   vision_deepseek: ImageSuggestionVisionVerdict;
   status: 'pending' | 'accepted' | 'rejected';
@@ -1136,6 +1139,11 @@ export interface ImageSuggestion {
 export interface ImageCdnSettings {
   gemini_configured: boolean;
   gemini_updated_at: string | null;
+  // Opt-in, ~30x cheaper alternative search step to Gemini's Grounding
+  // tool — see config/geminiPricing.js on the backend. Requires both an
+  // API key and a Search Engine ID (cx) to count as configured.
+  google_cse_configured: boolean;
+  google_cse_updated_at: string | null;
 }
 
 // A queued "Find & download from web" run — see routes/admin/image-cdn.js's
@@ -1154,6 +1162,8 @@ export interface WebSearchJobResult {
   url?: string;
   reason?: string;
   existing_status?: string;
+  // Only set for FOUND — which lookup actually found it.
+  found_via?: 'open_food_facts' | 'google_cse' | 'gemini_grounding';
 }
 
 export interface WebSearchJob {

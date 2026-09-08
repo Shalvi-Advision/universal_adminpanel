@@ -192,6 +192,17 @@ export async function setGeminiApiKey(geminiApiKey: string): Promise<{ success: 
   return apiClient.post('/api/admin/image-cdn/settings', { gemini_api_key: geminiApiKey });
 }
 
+// Google Custom Search — opt-in, ~30x cheaper alternative to Gemini's
+// Grounding search step (see config/geminiPricing.js on the backend).
+// Both pieces are required for it to actually be used; pass '' to clear
+// either. Write-only, same convention as the Gemini key.
+export async function setGoogleCseSettings(
+  apiKey: string,
+  cx: string
+): Promise<{ success: boolean; message: string }> {
+  return apiClient.post('/api/admin/image-cdn/settings', { google_cse_api_key: apiKey, google_cse_id: cx });
+}
+
 // Free — cross-tenant text matching + vision pre-filter.
 export async function generateCrossTenantSuggestions(): Promise<{
   success: boolean;

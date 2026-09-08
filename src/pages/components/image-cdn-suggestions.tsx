@@ -27,6 +27,7 @@ import {
   startWebSearchJob,
   getImageCdnSettings,
   getImageSuggestions,
+  setGoogleCseSettings,
   acceptImageSuggestion,
   rejectImageSuggestion,
   getImageSuggestionStats,
@@ -46,6 +47,10 @@ const PAGE_SIZE = 10;
 // env-overridden) value; if the two drift apart the worst case is a
 // slightly-off estimate here, never an unenforced cap.
 const ESTIMATED_COST_PER_ATTEMPT_INR = 32;
+// Mirrors config/geminiPricing.js's GOOGLE_CSE_COST_INR default — used
+// instead of the Gemini rate above once Google Custom Search is configured
+// (see generateWebSearchSuggestions's own preference order on the backend).
+const ESTIMATED_COST_PER_ATTEMPT_CSE_INR = 1;
 
 // Remembers whether the admin left the review list open or collapsed —
 // with 90+ pending suggestions being normal, re-opening the page shouldn't
@@ -153,6 +158,11 @@ export function SuggestedMatchesSection({
   const [savingKey, setSavingKey] = useState(false);
   const [keyMessage, setKeyMessage] = useState('');
 
+  const [cseKeyInput, setCseKeyInput] = useState('');
+  const [cseIdInput, setCseIdInput] = useState('');
+  const [savingCse, setSavingCse] = useState(false);
+  const [cseMessage, setCseMessage] = useState('');
+
   const [stats, setStats] = useState<ImageSuggestionStats | null>(null);
   const [generating, setGenerating] = useState(false);
   const [activeJob, setActiveJob] = useState<WebSearchJob | null>(null);
@@ -234,6 +244,8 @@ export function SuggestedMatchesSection({
   // invisible and read as a bug.
   const summarizeJob = (job: WebSearchJob) => {
     const parts = [`Found ${job.found} of ${job.processed} searched (~₹${job.estimated_cost_inr} spent)`];
+    const freeFinds = job.results?.filter((r) => r.found_via === 'open_food_facts').length ?? 0;
+    if (freeFinds > 0) parts.push(`${freeFinds} of those free (Open Food Facts)`);
     if (job.already_tried > 0) parts.push(`${job.already_tried} already had a suggestion`);
     if (job.not_missing > 0) parts.push(`${job.not_missing} no longer missing`);
     if (job.budget_stopped > 0) parts.push(`${job.budget_stopped} skipped — budget cap reached`);
@@ -306,14 +318,16 @@ export function SuggestedMatchesSection({
     return stopPolling;
   }, [loadSettings, loadStats, loadSuggestions, pollJob]);
 
-  // Keeps the pre-filled budget tracking "how many" (or the selection size)
-  // until the admin edits the budget field by hand — after that it's
-  // theirs to manage, this stops overwriting it.
+  // Keeps the pre-filled budget tracking "how many" (or the selection
+  // size) and whichever per-attempt rate currently applies, until the
+  // admin edits the budget field by hand — after that it's theirs to
+  // manage, this stops overwriting it.
   useEffect(() => {
     if (budgetTouched) return;
     const attempts = selectedPCodes.length > 0 ? selectedPCodes.length : webSearchLimit;
-    setBudgetInr(attempts * ESTIMATED_COST_PER_ATTEMPT_INR);
-  }, [webSearchLimit, selectedPCodes.length, budgetTouched]);
+    const perAttempt = settings?.google_cse_configured ? ESTIMATED_COST_PER_ATTEMPT_CSE_INR : ESTIMATED_COST_PER_ATTEMPT_INR;
+    setBudgetInr(attempts * perAttempt);
+  }, [webSearchLimit, selectedPCodes.length, budgetTouched, settings?.google_cse_configured]);
 
   const handlePageChange = (_event: ChangeEvent<unknown>, value: number) => {
     loadSuggestions(value);
@@ -331,6 +345,22 @@ export function SuggestedMatchesSection({
       setKeyMessage(err.message || 'Failed to save key');
     } finally {
       setSavingKey(false);
+    }
+  };
+
+  const handleSaveCse = async () => {
+    try {
+      setSavingCse(true);
+      setCseMessage('');
+      await setGoogleCseSettings(cseKeyInput, cseIdInput);
+      setCseKeyInput('');
+      setCseIdInput('');
+      setCseMessage('Saved.');
+      await loadSettings();
+    } catch (err: any) {
+      setCseMessage(err.message || 'Failed to save');
+    } finally {
+      setSavingCse(false);
     }
   };
 
@@ -462,6 +492,63 @@ export function SuggestedMatchesSection({
           )}
         </Stack>
 
+        <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+          <TextField
+            size="small"
+            type="password"
+            label="Google Custom Search API key"
+            placeholder={settings?.google_cse_configured ? 'Configured' : 'Not set'}
+            value={cseKeyInput}
+            onChange={(e) => setCseKeyInput(e.target.value)}
+            sx={{ minWidth: 260 }}
+          />
+          <TextField
+            size="small"
+            label="Search Engine ID (cx)"
+            placeholder={settings?.google_cse_configured ? 'Configured' : 'Not set'}
+            value={cseIdInput}
+            onChange={(e) => setCseIdInput(e.target.value)}
+            sx={{ minWidth: 220 }}
+          />
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={handleSaveCse}
+            disabled={savingCse || !cseKeyInput.trim() || !cseIdInput.trim()}
+          >
+            {savingCse ? 'Saving…' : 'Save'}
+          </Button>
+          {settings && (
+            <Chip
+              size="small"
+              icon={
+                <Iconify icon={(settings.google_cse_configured ? 'eva:checkmark-fill' : 'mingcute:close-line') as any} />
+              }
+              label={settings.google_cse_configured ? 'Google Search configured (cheaper)' : 'Optional — cheaper than Gemini search'}
+              color={settings.google_cse_configured ? 'success' : 'default'}
+              variant="outlined"
+            />
+          )}
+          {cseMessage && (
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              {cseMessage}
+            </Typography>
+          )}
+        </Stack>
+        <Typography variant="caption" sx={{ color: 'text.secondary', mt: -1 }}>
+          Optional, ~30x cheaper than Gemini web search — used automatically instead of it once both fields are
+          set. Create a search engine at{' '}
+          <Box component="span" sx={{ fontFamily: 'monospace' }}>
+            programmablesearchengine.google.com
+          </Box>{' '}
+          (set it to search the whole web, turn on Image search), then enable the &quot;Custom Search API&quot;
+          for an API key at{' '}
+          <Box component="span" sx={{ fontFamily: 'monospace' }}>
+            console.cloud.google.com
+          </Box>
+          . Free for the first 100 searches/day, then billed on that Cloud project.
+        </Typography>
+
         {error && (
           <Alert severity="error" onClose={() => setError('')}>
             {error}
@@ -529,9 +616,14 @@ export function SuggestedMatchesSection({
 
         {!jobRunning && settings?.gemini_configured && (
           <Typography variant="caption" sx={{ color: 'text.secondary', mt: -1 }}>
-            Worst-case estimate: up to ₹{(hasSelection ? selectedPCodes.length : webSearchLimit) * ESTIMATED_COST_PER_ATTEMPT_INR}{' '}
-            for {hasSelection ? selectedPCodes.length : webSearchLimit} attempt(s) — every attempt costs the same
-            whether or not it finds an image. The budget cap above stops the job early once it&apos;s reached.
+            Every product with a barcode is checked against Open Food Facts first, free. Worst-case estimate for
+            whatever&apos;s left: up to ₹
+            {(hasSelection ? selectedPCodes.length : webSearchLimit) *
+              (settings.google_cse_configured ? ESTIMATED_COST_PER_ATTEMPT_CSE_INR : ESTIMATED_COST_PER_ATTEMPT_INR)}{' '}
+            for {hasSelection ? selectedPCodes.length : webSearchLimit} attempt(s) via{' '}
+            {settings.google_cse_configured ? 'Google Custom Search' : 'Gemini web search'} — every paid attempt
+            costs the same whether or not it finds an image. The budget cap above stops the job early once
+            it&apos;s reached.
           </Typography>
         )}
 
