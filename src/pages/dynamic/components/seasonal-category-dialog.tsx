@@ -1,4 +1,6 @@
 import type {
+  Category,
+  Subcategory,
   SeasonalCategory,
   SeasonalCategoryItem,
   SeasonalCategoryPayload,
@@ -16,6 +18,7 @@ import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import DialogTitle from '@mui/material/DialogTitle';
+import Autocomplete from '@mui/material/Autocomplete';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -23,6 +26,8 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { parseSeasonalCategoryItems } from 'src/utils/csv-parser';
 
+import { getCategoriesByStore } from 'src/services/categories';
+import { getSubcategoriesByStore } from 'src/services/subcategories';
 import { createSeasonalCategory, updateSeasonalCategory } from 'src/services/seasonal-categories';
 
 import { Iconify } from 'src/components/iconify';
@@ -30,6 +35,10 @@ import { CSVUpload } from 'src/components/csv-upload';
 import { ImageUpload } from 'src/components/image-upload';
 
 import StoreCodeSelector from './store-code-selector';
+
+// Same cap used elsewhere for lookup dropdowns (see products.tsx) — these
+// lists back a search-as-you-type picker, not a paginated table.
+const LOOKUP_LIST_LIMIT = 500;
 
 interface SeasonalCategoryDialogProps {
   open: boolean;
@@ -61,6 +70,42 @@ export function SeasonalCategoryDialog({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [subcategories, setSubcategories] = useState<SeasonalCategoryItem[]>([]);
+
+  // Options for the per-tile picker below, scoped to this seasonal
+  // category's primary store — real names instead of a raw id field is what
+  // stops an admin from typing a category id into a field that used to be
+  // silently resolved as a subcategory id (or vice versa) whenever the two
+  // numbers happened to collide (they're both small per-store sequences).
+  const [categoryOptions, setCategoryOptions] = useState<Category[]>([]);
+  const [subcategoryOptions, setSubcategoryOptions] = useState<Subcategory[]>([]);
+  const primaryStoreCode = storeCodes[0] ?? '';
+
+  useEffect(() => {
+    if (!open || !primaryStoreCode) {
+      setCategoryOptions([]);
+      setSubcategoryOptions([]);
+      return undefined;
+    }
+    let active = true;
+    Promise.all([
+      getCategoriesByStore({ store_code: primaryStoreCode, limit: LOOKUP_LIST_LIMIT }),
+      getSubcategoriesByStore({ store_code: primaryStoreCode, limit: LOOKUP_LIST_LIMIT }),
+    ])
+      .then(([categoryRes, subcategoryRes]) => {
+        if (!active) return;
+        if (categoryRes.success) setCategoryOptions(categoryRes.data);
+        if (subcategoryRes.success) setSubcategoryOptions(subcategoryRes.data);
+      })
+      .catch(() => {
+        if (active) {
+          setCategoryOptions([]);
+          setSubcategoryOptions([]);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [open, primaryStoreCode]);
 
   // Load data when editing
   useEffect(() => {
@@ -105,7 +150,13 @@ export function SeasonalCategoryDialog({
   const handleAddSubcategory = () => {
     setSubcategories([
       ...subcategories,
-      { sub_category_id: '', position: subcategories.length + 1, redirect_url: '', metadata: {} },
+      {
+        sub_category_id: '',
+        reference_type: 'subcategory',
+        position: subcategories.length + 1,
+        redirect_url: '',
+        metadata: {},
+      },
     ]);
   };
 
@@ -352,7 +403,7 @@ export function SeasonalCategoryDialog({
               onError={(err) => setError(err)}
               templateName="seasonal-category-subcategories.csv"
               label="Bulk Import Subcategories via CSV"
-              helperText="Upload a CSV file to add multiple subcategories at once. This will replace existing subcategories."
+              helperText='Upload a CSV file to add multiple subcategories at once. This will replace existing subcategories. Include a "reference_type" column ("category" or "subcategory") per row — defaults to subcategory when omitted.'
             />
 
             <Stack spacing={2} sx={{ mt: 2 }}>
@@ -364,15 +415,121 @@ export function SeasonalCategoryDialog({
                   <Stack spacing={2}>
                     <Stack direction="row" spacing={1}>
                       <TextField
+                        select
                         size="small"
-                        label="Sub Category ID"
-                        value={subcategory.sub_category_id}
+                        label="Type"
+                        value={subcategory.reference_type ?? 'subcategory'}
                         onChange={(e) =>
-                          handleSubcategoryChange(index, 'sub_category_id', e.target.value)
+                          // The picker below is keyed off this — switching
+                          // type without clearing the id would keep a
+                          // now-meaningless id (a subcategory id read as a
+                          // category id, or vice versa) around silently.
+                          setSubcategories((prev) =>
+                            prev.map((item, i) =>
+                              i === index
+                                ? {
+                                    ...item,
+                                    reference_type: e.target.value as 'category' | 'subcategory',
+                                    sub_category_id: '',
+                                  }
+                                : item
+                            )
+                          )
                         }
-                        required
-                        sx={{ flex: 2 }}
-                      />
+                        sx={{ flex: 1, minWidth: 130 }}
+                      >
+                        <MenuItem value="subcategory">Subcategory</MenuItem>
+                        <MenuItem value="category">Category</MenuItem>
+                      </TextField>
+                      {subcategory.reference_type === 'category' ? (
+                        <Autocomplete
+                          size="small"
+                          sx={{ flex: 2 }}
+                          options={categoryOptions}
+                          getOptionLabel={(option) =>
+                            `${option.category_name} (${option.idcategory_master})`
+                          }
+                          isOptionEqualToValue={(option, value) =>
+                            option.idcategory_master === value.idcategory_master
+                          }
+                          value={
+                            categoryOptions.find(
+                              (c) => c.idcategory_master === subcategory.sub_category_id
+                            ) ?? null
+                          }
+                          onChange={(_, newValue) =>
+                            handleSubcategoryChange(
+                              index,
+                              'sub_category_id',
+                              newValue?.idcategory_master ?? ''
+                            )
+                          }
+                          noOptionsText={
+                            primaryStoreCode
+                              ? 'No categories found for this store'
+                              : 'Select a store code above first'
+                          }
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label="Category"
+                              required
+                              helperText={
+                                subcategory.sub_category_id &&
+                                !categoryOptions.some(
+                                  (c) => c.idcategory_master === subcategory.sub_category_id
+                                )
+                                  ? `Category "${subcategory.sub_category_id}" not found for ${primaryStoreCode || 'this store'} — pick again`
+                                  : undefined
+                              }
+                            />
+                          )}
+                        />
+                      ) : (
+                        <Autocomplete
+                          size="small"
+                          sx={{ flex: 2 }}
+                          options={subcategoryOptions}
+                          getOptionLabel={(option) =>
+                            `${option.sub_category_name} (${option.idsub_category_master})`
+                          }
+                          isOptionEqualToValue={(option, value) =>
+                            option.idsub_category_master === value.idsub_category_master
+                          }
+                          value={
+                            subcategoryOptions.find(
+                              (s) => s.idsub_category_master === subcategory.sub_category_id
+                            ) ?? null
+                          }
+                          onChange={(_, newValue) =>
+                            handleSubcategoryChange(
+                              index,
+                              'sub_category_id',
+                              newValue?.idsub_category_master ?? ''
+                            )
+                          }
+                          noOptionsText={
+                            primaryStoreCode
+                              ? 'No subcategories found for this store'
+                              : 'Select a store code above first'
+                          }
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label="Subcategory"
+                              required
+                              helperText={
+                                subcategory.sub_category_id &&
+                                !subcategoryOptions.some(
+                                  (s) => s.idsub_category_master === subcategory.sub_category_id
+                                )
+                                  ? `Subcategory "${subcategory.sub_category_id}" not found for ${primaryStoreCode || 'this store'} — pick again`
+                                  : undefined
+                              }
+                            />
+                          )}
+                        />
+                      )}
                       <TextField
                         size="small"
                         label="Store Code"

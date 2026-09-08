@@ -1025,6 +1025,27 @@ export default function Page() {
               />
             )}
 
+            {draft.type === 'category_grid' && (
+              <TextField
+                fullWidth
+                size="small"
+                type="number"
+                label="Collapsed rows"
+                placeholder="e.g. 2"
+                helperText="Rows of 4 tiles shown before 'View All'. Leave blank for one row."
+                value={(draft.config?.collapsed_rows as number | string) ?? ''}
+                onChange={(e) =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    config: {
+                      ...prev.config,
+                      collapsed_rows: e.target.value === '' ? '' : Number(e.target.value),
+                    },
+                  }))
+                }
+              />
+            )}
+
             {draft.type === 'usp_strip' && <TrustBadgeEditor draft={draft} setDraft={setDraft} />}
 
             {needsSource && (
