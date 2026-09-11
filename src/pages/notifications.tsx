@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import type { Product } from 'src/types/api';
+
+import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Alert from '@mui/material/Alert';
 import Radio from '@mui/material/Radio';
 import Stack from '@mui/material/Stack';
+import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -15,10 +18,13 @@ import RadioGroup from '@mui/material/RadioGroup';
 import Typography from '@mui/material/Typography';
 import LoadingButton from '@mui/lab/LoadingButton';
 import FormControl from '@mui/material/FormControl';
+import Autocomplete from '@mui/material/Autocomplete';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { CONFIG } from 'src/config-global';
+import { getProductsByStore } from 'src/services/products';
+import { useStoreCode } from 'src/contexts/store-code-context';
 import { usePermissions } from 'src/contexts/permissions-context';
 import {
     sendNotificationToAll,
@@ -41,6 +47,30 @@ export default function Page() {
     const [error, setError] = useState('');
     const [users, setUsers] = useState<any[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
+
+    // Attaching a product opens its detail page directly when the user taps
+    // the notification, instead of just landing on the home screen — the app
+    // already deep-links via data.url (see _handleMessageNavigation in
+    // firebase_notification_service.dart), so this only needs to set that.
+    const { storeCode: contextStoreCode } = useStoreCode();
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [productOptions, setProductOptions] = useState<Product[]>([]);
+    const [productSearchLoading, setProductSearchLoading] = useState(false);
+
+    const searchProducts = useCallback(async (query: string) => {
+        if (!contextStoreCode || query.length < 2) return;
+        try {
+            setProductSearchLoading(true);
+            const response = await getProductsByStore({ store_code: contextStoreCode, search: query, limit: 20 });
+            if (response.success) {
+                setProductOptions(response.data);
+            }
+        } catch {
+            // Silently fail search
+        } finally {
+            setProductSearchLoading(false);
+        }
+    }, [contextStoreCode]);
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -77,6 +107,11 @@ export default function Page() {
 
         try {
             setLoading(true);
+
+            const data = selectedProduct
+                ? { url: `/product/${encodeURIComponent(selectedProduct.p_code)}` }
+                : undefined;
+
             let response;
 
             if (target === 'user') {
@@ -84,11 +119,13 @@ export default function Page() {
                     userId: selectedUserId,
                     title,
                     body,
+                    data,
                 });
             } else {
                 response = await sendNotificationToAll({
                     title,
                     body,
+                    data,
                 });
             }
 
@@ -98,6 +135,7 @@ export default function Page() {
                 setTitle('');
                 setBody('');
                 setSelectedUserId('');
+                setSelectedProduct(null);
             } else {
                 setError(response.message || 'Failed to send notification');
             }
@@ -194,6 +232,48 @@ export default function Page() {
                                     placeholder="Enter notification message"
                                 />
 
+                                <Autocomplete
+                                    options={productOptions}
+                                    getOptionLabel={(option) => `${option.p_code} — ${option.product_name}`}
+                                    isOptionEqualToValue={(option, value) => option.p_code === value.p_code}
+                                    loading={productSearchLoading}
+                                    value={selectedProduct}
+                                    onInputChange={(_e, value) => searchProducts(value)}
+                                    onChange={(_e, value) => setSelectedProduct(value)}
+                                    disabled={!contextStoreCode}
+                                    renderOption={(props, option) => (
+                                        <Box component="li" {...props} key={option.p_code}>
+                                            <Stack direction="row" alignItems="center" spacing={1.5} sx={{ width: '100%' }}>
+                                                <Avatar
+                                                    src={option.pcode_img}
+                                                    variant="rounded"
+                                                    sx={{ width: 40, height: 40 }}
+                                                />
+                                                <Stack sx={{ minWidth: 0 }}>
+                                                    <Typography variant="body2" noWrap>
+                                                        {option.product_name}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {option.p_code}
+                                                    </Typography>
+                                                </Stack>
+                                            </Stack>
+                                        </Box>
+                                    )}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="Attach a Product (optional)"
+                                            placeholder="Search by product name or code..."
+                                            helperText={
+                                                contextStoreCode
+                                                    ? 'Tapping the notification opens this product directly'
+                                                    : 'Select a store first to attach a product'
+                                            }
+                                        />
+                                    )}
+                                />
+
                                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                                     <Button
                                         variant="outlined"
@@ -201,6 +281,7 @@ export default function Page() {
                                             setTitle('');
                                             setBody('');
                                             setSelectedUserId('');
+                                            setSelectedProduct(null);
                                             setError('');
                                             setSuccess('');
                                         }}
