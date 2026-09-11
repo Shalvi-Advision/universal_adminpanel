@@ -47,6 +47,7 @@ import { PermissionButton } from 'src/components/permission-button/permission-bu
 
 import { ProductDialog } from './components/product-dialog';
 import { DeleteConfirmDialog } from '../dynamic/components/delete-confirm-dialog';
+import { BulkUpdateProductsDialog } from './components/bulk-update-products-dialog';
 
 export default function Page() {
   const { storeCode } = useStoreCode();
@@ -55,6 +56,7 @@ export default function Page() {
   const [error, setError] = useState<string>('');
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openBulkUpdateDialog, setOpenBulkUpdateDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [deleteId, setDeleteId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -292,16 +294,27 @@ export default function Page() {
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography variant="h4">Products</Typography>
             {storeCode && (
-              <PermissionButton section="ecommerce" action="create">
-                <Button
-                  variant="contained"
-                  startIcon={<Iconify icon={"mingcute:add-line" as any} />}
-                  onClick={handleCreate}
-                  disabled={subscriptionBlocked}
-                >
-                  Create Product
-                </Button>
-              </PermissionButton>
+              <Stack direction="row" spacing={2}>
+                <PermissionButton section="ecommerce" action="edit">
+                  <Button
+                    variant="outlined"
+                    startIcon={<Iconify icon={"eva:arrow-ios-upward-fill" as any} />}
+                    onClick={() => setOpenBulkUpdateDialog(true)}
+                  >
+                    Update Products
+                  </Button>
+                </PermissionButton>
+                <PermissionButton section="ecommerce" action="create">
+                  <Button
+                    variant="contained"
+                    startIcon={<Iconify icon={"mingcute:add-line" as any} />}
+                    onClick={handleCreate}
+                    disabled={subscriptionBlocked}
+                  >
+                    Create Product
+                  </Button>
+                </PermissionButton>
+              </Stack>
             )}
           </Stack>
 
@@ -598,6 +611,13 @@ export default function Page() {
         onConfirm={handleDeleteConfirm}
         title="Delete Product"
         message="Are you sure you want to delete this product? This action cannot be undone."
+      />
+
+      <BulkUpdateProductsDialog
+        open={openBulkUpdateDialog}
+        storeCode={storeCode}
+        onClose={() => setOpenBulkUpdateDialog(false)}
+        onDone={fetchProducts}
       />
     </>
   );

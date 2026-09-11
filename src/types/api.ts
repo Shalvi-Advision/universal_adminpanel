@@ -661,6 +661,20 @@ export interface ProductMasterPayload {
   additional_sub_category_ids?: string[];
 }
 
+// Summary returned by POST /api/admin/products/bulk-update-csv — see
+// routes/admin/products.js. Enough detail for the "here's what happened"
+// dialog shown after a store admin's rate/stock sheet upload.
+export interface BulkProductCsvUpdateResult {
+  total_rows: number;
+  updated: number;
+  price_changed: number;
+  status_changed: number;
+  skipped_not_found: number;
+  skipped_not_found_codes: string[];
+  package_size_not_updated: number;
+  package_size_not_updated_details: { p_code: string; package_size: string }[];
+}
+
 // Category type matching backend model
 export interface Category {
   _id: string;
