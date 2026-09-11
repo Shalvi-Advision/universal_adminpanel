@@ -45,6 +45,8 @@ export default function Page() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
+  const [firebaseFileName, setFirebaseFileName] = useState('');
+  const [firebaseFileError, setFirebaseFileError] = useState('');
 
   const fetchIntegrations = useCallback(async () => {
     try {
@@ -94,6 +96,7 @@ export default function Page() {
       setError('');
       await updateSecrets({ [key]: secretDrafts[key] ?? '' });
       setSecretDrafts((prev) => ({ ...prev, [key]: '' }));
+      if (key === 'firebase_service_account_json') setFirebaseFileName('');
       setToast('Secret updated');
       await fetchIntegrations();
     } catch (err: any) {
@@ -101,6 +104,33 @@ export default function Page() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // A file input rather than a text field: a plain <input> mangles the
+  // private key's embedded newlines on paste, which a copy from a file
+  // picker's read-as-text never does.
+  const handleFirebaseFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setFirebaseFileError('');
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? '');
+      try {
+        JSON.parse(text);
+      } catch {
+        setFirebaseFileError('That file is not valid JSON');
+        setFirebaseFileName('');
+        setSecretDrafts((prev) => ({ ...prev, firebase_service_account_json: '' }));
+        return;
+      }
+      setFirebaseFileName(file.name);
+      setSecretDrafts((prev) => ({ ...prev, firebase_service_account_json: text }));
+    };
+    reader.onerror = () => setFirebaseFileError('Could not read that file');
+    reader.readAsText(file);
   };
 
   if (loading) {
@@ -227,6 +257,37 @@ export default function Page() {
                   </Stack>
                 </Stack>
               ))}
+
+              <Stack spacing={1}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography variant="subtitle2">Firebase Service Account (push notifications)</Typography>
+                  <Chip
+                    size="small"
+                    color={secretsSet.firebase_service_account_json ? 'success' : 'default'}
+                    label={secretsSet.firebase_service_account_json ? 'Set' : 'Not set'}
+                  />
+                </Stack>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  The Admin SDK service account JSON for this tenant&apos;s own Firebase project — needed
+                  because each app flavor mints push tokens against its own project, not a shared one.
+                  Leave unset to fall back to the shared project.
+                </Typography>
+                {firebaseFileError && <Alert severity="error">{firebaseFileError}</Alert>}
+                <Stack direction="row" spacing={1}>
+                  <Button component="label" variant="outlined" sx={{ height: 40, flexShrink: 0 }}>
+                    {firebaseFileName || 'Choose JSON file'}
+                    <input type="file" accept=".json" hidden onChange={handleFirebaseFileSelected} />
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    disabled={saving || !(secretDrafts.firebase_service_account_json ?? '').trim()}
+                    onClick={() => handleSaveSecret('firebase_service_account_json')}
+                    sx={{ height: 40 }}
+                  >
+                    Update
+                  </Button>
+                </Stack>
+              </Stack>
             </Stack>
           </Card>
         </Grid>
