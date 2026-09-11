@@ -711,6 +711,9 @@ export interface Department {
   store_code: string | null;
   image_link: string;
   sequence_id: number;
+  // Whether this department shows on the customer mobile app. Defaults
+  // true; absent on documents created before this field existed.
+  is_visible?: boolean;
   __v?: number;
 }
 
@@ -723,6 +726,7 @@ export interface DepartmentPayload {
   dept_no_of_col?: number;
   store_code?: string;
   image_link?: string;
+  is_visible?: boolean;
 }
 
 // Departments query parameters for GET endpoint

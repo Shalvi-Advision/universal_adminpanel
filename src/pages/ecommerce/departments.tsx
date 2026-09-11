@@ -8,8 +8,10 @@ import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Table from '@mui/material/Table';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Button from '@mui/material/Button';
 import Avatar from '@mui/material/Avatar';
+import Tooltip from '@mui/material/Tooltip';
 import TableRow from '@mui/material/TableRow';
 import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
@@ -24,7 +26,7 @@ import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { CONFIG } from 'src/config-global';
-import { deleteDepartment, getAllDepartments } from 'src/services/departments';
+import { deleteDepartment, updateDepartment, getAllDepartments } from 'src/services/departments';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
@@ -44,6 +46,7 @@ export default function Page() {
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [deleteId, setDeleteId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [togglingId, setTogglingId] = useState('');
   const limit = 20;
 
   const fetchDepartments = useCallback(async () => {
@@ -107,6 +110,22 @@ export default function Page() {
     fetchDepartments();
   };
 
+  const handleToggleVisible = async (dept: Department) => {
+    try {
+      setTogglingId(dept._id);
+      // Same partial-update pattern as Category's toggle: Mongoose's
+      // findByIdAndUpdate treats a plain object with no top-level `$`
+      // operators as an implicit $set, so sending only is_visible here
+      // never touches this department's other fields.
+      await updateDepartment(dept._id, { is_visible: !(dept.is_visible ?? true) });
+      await fetchDepartments();
+    } catch (err: any) {
+      setError(err.message || 'Failed to update visibility');
+    } finally {
+      setTogglingId('');
+    }
+  };
+
   const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
   };
@@ -166,19 +185,20 @@ export default function Page() {
                       <TableCell>Store Code</TableCell>
                       <TableCell align="right">Sequence</TableCell>
                       <TableCell align="right">Columns</TableCell>
+                      <TableCell align="center">Visible</TableCell>
                       <TableCell align="right">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                        <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
                           <CircularProgress />
                         </TableCell>
                       </TableRow>
                     ) : departments.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                        <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
                           <Typography variant="body2" color="text.secondary">
                             No departments found
                           </Typography>
@@ -218,6 +238,23 @@ export default function Page() {
                           </TableCell>
                           <TableCell align="right">
                             <Typography variant="body2">{item.dept_no_of_col}</Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Tooltip
+                              title={
+                                (item.is_visible ?? true)
+                                  ? 'Shown on the mobile app'
+                                  : 'Hidden from the mobile app'
+                              }
+                            >
+                              <PermissionButton section="ecommerce" action="edit" fallback="disable">
+                                <Switch
+                                  checked={item.is_visible ?? true}
+                                  disabled={togglingId === item._id}
+                                  onChange={() => handleToggleVisible(item)}
+                                />
+                              </PermissionButton>
+                            </Tooltip>
                           </TableCell>
                           <TableCell align="right">
                             <PermissionButton section="ecommerce" action="edit">

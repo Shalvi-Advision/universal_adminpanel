@@ -27,7 +27,10 @@ export async function createDepartment(data: DepartmentPayload): Promise<ApiResp
   return apiClient.post<ApiResponse<Department>>('/api/admin/categories/departments', data);
 }
 
-export async function updateDepartment(id: string, data: DepartmentPayload): Promise<ApiResponse<Department>> {
+export async function updateDepartment(
+  id: string,
+  data: Partial<DepartmentPayload>
+): Promise<ApiResponse<Department>> {
   return apiClient.put<ApiResponse<Department>>(`/api/admin/categories/departments/${id}`, data);
 }
 

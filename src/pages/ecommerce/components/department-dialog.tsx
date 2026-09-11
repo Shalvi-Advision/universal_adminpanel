@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import TextField from '@mui/material/TextField';
@@ -11,6 +12,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
+import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { createDepartment, updateDepartment } from 'src/services/departments';
 
@@ -35,6 +37,7 @@ export function DepartmentDialog({ open, department, onClose, onSuccess }: Depar
   const [deptNoOfCol, setDeptNoOfCol] = useState<number | ''>('');
   const [storeCode, setStoreCode] = useState('');
   const [imageLink, setImageLink] = useState('');
+  const [isVisible, setIsVisible] = useState(true);
 
   // Load data when editing
   useEffect(() => {
@@ -46,6 +49,7 @@ export function DepartmentDialog({ open, department, onClose, onSuccess }: Depar
       setDeptNoOfCol(department.dept_no_of_col ?? '');
       setStoreCode(department.store_code ?? '');
       setImageLink(department.image_link ?? '');
+      setIsVisible(department.is_visible ?? true);
     } else {
       // Reset form for create
       setDepartmentId('');
@@ -55,6 +59,7 @@ export function DepartmentDialog({ open, department, onClose, onSuccess }: Depar
       setDeptNoOfCol('');
       setStoreCode('');
       setImageLink('');
+      setIsVisible(true);
     }
     setError('');
   }, [department, open]);
@@ -97,6 +102,7 @@ export function DepartmentDialog({ open, department, onClose, onSuccess }: Depar
       dept_no_of_col: deptNoOfCol === '' ? 0 : Number(deptNoOfCol),
       store_code: storeCode.trim() || undefined,
       image_link: imageLink.trim() || undefined,
+      is_visible: isVisible,
     };
 
     try {
@@ -210,6 +216,11 @@ export function DepartmentDialog({ open, department, onClose, onSuccess }: Depar
             value={imageLink}
             onChange={(url) => setImageLink(url)}
             folder="departments"
+          />
+
+          <FormControlLabel
+            control={<Switch checked={isVisible} onChange={(e) => setIsVisible(e.target.checked)} />}
+            label="Visible on mobile app"
           />
         </Stack>
       </DialogContent>
