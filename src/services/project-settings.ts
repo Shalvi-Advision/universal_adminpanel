@@ -37,6 +37,12 @@ export interface ProjectSettingsConfig {
 
   // Home screen rollout switch — 'true' renders home from the server feed.
   home_feed_enabled: string;
+
+  // Which pre-installed launcher icon is currently active
+  // ('default' | 'festival' | 'premium'). Every variant ships inside the app
+  // binary at build time; this only picks which one shows — no store update
+  // needed to change it.
+  active_app_icon: string;
 }
 
 export interface ProjectSettingsResponse {

@@ -7,6 +7,7 @@ import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Switch from '@mui/material/Switch';
+import MenuItem from '@mui/material/MenuItem';
 import Snackbar from '@mui/material/Snackbar';
 import Container from '@mui/material/Container';
 import TextField from '@mui/material/TextField';
@@ -31,6 +32,7 @@ const CONFIG_FIELDS: (keyof ProjectSettingsConfig)[] = [
   'contact_email',
   'contact_phone',
   'home_feed_enabled',
+  'active_app_icon',
 ];
 
 // ----------------------------------------------------------------------
@@ -191,6 +193,31 @@ export default function Page() {
               }
               label="Server-driven home layout"
             />
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 0.5 }}>
+              App Icon
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+              Switches the installed app&apos;s launcher icon on its next launch — like Zomato
+              swapping to a festival icon. Every variant is already built into the app; this only
+              picks which one shows, so it takes effect with no update and no new download.
+            </Typography>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Active Icon"
+              value={config.active_app_icon || 'default'}
+              onChange={(e) => set('active_app_icon')(e.target.value)}
+            >
+              <MenuItem value="default">Default</MenuItem>
+              <MenuItem value="festival">Festival</MenuItem>
+              <MenuItem value="premium">Premium</MenuItem>
+            </TextField>
           </Card>
         </Grid>
       </Grid>
