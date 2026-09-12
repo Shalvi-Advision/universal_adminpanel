@@ -111,6 +111,7 @@ export function parsePopularCategoryItems(content: string): PopularCategoryItem[
 
   return objects.map((obj, index) => ({
     sub_category_id: obj.sub_category_id || '',
+    reference_type: obj.reference_type === 'category' ? 'category' : 'subcategory',
     position: obj.position ? Number(obj.position) : index + 1,
     metadata: {
       badge: obj.badge || undefined,

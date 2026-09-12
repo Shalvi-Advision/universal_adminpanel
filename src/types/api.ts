@@ -363,6 +363,12 @@ export interface AdvertisementPayload {
 // Popular Category Subcategory Item (nested in PopularCategory)
 export interface PopularCategoryItem {
   sub_category_id: string;
+  // Which collection sub_category_id is an id into. Category and Subcategory
+  // ids are both small per-tenant sequences that commonly collide, so this
+  // makes the admin's choice explicit instead of the backend guessing.
+  // Defaults to 'subcategory' server-side when omitted, matching every tile
+  // saved before this field existed (ported from SeasonalCategoryItem).
+  reference_type?: 'category' | 'subcategory';
   store_code?: string;
   position: number;
   metadata?: {
