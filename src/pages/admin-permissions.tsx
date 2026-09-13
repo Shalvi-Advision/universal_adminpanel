@@ -1,5 +1,5 @@
-import type { User } from 'src/types/api';
 import type { Project } from 'src/services/projects';
+import type { User, ProjectStore } from 'src/types/api';
 import type { UserPermissions, PermissionSection } from 'src/types/permissions';
 
 import { useState, useEffect } from 'react';
@@ -27,11 +27,17 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TableContainer from '@mui/material/TableContainer';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { CONFIG } from 'src/config-global';
 import { getProjects } from 'src/services/projects';
-import { getAdminUsers, createAdmin, updateAdmin } from 'src/services/admin-permissions';
+import {
+  createAdmin,
+  updateAdmin,
+  getAdminUsers,
+  getProjectStores,
+} from 'src/services/admin-permissions';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
@@ -84,6 +90,43 @@ export default function AdminPermissionsPage() {
   const [newAdmin, setNewAdmin] = useState({ name: '', mobile: '', email: '' });
   const [saving, setSaving] = useState(false);
 
+  // Store restriction — only meaningful when editProjectCodes has exactly
+  // one entry (see resolveStoreCodes in routes/admin/permissions.js).
+  const [restrictStores, setRestrictStores] = useState(false);
+  const [editStoreCodes, setEditStoreCodes] = useState<string[]>([]);
+  const [projectStores, setProjectStores] = useState<ProjectStore[]>([]);
+  const [loadingStores, setLoadingStores] = useState(false);
+
+  const singleProjectCode = editProjectCodes.length === 1 ? editProjectCodes[0] : null;
+
+  // Fetch the store list whenever the dialog settles on exactly one
+  // project. Cleared (and store restriction reset) the moment that stops
+  // being true, so stale stores from a previous project selection can never
+  // linger into a save.
+  useEffect(() => {
+    let active = true;
+
+    if (!dialogOpen || !singleProjectCode) {
+      setProjectStores([]);
+    } else {
+      setLoadingStores(true);
+      getProjectStores(singleProjectCode)
+        .then((res) => {
+          if (active && res.success) setProjectStores(res.data);
+        })
+        .catch(() => {
+          if (active) setProjectStores([]);
+        })
+        .finally(() => {
+          if (active) setLoadingStores(false);
+        });
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [dialogOpen, singleProjectCode]);
+
   const fetchAdmins = async () => {
     try {
       setLoading(true);
@@ -117,6 +160,9 @@ export default function AdminPermissionsPage() {
     }
     setEditPermissions(merged);
     setEditProjectCodes(admin.allowed_project_codes || []);
+    const storeCodes = admin.allowed_store_codes || [];
+    setEditStoreCodes(storeCodes);
+    setRestrictStores(storeCodes.length > 0);
     setDialogOpen(true);
     setSuccess('');
   };
@@ -126,6 +172,8 @@ export default function AdminPermissionsPage() {
     setSelectedAdmin(null);
     setEditPermissions(buildDefaultPermissions());
     setEditProjectCodes([]);
+    setEditStoreCodes([]);
+    setRestrictStores(false);
     setNewAdmin({ name: '', mobile: '', email: '' });
     setDialogOpen(true);
     setSuccess('');
@@ -157,12 +205,28 @@ export default function AdminPermissionsPage() {
     setEditProjectCodes((prev) =>
       prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
     );
+    // Any project change invalidates whatever store selection was made for
+    // the previous single-project state.
+    setRestrictStores(false);
+    setEditStoreCodes([]);
+  };
+
+  const handleToggleStore = (code: string) => {
+    setEditStoreCodes((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+    );
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
       setError('');
+
+      if (restrictStores && editStoreCodes.length === 0) {
+        setError('Select at least one store, or turn off store restriction');
+        return;
+      }
+      const allowed_store_codes = restrictStores ? editStoreCodes : [];
 
       if (dialogMode === 'create') {
         if (!newAdmin.name.trim() || !/^\d{10}$/.test(newAdmin.mobile.trim())) {
@@ -179,6 +243,7 @@ export default function AdminPermissionsPage() {
           email: newAdmin.email.trim() || undefined,
           permissions: editPermissions,
           allowed_project_codes: editProjectCodes,
+          allowed_store_codes,
         });
         setSuccess(`Admin ${newAdmin.name} created`);
       } else {
@@ -190,6 +255,7 @@ export default function AdminPermissionsPage() {
         await updateAdmin(selectedAdmin._id, {
           permissions: editPermissions,
           allowed_project_codes: editProjectCodes,
+          allowed_store_codes,
         });
         setSuccess(`Updated ${selectedAdmin.name || selectedAdmin.mobile}`);
       }
@@ -248,6 +314,7 @@ export default function AdminPermissionsPage() {
                       <TableCell>Mobile</TableCell>
                       <TableCell>Role</TableCell>
                       <TableCell>Projects</TableCell>
+                      <TableCell>Stores</TableCell>
                       <TableCell>Permissions Summary</TableCell>
                       <TableCell align="right">Actions</TableCell>
                     </TableRow>
@@ -299,6 +366,21 @@ export default function AdminPermissionsPage() {
                         <TableCell>
                           <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                             {admin.isSuperAdmin ? (
+                              <Chip label="All stores" color="success" size="small" variant="outlined" />
+                            ) : (admin.allowed_store_codes || []).length ? (
+                              (admin.allowed_store_codes || []).map((code) => (
+                                <Chip key={code} label={code} size="small" variant="outlined" color="secondary" />
+                              ))
+                            ) : (
+                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                All stores
+                              </Typography>
+                            )}
+                          </Stack>
+                        </TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                            {admin.isSuperAdmin ? (
                               <Chip label="Full Access" color="success" size="small" variant="outlined" />
                             ) : (
                               SECTIONS.filter(
@@ -330,7 +412,7 @@ export default function AdminPermissionsPage() {
                     ))}
                     {admins.length === 0 && !loading && (
                       <TableRow>
-                        <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
+                        <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                             No admin users found
                           </Typography>
@@ -403,6 +485,60 @@ export default function AdminPermissionsPage() {
                 );
               })}
             </Stack>
+
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Store Access
+            </Typography>
+            {singleProjectCode ? (
+              <>
+                <FormControlLabel
+                  sx={{ mb: 1, display: 'block' }}
+                  control={
+                    <Switch
+                      checked={restrictStores}
+                      onChange={(e) => {
+                        setRestrictStores(e.target.checked);
+                        if (!e.target.checked) setEditStoreCodes([]);
+                      }}
+                    />
+                  }
+                  label={restrictStores ? 'Restricted to specific stores' : 'All stores in this project'}
+                />
+                {restrictStores &&
+                  (loadingStores ? (
+                    <Box sx={{ display: 'flex', py: 1 }}>
+                      <CircularProgress size={20} />
+                    </Box>
+                  ) : (
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 3 }}>
+                      {projectStores.map((store) => {
+                        const checked = editStoreCodes.includes(store.store_code);
+                        return (
+                          <Chip
+                            key={store.store_code}
+                            label={`${store.store_name} (${store.store_code})`}
+                            color={checked ? 'secondary' : 'default'}
+                            variant={checked ? 'filled' : 'outlined'}
+                            onClick={() => handleToggleStore(store.store_code)}
+                            icon={checked ? <Iconify icon="eva:checkmark-fill" /> : undefined}
+                          />
+                        );
+                      })}
+                      {projectStores.length === 0 && (
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          No stores found for this project
+                        </Typography>
+                      )}
+                    </Stack>
+                  ))}
+              </>
+            ) : (
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 3 }}>
+                {editProjectCodes.length === 0
+                  ? 'Assign a project above to optionally restrict this admin to specific stores.'
+                  : 'Store restriction is only available when exactly one project is assigned.'}
+              </Typography>
+            )}
 
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
               Section Permissions

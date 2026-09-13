@@ -1,5 +1,5 @@
-import type { User, ApiResponse } from 'src/types/api';
 import type { UserPermissions } from 'src/types/permissions';
+import type { User, ApiResponse, ProjectStore } from 'src/types/api';
 
 import { apiClient } from 'src/utils/api-client';
 
@@ -9,11 +9,13 @@ export interface CreateAdminPayload {
   email?: string;
   permissions?: UserPermissions;
   allowed_project_codes: string[];
+  allowed_store_codes?: string[];
 }
 
 export interface UpdateAdminPayload {
   permissions?: UserPermissions;
   allowed_project_codes?: string[];
+  allowed_store_codes?: string[];
 }
 
 export async function getAdminUsers(): Promise<ApiResponse<User[]>> {
@@ -40,4 +42,15 @@ export async function updateAdminPermissions(
   permissions: UserPermissions
 ): Promise<ApiResponse<User>> {
   return updateAdmin(userId, { permissions });
+}
+
+// Stores for a specific project, regardless of which project is currently
+// selected in the panel — backs the store checklist below the project
+// checklist on this page.
+export async function getProjectStores(
+  projectCode: string
+): Promise<ApiResponse<ProjectStore[]>> {
+  return apiClient.get<ApiResponse<ProjectStore[]>>(
+    `/api/admin/permissions/projects/${projectCode}/stores`
+  );
 }

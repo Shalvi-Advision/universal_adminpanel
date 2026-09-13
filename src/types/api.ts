@@ -16,6 +16,11 @@ export interface User {
   blockedAt?: string | null;
   blockedReason?: string | null;
   allowed_project_codes?: string[];
+  // Store-level restriction within the admin's project(s) — empty/absent
+  // means unrestricted (every store in their project). Only meaningful when
+  // allowed_project_codes has exactly one entry; see
+  // routes/admin/permissions.js's resolveStoreCodes.
+  allowed_store_codes?: string[];
   permissions?: import('./permissions').UserPermissions;
   // Gate for the Image CDN tools. Deliberately separate from isSuperAdmin —
   // see src/contexts/permissions-context.tsx.
@@ -1037,6 +1042,15 @@ export interface SeasonalCategoryPayload {
 export interface StoreCode {
   store_code: string;
   store_name: string;
+}
+
+// One store under a specific project, from
+// GET /api/admin/permissions/projects/:projectCode/stores — used to build
+// the store checklist on the Admin Permissions page.
+export interface ProjectStore {
+  store_code: string;
+  store_name: string;
+  is_enabled: boolean;
 }
 
 // ========================================
