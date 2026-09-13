@@ -21,6 +21,9 @@ export interface User {
   // allowed_project_codes has exactly one entry; see
   // routes/admin/permissions.js's resolveStoreCodes.
   allowed_store_codes?: string[];
+  // Whether an admin-login password has ever been set. Never the password
+  // itself — the API strips the hash and returns only this boolean.
+  hasPassword?: boolean;
   permissions?: import('./permissions').UserPermissions;
   // Gate for the Image CDN tools. Deliberately separate from isSuperAdmin —
   // see src/contexts/permissions-context.tsx.

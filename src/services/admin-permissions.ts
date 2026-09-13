@@ -7,6 +7,7 @@ export interface CreateAdminPayload {
   mobile: string;
   name: string;
   email?: string;
+  password?: string;
   permissions?: UserPermissions;
   allowed_project_codes: string[];
   allowed_store_codes?: string[];
@@ -16,6 +17,7 @@ export interface UpdateAdminPayload {
   permissions?: UserPermissions;
   allowed_project_codes?: string[];
   allowed_store_codes?: string[];
+  password?: string;
 }
 
 export async function getAdminUsers(): Promise<ApiResponse<User[]>> {

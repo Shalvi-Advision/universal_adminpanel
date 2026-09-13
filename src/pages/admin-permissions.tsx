@@ -26,6 +26,7 @@ import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -89,6 +90,13 @@ export default function AdminPermissionsPage() {
   const [editProjectCodes, setEditProjectCodes] = useState<string[]>([]);
   const [newAdmin, setNewAdmin] = useState({ name: '', mobile: '', email: '' });
   const [saving, setSaving] = useState(false);
+
+  // Password — optional on create (an admin without one just can't log in
+  // yet); on edit it's an opt-in "change password" toggle so a save never
+  // resets it by accident.
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [changePassword, setChangePassword] = useState(false);
 
   // Store restriction — only meaningful when editProjectCodes has exactly
   // one entry (see resolveStoreCodes in routes/admin/permissions.js).
@@ -163,6 +171,9 @@ export default function AdminPermissionsPage() {
     const storeCodes = admin.allowed_store_codes || [];
     setEditStoreCodes(storeCodes);
     setRestrictStores(storeCodes.length > 0);
+    setPassword('');
+    setShowPassword(false);
+    setChangePassword(false);
     setDialogOpen(true);
     setSuccess('');
   };
@@ -175,6 +186,9 @@ export default function AdminPermissionsPage() {
     setEditStoreCodes([]);
     setRestrictStores(false);
     setNewAdmin({ name: '', mobile: '', email: '' });
+    setPassword('');
+    setShowPassword(false);
+    setChangePassword(false);
     setDialogOpen(true);
     setSuccess('');
   };
@@ -228,6 +242,12 @@ export default function AdminPermissionsPage() {
       }
       const allowed_store_codes = restrictStores ? editStoreCodes : [];
 
+      const wantsPassword = dialogMode === 'create' ? password.length > 0 : changePassword;
+      if (wantsPassword && password.length < 6) {
+        setError('Password must be at least 6 characters');
+        return;
+      }
+
       if (dialogMode === 'create') {
         if (!newAdmin.name.trim() || !/^\d{10}$/.test(newAdmin.mobile.trim())) {
           setError('Name and a valid 10-digit mobile number are required');
@@ -241,6 +261,7 @@ export default function AdminPermissionsPage() {
           name: newAdmin.name.trim(),
           mobile: newAdmin.mobile.trim(),
           email: newAdmin.email.trim() || undefined,
+          password: password || undefined,
           permissions: editPermissions,
           allowed_project_codes: editProjectCodes,
           allowed_store_codes,
@@ -256,6 +277,7 @@ export default function AdminPermissionsPage() {
           permissions: editPermissions,
           allowed_project_codes: editProjectCodes,
           allowed_store_codes,
+          password: changePassword ? password : undefined,
         });
         setSuccess(`Updated ${selectedAdmin.name || selectedAdmin.mobile}`);
       }
@@ -315,6 +337,7 @@ export default function AdminPermissionsPage() {
                       <TableCell>Role</TableCell>
                       <TableCell>Projects</TableCell>
                       <TableCell>Stores</TableCell>
+                      <TableCell>Login</TableCell>
                       <TableCell>Permissions Summary</TableCell>
                       <TableCell align="right">Actions</TableCell>
                     </TableRow>
@@ -379,6 +402,13 @@ export default function AdminPermissionsPage() {
                           </Stack>
                         </TableCell>
                         <TableCell>
+                          {admin.isSuperAdmin || admin.hasPassword ? (
+                            <Chip label="Enabled" color="success" size="small" variant="outlined" />
+                          ) : (
+                            <Chip label="No password" color="error" size="small" variant="outlined" />
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                             {admin.isSuperAdmin ? (
                               <Chip label="Full Access" color="success" size="small" variant="outlined" />
@@ -412,7 +442,7 @@ export default function AdminPermissionsPage() {
                     ))}
                     {admins.length === 0 && !loading && (
                       <TableRow>
-                        <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                        <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
                           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                             No admin users found
                           </Typography>
@@ -459,6 +489,72 @@ export default function AdminPermissionsPage() {
                     onChange={(e) => setNewAdmin((p) => ({ ...p, email: e.target.value }))}
                   />
                 </Stack>
+                <TextField
+                  label="Password (optional)"
+                  helperText="Leave blank to create the admin without one — they won't be able to log in until a super admin sets it later."
+                  fullWidth
+                  size="small"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  sx={{ mb: 3 }}
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton onClick={() => setShowPassword((p) => !p)} edge="end">
+                            <Iconify icon={showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'} />
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+                <Divider sx={{ mb: 2 }} />
+              </>
+            )}
+
+            {dialogMode === 'edit' && (
+              <>
+                <FormControlLabel
+                  sx={{ mb: changePassword ? 1 : 3, display: 'block' }}
+                  control={
+                    <Switch
+                      checked={changePassword}
+                      onChange={(e) => {
+                        setChangePassword(e.target.checked);
+                        if (!e.target.checked) setPassword('');
+                      }}
+                    />
+                  }
+                  label={
+                    selectedAdmin?.hasPassword
+                      ? 'Change password'
+                      : 'Set password (no password set — this admin cannot log in yet)'
+                  }
+                />
+                {changePassword && (
+                  <TextField
+                    label="New password"
+                    fullWidth
+                    size="small"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    sx={{ mb: 3 }}
+                    slotProps={{
+                      input: {
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton onClick={() => setShowPassword((p) => !p)} edge="end">
+                              <Iconify icon={showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'} />
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                  />
+                )}
                 <Divider sx={{ mb: 2 }} />
               </>
             )}
