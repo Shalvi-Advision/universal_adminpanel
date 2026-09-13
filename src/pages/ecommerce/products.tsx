@@ -34,6 +34,8 @@ import { fCurrency } from 'src/utils/format-number';
 import { LOOKUP_LIST_LIMIT } from 'src/utils/lookup-constants';
 
 import { CONFIG } from 'src/config-global';
+import { getProjects } from 'src/services/projects';
+import { useProject } from 'src/contexts/project-context';
 import { getAllDepartments } from 'src/services/departments';
 import { useStoreCode } from 'src/contexts/store-code-context';
 import { getCategoriesByStore } from 'src/services/categories';
@@ -51,6 +53,8 @@ import { BulkUpdateProductsDialog } from './components/bulk-update-products-dial
 
 export default function Page() {
   const { storeCode } = useStoreCode();
+  const { projectCode } = useProject();
+  const [projectName, setProjectName] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -82,6 +86,24 @@ export default function Page() {
   // Subscription status gates product creation — checked once on mount,
   // independent of the store/filter-driven product list fetch above.
   const [subscriptionStatus, setSubscriptionStatus] = useState<MySubscriptionStatus | null>(null);
+
+  // Client name for the currently selected project — shown on the Bulk
+  // Update dialog so it's unmistakable which tenant a CSV is about to hit.
+  useEffect(() => {
+    let active = true;
+    getProjects()
+      .then((response) => {
+        if (!active || !response.success) return;
+        const match = response.data.find((p) => p.project_code === projectCode);
+        setProjectName(match?.client_name ?? '');
+      })
+      .catch(() => {
+        if (active) setProjectName('');
+      });
+    return () => {
+      active = false;
+    };
+  }, [projectCode]);
 
   useEffect(() => {
     let active = true;
@@ -616,6 +638,8 @@ export default function Page() {
       <BulkUpdateProductsDialog
         open={openBulkUpdateDialog}
         storeCode={storeCode}
+        projectCode={projectCode}
+        projectName={projectName}
         onClose={() => setOpenBulkUpdateDialog(false)}
         onDone={fetchProducts}
       />

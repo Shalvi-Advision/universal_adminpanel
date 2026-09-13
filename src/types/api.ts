@@ -679,6 +679,11 @@ export interface ProductMasterPayload {
 // routes/admin/products.js. Enough detail for the "here's what happened"
 // dialog shown after a store admin's rate/stock sheet upload.
 export interface BulkProductCsvUpdateResult {
+  // Echoed back by the server — what this update actually ran against, so
+  // the panel can confirm it after the fact rather than trust that the
+  // right project/store was selected at upload time.
+  project_code: string;
+  store_code: string | null;
   total_rows: number;
   updated: number;
   price_changed: number;

@@ -25,6 +25,8 @@ import { Iconify } from 'src/components/iconify';
 interface BulkUpdateProductsDialogProps {
   open: boolean;
   storeCode?: string | null;
+  projectCode: string;
+  projectName?: string;
   onClose: () => void;
   onDone: () => void;
 }
@@ -32,6 +34,8 @@ interface BulkUpdateProductsDialogProps {
 export function BulkUpdateProductsDialog({
   open,
   storeCode,
+  projectCode,
+  projectName,
   onClose,
   onDone,
 }: BulkUpdateProductsDialogProps) {
@@ -84,6 +88,21 @@ export function BulkUpdateProductsDialog({
             touched.
           </Typography>
 
+          <Alert severity={storeCode ? 'info' : 'warning'}>
+            This will update products for{' '}
+            <strong>
+              {projectName ? `${projectName} (${projectCode})` : projectCode}
+            </strong>
+            {storeCode ? (
+              <>
+                {' '}
+                — store <strong>{storeCode}</strong>.
+              </>
+            ) : (
+              ' — no store selected, so it will match by P_CODE across every store in this project.'
+            )}
+          </Alert>
+
           {error && <Alert severity="error">{error}</Alert>}
 
           <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
@@ -95,7 +114,17 @@ export function BulkUpdateProductsDialog({
 
           {result && (
             <Alert severity={result.skipped_not_found > 0 ? 'warning' : 'success'}>
-              Updated {result.updated} of {result.total_rows} product(s) from the CSV.
+              Updated {result.updated} of {result.total_rows} product(s) from the CSV — matched
+              against <strong>{result.project_code}</strong>
+              {result.store_code ? (
+                <>
+                  {' '}
+                  / store <strong>{result.store_code}</strong>
+                </>
+              ) : (
+                ' (no store filter)'
+              )}
+              .
               <Box component="ul" sx={{ m: '8px 0 0', pl: 2.5 }}>
                 <li>
                   <Typography variant="caption">{result.price_changed} price change(s)</Typography>
