@@ -77,6 +77,14 @@ export function SubcategoryDialog({
     setError('');
   }, [subcategory, open]);
 
+  // Main Category Name is fully derived from the selected Category — keeps
+  // the two fields from ever disagreeing, which a free-typed name couldn't
+  // guarantee.
+  useEffect(() => {
+    const match = categoryOptions.find((c) => c.idcategory_master === categoryId);
+    if (match) setMainCategoryName(match.category_name);
+  }, [categoryId, categoryOptions]);
+
   // Populate the "Additional Categories" picker options for the current store
   useEffect(() => {
     if (!open || !storeCode) {
@@ -188,20 +196,26 @@ export function SubcategoryDialog({
             required
           />
 
-          <TextField
-            fullWidth
-            label="Category ID"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            required
+          <Autocomplete
+            options={categoryOptions}
+            getOptionLabel={(option) => `${option.category_name} (${option.idcategory_master})`}
+            isOptionEqualToValue={(option, value) =>
+              option.idcategory_master === value.idcategory_master
+            }
+            value={categoryOptions.find((c) => c.idcategory_master === categoryId) ?? null}
+            onChange={(_event, newValue) => setCategoryId(newValue?.idcategory_master ?? '')}
+            loading={loadingCategoryOptions}
+            renderInput={(params) => (
+              <TextField {...params} label="Category" required helperText="Search by category name" />
+            )}
           />
 
           <TextField
             fullWidth
             label="Main Category Name"
             value={mainCategoryName}
-            onChange={(e) => setMainCategoryName(e.target.value)}
-            required
+            disabled
+            helperText="Derived automatically from the selected Category"
           />
 
           <ImageUpload

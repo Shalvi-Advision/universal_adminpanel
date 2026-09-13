@@ -1,4 +1,4 @@
-import type { Category, CategoryPayload } from 'src/types/api';
+import type { Category, Department, CategoryPayload } from 'src/types/api';
 
 import { useState, useEffect } from 'react';
 
@@ -9,11 +9,15 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import TextField from '@mui/material/TextField';
 import DialogTitle from '@mui/material/DialogTitle';
+import Autocomplete from '@mui/material/Autocomplete';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { LOOKUP_LIST_LIMIT } from 'src/utils/lookup-constants';
+
+import { getAllDepartments } from 'src/services/departments';
 import { useStoreCode } from 'src/contexts/store-code-context';
 import { createCategory, updateCategory } from 'src/services/categories';
 
@@ -43,6 +47,10 @@ export function CategoryDialog({ open, category, onClose, onSuccess }: CategoryD
   const [categoryBgColor, setCategoryBgColor] = useState('');
   const [isVisible, setIsVisible] = useState(true);
 
+  // Options for the searchable Department picker
+  const [departmentOptions, setDepartmentOptions] = useState<Department[]>([]);
+  const [loadingDepartmentOptions, setLoadingDepartmentOptions] = useState(false);
+
   // Load data when editing
   useEffect(() => {
     if (category) {
@@ -69,6 +77,31 @@ export function CategoryDialog({ open, category, onClose, onSuccess }: CategoryD
     }
     setError('');
   }, [category, open, contextStoreCode]);
+
+  // Populate the searchable Department picker for whichever store this
+  // category belongs to (its own store_code field, not necessarily the
+  // panel's currently-selected store).
+  useEffect(() => {
+    if (!open || !storeCode) {
+      setDepartmentOptions([]);
+      return undefined;
+    }
+    let active = true;
+    setLoadingDepartmentOptions(true);
+    getAllDepartments({ storeCode, limit: LOOKUP_LIST_LIMIT })
+      .then((response) => {
+        if (active && response.success) setDepartmentOptions(response.data);
+      })
+      .catch(() => {
+        if (active) setDepartmentOptions([]);
+      })
+      .finally(() => {
+        if (active) setLoadingDepartmentOptions(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [open, storeCode]);
 
   const validateForm = (): boolean => {
     if (!idCategoryMaster.trim()) {
@@ -179,10 +212,30 @@ export function CategoryDialog({ open, category, onClose, onSuccess }: CategoryD
 
           <TextField
             fullWidth
-            label="Department ID"
-            value={deptId}
-            onChange={(e) => setDeptId(e.target.value)}
+            label="Store Code"
+            value={storeCode}
+            onChange={(e) => setStoreCode(e.target.value)}
             required
+          />
+
+          <Autocomplete
+            options={departmentOptions}
+            getOptionLabel={(option) => `${option.department_name} (${option.department_id})`}
+            isOptionEqualToValue={(option, value) => option.department_id === value.department_id}
+            value={departmentOptions.find((d) => d.department_id === deptId) ?? null}
+            onChange={(_event, newValue) => setDeptId(newValue?.department_id ?? '')}
+            loading={loadingDepartmentOptions}
+            disabled={!storeCode.trim()}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Department"
+                required
+                helperText={
+                  storeCode.trim() ? 'Search by department name' : 'Enter a Store Code first'
+                }
+              />
+            )}
           />
 
           <TextField
@@ -193,14 +246,6 @@ export function CategoryDialog({ open, category, onClose, onSuccess }: CategoryD
             type="number"
             required
             helperText="Positive integer for display ordering"
-          />
-
-          <TextField
-            fullWidth
-            label="Store Code"
-            value={storeCode}
-            onChange={(e) => setStoreCode(e.target.value)}
-            required
           />
 
           <TextField

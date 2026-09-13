@@ -1,4 +1,4 @@
-import type { Product, Subcategory, ProductMasterPayload } from 'src/types/api';
+import type { Product, Category, Department, Subcategory, ProductMasterPayload } from 'src/types/api';
 
 import { useState, useEffect } from 'react';
 
@@ -22,7 +22,9 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { LOOKUP_LIST_LIMIT } from 'src/utils/lookup-constants';
 
+import { getAllDepartments } from 'src/services/departments';
 import { useStoreCode } from 'src/contexts/store-code-context';
+import { getCategoriesByStore } from 'src/services/categories';
 import { createProduct, updateProduct } from 'src/services/products';
 import { getSubcategoriesByStore } from 'src/services/subcategories';
 
@@ -67,9 +69,21 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
   const [subCategoryId, setSubCategoryId] = useState('');
   const [additionalSubCategoryIds, setAdditionalSubCategoryIds] = useState<string[]>([]);
 
-  // Options for the "Additional Subcategories" picker
+  // Options for the "Additional Subcategories" picker — the full store-wide
+  // list, since a product can be cross-listed under any subcategory, not
+  // just siblings of its primary Category.
   const [subcategoryOptions, setSubcategoryOptions] = useState<Subcategory[]>([]);
   const [loadingSubcategoryOptions, setLoadingSubcategoryOptions] = useState(false);
+
+  // Cascading options for the primary Department -> Category -> Subcategory
+  // pickers — each level's list is scoped to the level above it, same as
+  // the Department/Category/Subcategory filter on the Products list page.
+  const [departmentOptions, setDepartmentOptions] = useState<Department[]>([]);
+  const [loadingDepartmentOptions, setLoadingDepartmentOptions] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<Category[]>([]);
+  const [loadingCategoryOptions, setLoadingCategoryOptions] = useState(false);
+  const [primarySubcategoryOptions, setPrimarySubcategoryOptions] = useState<Subcategory[]>([]);
+  const [loadingPrimarySubcategoryOptions, setLoadingPrimarySubcategoryOptions] = useState(false);
 
   // Status
   const [pcodeStatus, setPcodeStatus] = useState('Y');
@@ -144,6 +158,91 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
       active = false;
     };
   }, [open, storeCode]);
+
+  // Department options for the current store
+  useEffect(() => {
+    if (!open || !storeCode) {
+      setDepartmentOptions([]);
+      return undefined;
+    }
+    let active = true;
+    setLoadingDepartmentOptions(true);
+    getAllDepartments({ storeCode, limit: LOOKUP_LIST_LIMIT })
+      .then((response) => {
+        if (active && response.success) setDepartmentOptions(response.data);
+      })
+      .catch(() => {
+        if (active) setDepartmentOptions([]);
+      })
+      .finally(() => {
+        if (active) setLoadingDepartmentOptions(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [open, storeCode]);
+
+  // Category options scoped to the selected Department
+  useEffect(() => {
+    if (!open || !storeCode || !deptId) {
+      setCategoryOptions([]);
+      return undefined;
+    }
+    let active = true;
+    setLoadingCategoryOptions(true);
+    getCategoriesByStore({ store_code: storeCode, deptId, limit: LOOKUP_LIST_LIMIT })
+      .then((response) => {
+        if (active && response.success) setCategoryOptions(response.data);
+      })
+      .catch(() => {
+        if (active) setCategoryOptions([]);
+      })
+      .finally(() => {
+        if (active) setLoadingCategoryOptions(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [open, storeCode, deptId]);
+
+  // Subcategory options scoped to the selected Category — the primary
+  // Subcategory picker, distinct from the full-list "Additional
+  // Subcategories" picker above.
+  useEffect(() => {
+    if (!open || !storeCode || !categoryId) {
+      setPrimarySubcategoryOptions([]);
+      return undefined;
+    }
+    let active = true;
+    setLoadingPrimarySubcategoryOptions(true);
+    getSubcategoriesByStore({ store_code: storeCode, categoryId, limit: LOOKUP_LIST_LIMIT })
+      .then((response) => {
+        if (active && response.success) setPrimarySubcategoryOptions(response.data);
+      })
+      .catch(() => {
+        if (active) setPrimarySubcategoryOptions([]);
+      })
+      .finally(() => {
+        if (active) setLoadingPrimarySubcategoryOptions(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [open, storeCode, categoryId]);
+
+  // A department/category change made by the admin invalidates whatever was
+  // selected below it — but only when they change it, not when the form
+  // first loads an existing product's already-consistent dept/category/sub.
+  const handleDeptChange = (newDeptId: string) => {
+    setDeptId(newDeptId);
+    setCategoryId('');
+    setSubCategoryId('');
+  };
+
+  const handleCategoryChange = (newCategoryId: string) => {
+    setCategoryId(newCategoryId);
+    setSubCategoryId('');
+  };
 
   const validateForm = (): boolean => {
     if (!pCode.trim()) {
@@ -417,30 +516,71 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Department ID"
-                value={deptId}
-                onChange={(e) => setDeptId(e.target.value)}
-                required
+              <Autocomplete
+                options={departmentOptions}
+                getOptionLabel={(option) => `${option.department_name} (${option.department_id})`}
+                isOptionEqualToValue={(option, value) =>
+                  option.department_id === value.department_id
+                }
+                value={departmentOptions.find((d) => d.department_id === deptId) ?? null}
+                onChange={(_event, newValue) => handleDeptChange(newValue?.department_id ?? '')}
+                loading={loadingDepartmentOptions}
+                disabled={!storeCode.trim()}
+                renderInput={(params) => (
+                  <TextField {...params} label="Department" required helperText="Search by name" />
+                )}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Category ID"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                required
+              <Autocomplete
+                options={categoryOptions}
+                getOptionLabel={(option) => `${option.category_name} (${option.idcategory_master})`}
+                isOptionEqualToValue={(option, value) =>
+                  option.idcategory_master === value.idcategory_master
+                }
+                value={categoryOptions.find((c) => c.idcategory_master === categoryId) ?? null}
+                onChange={(_event, newValue) =>
+                  handleCategoryChange(newValue?.idcategory_master ?? '')
+                }
+                loading={loadingCategoryOptions}
+                disabled={!deptId}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Category"
+                    required
+                    helperText={deptId ? 'Search by name' : 'Select a Department first'}
+                  />
+                )}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Subcategory ID"
-                value={subCategoryId}
-                onChange={(e) => setSubCategoryId(e.target.value)}
-                required
+              <Autocomplete
+                options={primarySubcategoryOptions}
+                getOptionLabel={(option) =>
+                  `${option.sub_category_name} (${option.idsub_category_master})`
+                }
+                isOptionEqualToValue={(option, value) =>
+                  option.idsub_category_master === value.idsub_category_master
+                }
+                value={
+                  primarySubcategoryOptions.find(
+                    (s) => s.idsub_category_master === subCategoryId
+                  ) ?? null
+                }
+                onChange={(_event, newValue) =>
+                  setSubCategoryId(newValue?.idsub_category_master ?? '')
+                }
+                loading={loadingPrimarySubcategoryOptions}
+                disabled={!categoryId}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Subcategory"
+                    required
+                    helperText={categoryId ? 'Search by name' : 'Select a Category first'}
+                  />
+                )}
               />
             </Grid>
             <Grid size={12}>
