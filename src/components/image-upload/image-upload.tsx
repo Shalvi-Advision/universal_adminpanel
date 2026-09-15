@@ -162,11 +162,7 @@ export function ImageUpload({
                 (e.target as HTMLImageElement).style.display = 'none';
               }}
             />
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="caption" noWrap>
-                {value}
-              </Typography>
-            </Box>
+            <Box sx={{ flex: 1 }} />
             <IconButton size="small" color="error" onClick={handleClearImage}>
               <Iconify icon="solar:trash-bin-trash-bold" />
             </IconButton>
