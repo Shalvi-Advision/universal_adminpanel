@@ -417,89 +417,6 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
             onChange={(e) => setBarcode(e.target.value)}
           />
 
-          {/* Packaging */}
-          <Typography variant="subtitle2" sx={{ mb: 1, mt: 2 }}>
-            Packaging
-          </Typography>
-
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Package Size"
-                value={packageSize}
-                onChange={handleNumberChange(setPackageSize)}
-                type="number"
-                required
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Package Unit"
-                value={packageUnit}
-                onChange={(e) => setPackageUnit(e.target.value)}
-                required
-                placeholder="e.g. kg, g, ml, L, pcs"
-              />
-            </Grid>
-          </Grid>
-
-          {/* Pricing */}
-          <Typography variant="subtitle2" sx={{ mb: 1, mt: 2 }}>
-            Pricing
-          </Typography>
-
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Product MRP"
-                value={productMrp}
-                onChange={handleNumberChange(setProductMrp)}
-                type="number"
-                required
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Our Price"
-                value={ourPrice}
-                onChange={handleNumberChange(setOurPrice)}
-                type="number"
-                required
-                helperText="Must be less than or equal to MRP"
-              />
-            </Grid>
-          </Grid>
-
-          {/* Stock */}
-          <Typography variant="subtitle2" sx={{ mb: 1, mt: 2 }}>
-            Stock
-          </Typography>
-
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Store Quantity"
-                value={storeQuantity}
-                onChange={handleNumberChange(setStoreQuantity)}
-                type="number"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Max Quantity Allowed"
-                value={maxQuantityAllowed}
-                onChange={handleNumberChange(setMaxQuantityAllowed)}
-                type="number"
-              />
-            </Grid>
-          </Grid>
-
           {/* Classification */}
           <Typography variant="subtitle2" sx={{ mb: 1, mt: 2 }}>
             Classification
@@ -620,6 +537,89 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
                     helperText="Cross-list this product under other subcategories, beyond its primary Subcategory ID above"
                   />
                 )}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Packaging */}
+          <Typography variant="subtitle2" sx={{ mb: 1, mt: 2 }}>
+            Packaging
+          </Typography>
+
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label="Package Size"
+                value={packageSize}
+                onChange={handleNumberChange(setPackageSize)}
+                type="number"
+                required
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label="Package Unit"
+                value={packageUnit}
+                onChange={(e) => setPackageUnit(e.target.value)}
+                required
+                placeholder="e.g. kg, g, ml, L, pcs"
+              />
+            </Grid>
+          </Grid>
+
+          {/* Pricing */}
+          <Typography variant="subtitle2" sx={{ mb: 1, mt: 2 }}>
+            Pricing
+          </Typography>
+
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label="Product MRP"
+                value={productMrp}
+                onChange={handleNumberChange(setProductMrp)}
+                type="number"
+                required
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label="Our Price"
+                value={ourPrice}
+                onChange={handleNumberChange(setOurPrice)}
+                type="number"
+                required
+                helperText="Must be less than or equal to MRP"
+              />
+            </Grid>
+          </Grid>
+
+          {/* Stock */}
+          <Typography variant="subtitle2" sx={{ mb: 1, mt: 2 }}>
+            Stock
+          </Typography>
+
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label="Store Quantity"
+                value={storeQuantity}
+                onChange={handleNumberChange(setStoreQuantity)}
+                type="number"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label="Max Quantity Allowed"
+                value={maxQuantityAllowed}
+                onChange={handleNumberChange(setMaxQuantityAllowed)}
+                type="number"
               />
             </Grid>
           </Grid>
