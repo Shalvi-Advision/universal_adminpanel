@@ -650,6 +650,9 @@ export interface ProductsQueryParams {
   // Defaults to 'all' server-side — omit to see every product regardless
   // of pcode_status, matching what search itself no longer hides.
   status?: 'active' | 'inactive' | 'all';
+  // Server ignores dept_id/category_id/sub_category_id when this is set —
+  // a product missing a valid classification can't be narrowed to one.
+  unclassified_only?: boolean;
 }
 
 // ProductMaster payload for create/update

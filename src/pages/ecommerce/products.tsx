@@ -11,9 +11,11 @@ import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
 import Table from '@mui/material/Table';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Select from '@mui/material/Select';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
 import Container from '@mui/material/Container';
@@ -28,6 +30,7 @@ import Pagination from '@mui/material/Pagination';
 import FormControl from '@mui/material/FormControl';
 import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { fCurrency } from 'src/utils/format-number';
@@ -79,6 +82,11 @@ export default function Page() {
   // the backend with no way to ask for anything else — an inactive product
   // was simply unfindable, search included. 'all' matches that fix.
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  // Diagnostic view: products whose dept_id/category_id/sub_category_id
+  // doesn't match any real department/category/subcategory — a free-typed
+  // reference can point at nothing after a rename or deletion elsewhere.
+  // Mutually exclusive with the cascading filter above (disabled below).
+  const [unclassifiedOnly, setUnclassifiedOnly] = useState(false);
   const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingSubcategories, setLoadingSubcategories] = useState(false);
@@ -147,6 +155,7 @@ export default function Page() {
         category_id: categoryId || undefined,
         sub_category_id: subCategoryId || undefined,
         status: statusFilter,
+        unclassified_only: unclassifiedOnly || undefined,
       });
       if (response.success) {
         setProducts(response.data);
@@ -157,7 +166,7 @@ export default function Page() {
     } finally {
       setLoading(false);
     }
-  }, [storeCode, page, searchQuery, deptId, categoryId, subCategoryId, statusFilter]);
+  }, [storeCode, page, searchQuery, deptId, categoryId, subCategoryId, statusFilter, unclassifiedOnly]);
 
   useEffect(() => {
     fetchProducts();
@@ -265,6 +274,17 @@ export default function Page() {
     setPage(1);
   };
 
+  const handleUnclassifiedOnlyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = event.target.checked;
+    setUnclassifiedOnly(checked);
+    if (checked) {
+      setDeptId('');
+      setCategoryId('');
+      setSubCategoryId('');
+    }
+    setPage(1);
+  };
+
   const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
   };
@@ -368,7 +388,7 @@ export default function Page() {
                         label="Select Department"
                         value={deptId}
                         onChange={handleDeptChange}
-                        disabled={loadingDepartments}
+                        disabled={loadingDepartments || unclassifiedOnly}
                         endAdornment={
                           loadingDepartments && (
                             <CircularProgress size={16} sx={{ mr: 3 }} />
@@ -394,7 +414,7 @@ export default function Page() {
                         label="Select Category"
                         value={categoryId}
                         onChange={handleCategoryChange}
-                        disabled={!deptId || loadingCategories}
+                        disabled={!deptId || loadingCategories || unclassifiedOnly}
                         endAdornment={
                           loadingCategories && (
                             <CircularProgress size={16} sx={{ mr: 3 }} />
@@ -425,7 +445,7 @@ export default function Page() {
                         label="Select Sub Category"
                         value={subCategoryId}
                         onChange={handleSubCategoryChange}
-                        disabled={!categoryId || loadingSubcategories}
+                        disabled={!categoryId || loadingSubcategories || unclassifiedOnly}
                         endAdornment={
                           loadingSubcategories && (
                             <CircularProgress size={16} sx={{ mr: 3 }} />
@@ -479,6 +499,18 @@ export default function Page() {
                       <MenuItem value="inactive">Inactive only</MenuItem>
                     </Select>
                   </FormControl>
+                  <Tooltip title="Products whose department, category, or subcategory doesn't match a real one anymore — e.g. after that department/category/subcategory was renamed to a new ID or deleted.">
+                    <FormControlLabel
+                      sx={{ whiteSpace: 'nowrap' }}
+                      control={
+                        <Switch
+                          checked={unclassifiedOnly}
+                          onChange={handleUnclassifiedOnlyChange}
+                        />
+                      }
+                      label="Unclassified only"
+                    />
+                  </Tooltip>
                 </Stack>
               </Box>
 
