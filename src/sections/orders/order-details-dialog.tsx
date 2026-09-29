@@ -129,10 +129,13 @@ export function OrderDetailsDialog({
     const totals = getOrderTotals(items);
     const deliveryCharges = order.order_summary?.delivery_charges ?? 0;
 
-    // The same one-step-forward action the list's Actions column offers, so an
-    // admin working inside the details view can walk the order through the
-    // whole workflow without going back to the table.
-    const nextStep = canEdit ? getNextOrderStatus(status) : null;
+    // Only the very first step (Accept) shows here — once an order is
+    // accepted, the rest of the workflow (Accepted By Store, In Packaging,
+    // Out for Delivery, Delivered) is walked from the list's own Actions
+    // column, not from inside this dialog. Showing every subsequent stage's
+    // button here too just meant clicking one instantly relabelled itself
+    // to the next stage, with no way to tell the two apart.
+    const nextStep = canEdit && status === 'pending' ? getNextOrderStatus(status) : null;
     const canCancel = canEdit && status !== 'cancelled' && status !== 'delivered';
 
     // Editing individual lines only makes sense while the order is still
