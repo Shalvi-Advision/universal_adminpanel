@@ -72,8 +72,13 @@ const EMPTY_COUNTS = ORDER_STATUSES.reduce((acc, status) => {
 }, {} as StatusCounts);
 
 export default function OrdersPage() {
-    const { hasPermission } = usePermissions();
+    const { hasPermission, isSuperAdmin } = usePermissions();
     const canEditOrders = hasPermission('orders', 'edit');
+    // The free-choice "jump to any status" dropdown is a super-admin-only
+    // tool — store admins/managers move an order forward one step at a time
+    // via the Actions column (renderStatusActions) instead, so this is
+    // deliberately its own flag rather than reusing canEditOrders.
+    const canEditOrderStatus = canEditOrders && isSuperAdmin;
 
     const [orders, setOrders] = useState<Order[]>([]);
     const [counts, setCounts] = useState<StatusCounts>(EMPTY_COUNTS);
@@ -305,9 +310,9 @@ export default function OrdersPage() {
             <Chip
                 size="small"
                 label={ORDER_STATUS_LABELS[status]}
-                onClick={canEditOrders ? () => openStatusDialog(order) : undefined}
+                onClick={canEditOrderStatus ? () => openStatusDialog(order) : undefined}
                 sx={{
-                    cursor: canEditOrders ? 'pointer' : 'default',
+                    cursor: canEditOrderStatus ? 'pointer' : 'default',
                     fontWeight: 600,
                     color: '#fff',
                     bgcolor: STATUS_COLORS[status],
@@ -500,20 +505,20 @@ export default function OrdersPage() {
                                             <TableCell>Payment Status</TableCell>
                                             <TableCell>Payment Mode</TableCell>
                                             <TableCell>Fulfillment</TableCell>
-                                            <TableCell>Order Status</TableCell>
+                                            {isSuperAdmin && <TableCell>Order Status</TableCell>}
                                             <TableCell>Actions</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {loading ? (
                                             <TableRow>
-                                                <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
+                                                <TableCell colSpan={isSuperAdmin ? 10 : 9} align="center" sx={{ py: 8 }}>
                                                     <CircularProgress />
                                                 </TableCell>
                                             </TableRow>
                                         ) : orders.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
+                                                <TableCell colSpan={isSuperAdmin ? 10 : 9} align="center" sx={{ py: 8 }}>
                                                     <Typography variant="body2" color="text.secondary">
                                                         No {ORDER_STATUS_LABELS[statusFilter].toLowerCase()} orders
                                                     </Typography>
@@ -633,9 +638,11 @@ export default function OrdersPage() {
                                                             />
                                                         </TableCell>
 
-                                                        <TableCell>
-                                                            {renderStatusChip(order)}
-                                                        </TableCell>
+                                                        {isSuperAdmin && (
+                                                            <TableCell>
+                                                                {renderStatusChip(order)}
+                                                            </TableCell>
+                                                        )}
 
                                                         <TableCell sx={{ minWidth: 150 }}>
                                                             {renderStatusActions(order)}
