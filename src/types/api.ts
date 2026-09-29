@@ -660,6 +660,7 @@ export interface ProductsQueryParams {
 // they read as a stable "how's this store doing overall" figure.
 export interface ProductsByStoreStats {
   total_products: number;
+  active_count: number;
   // Store-wide inactive count — present only while Unclassified-only is off.
   inactive_count: number | null;
   // Active count among the unclassified set — present only while

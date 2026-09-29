@@ -373,10 +373,11 @@ export default function Page() {
           {storeCode && stats && (
             <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
               <Chip label={`Total Products: ${stats.total_products}`} variant="outlined" />
+              <Chip label={`Active: ${stats.active_count}`} color="success" variant="outlined" />
               {unclassifiedOnly ? (
                 <Chip
-                  label={`Active: ${stats.unclassified_active_count ?? 0} (of ${totalCount} unclassified)`}
-                  color="success"
+                  label={`Unclassified & Active: ${stats.unclassified_active_count ?? 0} (of ${totalCount} unclassified)`}
+                  color="warning"
                   variant="outlined"
                 />
               ) : (
