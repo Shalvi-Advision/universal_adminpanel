@@ -38,16 +38,33 @@ export async function deleteProduct(id: string): Promise<ApiResponse<null>> {
 // — an update-only pass, never inserts a new product.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
+export interface BulkUpdateProductsCsvOptions {
+  storeCode?: string;
+  // Opt-in daily reconcile: also creates newly-stocked (p_code, store)
+  // combos and deactivates ones missing from today's file — see the
+  // backend route's own comment for the full semantics.
+  syncMode?: boolean;
+  // Forces through a store's deactivations after the safety guard held
+  // them back on a first sync_mode pass (see deactivation_blocked).
+  confirmDeactivation?: boolean;
+  // Computes and returns every count without writing anything.
+  dryRun?: boolean;
+}
+
 export async function bulkUpdateProductsCsv(
   file: File,
-  storeCode?: string
+  options: BulkUpdateProductsCsvOptions = {}
 ): Promise<{ success: boolean; message: string; data: BulkProductCsvUpdateResult }> {
+  const { storeCode, syncMode, confirmDeactivation, dryRun } = options;
   const token = sessionStorage.getItem('authToken');
   if (!token) throw new Error('Authentication required');
 
   const formData = new FormData();
   formData.append('file', file);
   if (storeCode) formData.append('store_code', storeCode);
+  if (syncMode) formData.append('sync_mode', 'true');
+  if (confirmDeactivation) formData.append('confirm_deactivation', 'true');
+  if (dryRun) formData.append('dry_run', 'true');
 
   const response = await fetch(`${API_BASE_URL}/api/admin/products/bulk-update-csv`, {
     method: 'POST',

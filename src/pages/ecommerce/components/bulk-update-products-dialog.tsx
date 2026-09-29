@@ -5,12 +5,14 @@ import { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { bulkUpdateProductsCsv } from 'src/services/products';
@@ -18,10 +20,13 @@ import { bulkUpdateProductsCsv } from 'src/services/products';
 import { Iconify } from 'src/components/iconify';
 
 // A store admin's own periodic rate/stock re-export — see the backend
-// route's own comment for the exact column set. Update-only: a p_code the
-// current catalog doesn't already have is reported and skipped, never
-// inserted (this file carries no department/category to place a new
-// product under). Never touches images or category placement.
+// route's own comment for the exact column set and full sync_mode
+// semantics. Plain mode is update-only: a p_code the current catalog
+// doesn't already have is reported and skipped, never inserted. Sync mode
+// additionally creates newly-stocked (p_code, store) combos (cloning
+// classification from a sibling elsewhere) and deactivates ones missing
+// from today's file, per store — guarded against a partial file wiping out
+// a store's catalog in one go.
 interface BulkUpdateProductsDialogProps {
   open: boolean;
   storeCode?: string | null;
@@ -40,14 +45,19 @@ export function BulkUpdateProductsDialog({
   onDone,
 }: BulkUpdateProductsDialogProps) {
   const [file, setFile] = useState<File | null>(null);
+  const [syncMode, setSyncMode] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const [result, setResult] = useState<BulkProductCsvUpdateResult | null>(null);
+  const [preview, setPreview] = useState<BulkProductCsvUpdateResult | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (open) {
       setFile(null);
+      setSyncMode(false);
       setResult(null);
+      setPreview(null);
       setError('');
     }
   }, [open]);
@@ -55,18 +65,42 @@ export function BulkUpdateProductsDialog({
   const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFile(e.target.files?.[0] ?? null);
     setResult(null);
+    setPreview(null);
     setError('');
   };
 
-  const handleUpload = async () => {
+  const handlePreview = async () => {
+    if (!file) return;
+    try {
+      setPreviewing(true);
+      setError('');
+      const res = await bulkUpdateProductsCsv(file, { storeCode: storeCode ?? undefined, syncMode, dryRun: true });
+      setPreview(res.data);
+    } catch (err: any) {
+      setError(err.message || 'Preview failed');
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
+  const handleUpload = async (confirmDeactivation = false) => {
     if (!file) return;
     try {
       setUploading(true);
       setError('');
       setResult(null);
-      const res = await bulkUpdateProductsCsv(file, storeCode ?? undefined);
+      const res = await bulkUpdateProductsCsv(file, {
+        storeCode: storeCode ?? undefined,
+        syncMode,
+        confirmDeactivation,
+      });
       setResult(res.data);
-      setFile(null);
+      setPreview(null);
+      // A blocked deactivation still needs the same file to force it
+      // through, so only clear the picker once nothing is left pending.
+      if (!res.data.deactivation_blocked?.length) {
+        setFile(null);
+      }
       onDone();
     } catch (err: any) {
       setError(err.message || 'Bulk update failed');
@@ -74,6 +108,58 @@ export function BulkUpdateProductsDialog({
       setUploading(false);
     }
   };
+
+  const renderCounts = (r: BulkProductCsvUpdateResult) => (
+    <Box component="ul" sx={{ m: '8px 0 0', pl: 2.5 }}>
+      <li>
+        <Typography variant="caption">{r.price_changed} price change(s)</Typography>
+      </li>
+      <li>
+        <Typography variant="caption">{r.status_changed} active/inactive change(s)</Typography>
+      </li>
+      {r.sync_mode && (
+        <>
+          <li>
+            <Typography variant="caption" color="success.main">
+              {r.created ?? 0} product(s) newly created (a store carrying a p_code for the first
+              time)
+            </Typography>
+          </li>
+          <li>
+            <Typography variant="caption" color="warning.main">
+              {r.deactivated ?? 0} product(s) deactivated (not in today&apos;s file for their store)
+            </Typography>
+          </li>
+          {!!r.unresolvable_pcodes?.length && (
+            <li>
+              <Typography variant="caption" color="error">
+                {r.unresolvable_pcodes.length} p_code(s) couldn&apos;t be created — no existing product
+                anywhere to copy a department/category/subcategory from: {r.unresolvable_pcodes.slice(0, 10).join(', ')}
+                {r.unresolvable_pcodes.length > 10 ? ', …' : ''}
+              </Typography>
+            </li>
+          )}
+        </>
+      )}
+      {r.skipped_not_found > 0 && (
+        <li>
+          <Typography variant="caption" color="error">
+            {r.skipped_not_found} p_code(s) not found in the catalog, skipped:{' '}
+            {r.skipped_not_found_codes.slice(0, 10).join(', ')}
+            {r.skipped_not_found > 10 ? ', …' : ''}
+          </Typography>
+        </li>
+      )}
+      {r.package_size_not_updated > 0 && (
+        <li>
+          <Typography variant="caption" color="warning.main">
+            {r.package_size_not_updated} product(s) had an unrecognized package size — left
+            unchanged, everything else on those rows was still updated
+          </Typography>
+        </li>
+      )}
+    </Box>
+  );
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -83,9 +169,7 @@ export function BulkUpdateProductsDialog({
           <Typography variant="body2" color="text.secondary">
             Upload your rate/stock sheet — columns P_CODE, BARCODE, package_size, BRAND_NAME,
             BR_CODE, our_price, product_mrp, quantity, store_code_status — to refresh price,
-            stock, and active/inactive status for every p_code it mentions. A p_code not already
-            in the catalog is skipped, not created; nothing else (images, department, category) is
-            touched.
+            stock, and active/inactive status for every p_code it mentions.
           </Typography>
 
           <Alert severity={storeCode ? 'info' : 'warning'}>
@@ -99,9 +183,19 @@ export function BulkUpdateProductsDialog({
                 — store <strong>{storeCode}</strong>.
               </>
             ) : (
-              ' — no store selected, so it will match by P_CODE across every store in this project.'
+              ' — no store selected, so BR_CODE in the file decides each row\'s store.'
             )}
           </Alert>
+
+          <FormControlLabel
+            control={<Switch checked={syncMode} onChange={(e) => setSyncMode(e.target.checked)} />}
+            label="Full daily sync"
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5 }}>
+            {syncMode
+              ? "Also creates a product the first time a store carries it, and deactivates any product not in today's file for its store — for a sheet that always lists everything currently active."
+              : 'Off: only updates p_codes already in the catalog. Nothing is created or deactivated for being absent from the file.'}
+          </Typography>
 
           {error && <Alert severity="error">{error}</Alert>}
 
@@ -110,10 +204,34 @@ export function BulkUpdateProductsDialog({
               {file ? file.name : 'Choose CSV file'}
               <input type="file" accept=".csv" hidden onChange={handleFileSelected} />
             </Button>
+            {syncMode && (
+              <Button variant="text" disabled={!file || previewing} onClick={handlePreview}>
+                {previewing ? 'Previewing…' : 'Preview (no changes made)'}
+              </Button>
+            )}
           </Stack>
 
+          {preview && (
+            <Alert severity="info">
+              Preview — updates {preview.updated}, creates {preview.created ?? 0}, deactivates{' '}
+              {preview.deactivated ?? 0} of {preview.total_rows} row(s). Nothing has been written
+              yet.
+              {renderCounts(preview)}
+              {!!preview.deactivation_blocked?.length && (
+                <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
+                  {preview.deactivation_blocked
+                    .map(
+                      (b) =>
+                        `${b.store_code}: would deactivate ${b.would_deactivate} of ${b.active_count} active (${Math.round(b.ratio * 100)}%) — held back, more than half the store's catalog`
+                    )
+                    .join('; ')}
+                </Typography>
+              )}
+            </Alert>
+          )}
+
           {result && (
-            <Alert severity={result.skipped_not_found > 0 ? 'warning' : 'success'}>
+            <Alert severity={result.deactivation_blocked?.length ? 'warning' : (result.skipped_not_found > 0 ? 'warning' : 'success')}>
               Updated {result.updated} of {result.total_rows} product(s) from the CSV — matched
               against <strong>{result.project_code}</strong>
               {result.store_code ? (
@@ -125,44 +243,41 @@ export function BulkUpdateProductsDialog({
                 ' (no store filter)'
               )}
               .
-              <Box component="ul" sx={{ m: '8px 0 0', pl: 2.5 }}>
-                <li>
-                  <Typography variant="caption">{result.price_changed} price change(s)</Typography>
-                </li>
-                <li>
-                  <Typography variant="caption">
-                    {result.status_changed} active/inactive change(s)
+              {renderCounts(result)}
+              {!!result.deactivation_blocked?.length && (
+                <Box sx={{ mt: 1.5 }}>
+                  <Typography variant="caption" color="error" sx={{ display: 'block', mb: 1 }}>
+                    Held back — deactivating would drop more than half of these stores&apos;
+                    currently-active catalog, likely a partial file:{' '}
+                    {result.deactivation_blocked
+                      .map(
+                        (b) =>
+                          `${b.store_code} (${b.would_deactivate} of ${b.active_count}, ${Math.round(b.ratio * 100)}%)`
+                      )
+                      .join(', ')}
                   </Typography>
-                </li>
-                {result.skipped_not_found > 0 && (
-                  <li>
-                    <Typography variant="caption" color="error">
-                      {result.skipped_not_found} p_code(s) not found in the catalog, skipped:{' '}
-                      {result.skipped_not_found_codes.slice(0, 10).join(', ')}
-                      {result.skipped_not_found > 10 ? ', …' : ''}
-                    </Typography>
-                  </li>
-                )}
-                {result.package_size_not_updated > 0 && (
-                  <li>
-                    <Typography variant="caption" color="warning.main">
-                      {result.package_size_not_updated} product(s) had an unrecognized package
-                      size — left unchanged, everything else on those rows was still updated
-                    </Typography>
-                  </li>
-                )}
-              </Box>
+                  <Button
+                    size="small"
+                    color="error"
+                    variant="outlined"
+                    disabled={uploading}
+                    onClick={() => handleUpload(true)}
+                  >
+                    This is correct — deactivate anyway
+                  </Button>
+                </Box>
+              )}
             </Alert>
           )}
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={uploading}>
-          {result ? 'Close' : 'Cancel'}
+          {result && !result.deactivation_blocked?.length ? 'Close' : 'Cancel'}
         </Button>
         <Button
           variant="contained"
-          onClick={handleUpload}
+          onClick={() => handleUpload(false)}
           disabled={!file || uploading}
           startIcon={uploading ? <CircularProgress size={16} /> : undefined}
         >

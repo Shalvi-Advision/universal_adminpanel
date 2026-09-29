@@ -712,6 +712,22 @@ export interface BulkProductCsvUpdateResult {
   skipped_not_found_codes: string[];
   package_size_not_updated: number;
   package_size_not_updated_details: { p_code: string; package_size: string }[];
+  // Present when the upload was run with sync_mode — see
+  // routes/admin/products.js's own comment on the route for the full
+  // semantics (create newly-stocked combos, deactivate dropped ones).
+  sync_mode?: boolean;
+  dry_run?: boolean;
+  created?: number;
+  created_details?: string[];
+  unresolvable_pcodes?: string[];
+  deactivated?: number;
+  deactivated_codes?: string[];
+  deactivation_blocked?: {
+    store_code: string;
+    active_count: number;
+    would_deactivate: number;
+    ratio: number;
+  }[];
 }
 
 // Category type matching backend model
