@@ -202,7 +202,7 @@ export default function OrdersPage() {
     // workflow, or Cancel Order. Both move the order into another tab, so the
     // list and the badges are refetched.
     const applyStatus = useCallback(
-        async (order: Order, status: OrderStatus) => {
+        async (order: Order, status: OrderStatus): Promise<boolean> => {
             try {
                 setUpdating(true);
                 setError('');
@@ -211,8 +211,10 @@ export default function OrdersPage() {
                     `Order ${order.order_number} moved to ${ORDER_STATUS_LABELS[status]}`
                 );
                 refresh();
+                return true;
             } catch (err: any) {
                 setError(err.message || 'Failed to update order status');
+                return false;
             } finally {
                 setUpdating(false);
             }
@@ -225,12 +227,19 @@ export default function OrdersPage() {
     // than waiting for the refetched list.
     const handleDetailStatusChange = useCallback(
         async (order: Order, status: OrderStatus) => {
-            await applyStatus(order, status);
+            const succeeded = await applyStatus(order, status);
+            if (!succeeded) return;
             setSelectedOrder((current) =>
                 current && current._id === order._id
                     ? { ...current, order_status: status }
                     : current
             );
+            // Acting on the order (Accept, the next stage, or Cancel) is the
+            // end of what you came into the details view to do — return to
+            // the list rather than leaving the dialog open on a now-stale
+            // view. Only on success: a failed update should leave the
+            // dialog open with the error visible, not vanish on you.
+            setDetailDialogOpen(false);
         },
         [applyStatus]
     );
