@@ -1,22 +1,33 @@
-import type { Order, OrderStatus } from 'src/services/orders';
+import type { Order, OrderItem, OrderStatus } from 'src/services/orders';
+
+import { useState } from 'react';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
+import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import Tooltip from '@mui/material/Tooltip';
 import Divider from '@mui/material/Divider';
 import TableRow from '@mui/material/TableRow';
+import TextField from '@mui/material/TextField';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import DialogTitle from '@mui/material/DialogTitle';
 import GlobalStyles from '@mui/material/GlobalStyles';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import CircularProgress from '@mui/material/CircularProgress';
+import DialogContentText from '@mui/material/DialogContentText';
 
 import { orderStatusLabel, getNextOrderStatus, normalizeOrderStatus } from 'src/services/orders';
+
+import { Iconify } from 'src/components/iconify';
 
 import {
     formatDate,
@@ -87,6 +98,8 @@ type Props = {
     onClose: () => void;
     onOpenHistory: () => void;
     onChangeStatus: (order: Order, status: OrderStatus) => void;
+    onUpdateItemQuantity?: (order: Order, pCode: string, quantity: number) => Promise<void>;
+    onRemoveItem?: (order: Order, pCode: string) => Promise<void>;
 };
 
 export function OrderDetailsDialog({
@@ -97,7 +110,17 @@ export function OrderDetailsDialog({
     onClose,
     onOpenHistory,
     onChangeStatus,
+    onUpdateItemQuantity,
+    onRemoveItem,
 }: Props) {
+    // Inline quantity edit — which p_code (if any) is mid-edit, and the
+    // textfield's own draft value while editing it.
+    const [editingPcode, setEditingPcode] = useState<string | null>(null);
+    const [editQuantity, setEditQuantity] = useState('');
+    const [itemBusyPcode, setItemBusyPcode] = useState<string | null>(null);
+    const [removeTarget, setRemoveTarget] = useState<OrderItem | null>(null);
+    const [itemError, setItemError] = useState('');
+
     if (!order) return null;
 
     const status = normalizeOrderStatus(order.order_status);
@@ -112,7 +135,61 @@ export function OrderDetailsDialog({
     const nextStep = canEdit ? getNextOrderStatus(status) : null;
     const canCancel = canEdit && status !== 'cancelled' && status !== 'delivered';
 
+    // Editing individual lines only makes sense while the order is still
+    // being worked — once delivered or cancelled, what shipped is history.
+    const canEditItems =
+        canEdit && !!onUpdateItemQuantity && !!onRemoveItem && status !== 'delivered' && status !== 'cancelled';
+    const activeItemCount = items.filter((item) => !item.removed).length;
+
     const storeName = order.store_name || order.store_code;
+
+    const startEdit = (item: OrderItem) => {
+        setItemError('');
+        setEditingPcode(item.p_code);
+        setEditQuantity(String(item.quantity));
+    };
+
+    const cancelEdit = () => {
+        setEditingPcode(null);
+        setEditQuantity('');
+    };
+
+    const saveEdit = async (item: OrderItem) => {
+        if (!onUpdateItemQuantity) return;
+        const quantity = parseInt(editQuantity, 10);
+        if (!Number.isInteger(quantity) || quantity < 1) {
+            setItemError('Enter a whole number of at least 1');
+            return;
+        }
+        if (quantity === item.quantity) {
+            cancelEdit();
+            return;
+        }
+        try {
+            setItemError('');
+            setItemBusyPcode(item.p_code);
+            await onUpdateItemQuantity(order, item.p_code, quantity);
+            cancelEdit();
+        } catch (err: any) {
+            setItemError(err.message || 'Failed to update quantity');
+        } finally {
+            setItemBusyPcode(null);
+        }
+    };
+
+    const confirmRemove = async () => {
+        if (!removeTarget || !onRemoveItem) return;
+        try {
+            setItemError('');
+            setItemBusyPcode(removeTarget.p_code);
+            await onRemoveItem(order, removeTarget.p_code);
+            setRemoveTarget(null);
+        } catch (err: any) {
+            setItemError(err.message || 'Failed to remove item');
+        } finally {
+            setItemBusyPcode(null);
+        }
+    };
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth scroll="paper">
@@ -234,6 +311,12 @@ export function OrderDetailsDialog({
                     </Stack>
                 </Box>
 
+                {itemError && (
+                    <Alert severity="error" className="no-print" sx={{ mt: 2 }} onClose={() => setItemError('')}>
+                        {itemError}
+                    </Alert>
+                )}
+
                 <Box sx={{ mt: 3, overflowX: 'auto' }}>
                     <Table size="small" sx={{ minWidth: 900 }}>
                         <TableHead>
@@ -246,35 +329,146 @@ export function OrderDetailsDialog({
                                 <TableCell sx={headCellSx}>Selling Price</TableCell>
                                 <TableCell sx={headCellSx}>Discount</TableCell>
                                 <TableCell sx={headCellSx}>Discounted Rate</TableCell>
+                                {canEditItems && (
+                                    <TableCell sx={{ ...headCellSx }} className="no-print">
+                                        Actions
+                                    </TableCell>
+                                )}
                             </TableRow>
                         </TableHead>
 
                         <TableBody>
                             {items.map((item, index) => {
                                 const line = getLineAmounts(item);
+                                const isEditingThis = editingPcode === item.p_code;
+                                const isBusyThis = itemBusyPcode === item.p_code;
+                                const wasEdited = item.original_quantity !== undefined;
+                                const strike = item.removed
+                                    ? { textDecoration: 'line-through', color: 'text.disabled' }
+                                    : undefined;
+
                                 return (
                                     <TableRow key={`${item.p_code}-${index}`} hover>
-                                        <TableCell sx={cellSx}>{index + 1}</TableCell>
-                                        <TableCell sx={cellSx}>
+                                        <TableCell sx={{ ...cellSx, ...strike }}>{index + 1}</TableCell>
+                                        <TableCell sx={{ ...cellSx, ...strike }}>
                                             {item.product_name} ({item.p_code})
+                                            {item.removed && (
+                                                <Chip
+                                                    label="Removed"
+                                                    size="small"
+                                                    color="error"
+                                                    variant="outlined"
+                                                    sx={{ ml: 1, textDecoration: 'none' }}
+                                                />
+                                            )}
                                         </TableCell>
-                                        <TableCell sx={cellSx}>{formatPackSize(item)}</TableCell>
-                                        <TableCell sx={cellSx}>{line.quantity}</TableCell>
+                                        <TableCell sx={{ ...cellSx, ...strike }}>
+                                            {formatPackSize(item)}
+                                        </TableCell>
                                         <TableCell sx={cellSx}>
+                                            {isEditingThis ? (
+                                                <TextField
+                                                    className="no-print"
+                                                    size="small"
+                                                    type="number"
+                                                    value={editQuantity}
+                                                    onChange={(e) => setEditQuantity(e.target.value)}
+                                                    slotProps={{ htmlInput: { min: 1, style: { width: 56 } } }}
+                                                    autoFocus
+                                                />
+                                            ) : item.removed ? (
+                                                <Box component="span" sx={strike}>
+                                                    {item.original_quantity ?? line.quantity}
+                                                </Box>
+                                            ) : wasEdited ? (
+                                                <Stack direction="row" spacing={0.5} alignItems="baseline">
+                                                    <Box
+                                                        component="span"
+                                                        sx={{ textDecoration: 'line-through', color: 'text.disabled' }}
+                                                    >
+                                                        {item.original_quantity}
+                                                    </Box>
+                                                    <Typography component="span" variant="body2">
+                                                        → {line.quantity}
+                                                    </Typography>
+                                                </Stack>
+                                            ) : (
+                                                line.quantity
+                                            )}
+                                        </TableCell>
+                                        <TableCell sx={{ ...cellSx, ...strike }}>
                                             {line.hasMrp ? formatAmount(line.mrp as number) : '—'}
                                         </TableCell>
-                                        <TableCell sx={cellSx}>
+                                        <TableCell sx={{ ...cellSx, ...strike }}>
                                             {formatAmount(line.sellingPrice)}
                                         </TableCell>
-                                        <TableCell sx={cellSx}>{formatAmount(line.discount)}</TableCell>
-                                        <TableCell sx={cellSx}>{formatAmount(line.net)}</TableCell>
+                                        <TableCell sx={{ ...cellSx, ...strike }}>
+                                            {formatAmount(line.discount)}
+                                        </TableCell>
+                                        <TableCell sx={{ ...cellSx, ...strike }}>
+                                            {formatAmount(line.net)}
+                                        </TableCell>
+                                        {canEditItems && (
+                                            <TableCell sx={cellSx} className="no-print">
+                                                {item.removed ? null : isEditingThis ? (
+                                                    <Stack direction="row" spacing={0.5}>
+                                                        <IconButton
+                                                            size="small"
+                                                            color="success"
+                                                            disabled={isBusyThis}
+                                                            onClick={() => saveEdit(item)}
+                                                        >
+                                                            {isBusyThis ? (
+                                                                <CircularProgress size={16} />
+                                                            ) : (
+                                                                <Iconify icon="eva:checkmark-fill" width={18} />
+                                                            )}
+                                                        </IconButton>
+                                                        <IconButton size="small" disabled={isBusyThis} onClick={cancelEdit}>
+                                                            <Iconify icon="mingcute:close-line" width={18} />
+                                                        </IconButton>
+                                                    </Stack>
+                                                ) : (
+                                                    <Stack direction="row" spacing={0.5}>
+                                                        <IconButton
+                                                            size="small"
+                                                            disabled={busy || isBusyThis}
+                                                            onClick={() => startEdit(item)}
+                                                        >
+                                                            <Iconify icon="solar:pen-bold" width={18} />
+                                                        </IconButton>
+                                                        <Tooltip
+                                                            title={
+                                                                activeItemCount <= 1
+                                                                    ? "Can't remove the last item — cancel the order instead"
+                                                                    : 'Remove from order'
+                                                            }
+                                                        >
+                                                            <span>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    color="error"
+                                                                    disabled={busy || isBusyThis || activeItemCount <= 1}
+                                                                    onClick={() => setRemoveTarget(item)}
+                                                                >
+                                                                    <Iconify
+                                                                        icon="solar:trash-bin-trash-bold"
+                                                                        width={18}
+                                                                    />
+                                                                </IconButton>
+                                                            </span>
+                                                        </Tooltip>
+                                                    </Stack>
+                                                )}
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 );
                             })}
 
                             {items.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={8} align="center" sx={cellSx}>
+                                    <TableCell colSpan={canEditItems ? 9 : 8} align="center" sx={cellSx}>
                                         No items on this order
                                     </TableCell>
                                 </TableRow>
@@ -289,6 +483,7 @@ export function OrderDetailsDialog({
                                 <TableCell sx={headCellSx}>{formatAmount(totals.net)}</TableCell>
                                 <TableCell sx={headCellSx}>{formatAmount(totals.discount)}</TableCell>
                                 <TableCell sx={headCellSx}>{formatAmount(totals.net)}</TableCell>
+                                {canEditItems && <TableCell sx={cellSx} className="no-print" />}
                             </TableRow>
 
                             <TableRow>
@@ -296,6 +491,7 @@ export function OrderDetailsDialog({
                                 <TableCell sx={headCellSx}>Delivery Charges +</TableCell>
                                 {spacerCells}
                                 <TableCell sx={headCellSx}>{formatAmount(deliveryCharges)}</TableCell>
+                                {canEditItems && <TableCell sx={cellSx} className="no-print" />}
                             </TableRow>
 
                             <TableRow>
@@ -305,6 +501,7 @@ export function OrderDetailsDialog({
                                 <TableCell sx={headCellSx}>
                                     {formatAmount(order.order_summary?.total_amount ?? 0)}
                                 </TableCell>
+                                {canEditItems && <TableCell sx={cellSx} className="no-print" />}
                             </TableRow>
                         </TableBody>
                     </Table>
@@ -342,6 +539,30 @@ export function OrderDetailsDialog({
                     </Button>
                 )}
             </DialogActions>
+
+            <Dialog open={!!removeTarget} onClose={() => setRemoveTarget(null)}>
+                <DialogTitle>Remove item from order?</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        {removeTarget?.product_name} will be removed from order #{order.order_number}
+                        and the customer will be notified. This can&apos;t be undone from here.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setRemoveTarget(null)} disabled={!!itemBusyPcode}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={confirmRemove}
+                        color="error"
+                        variant="contained"
+                        disabled={!!itemBusyPcode}
+                        startIcon={itemBusyPcode ? <CircularProgress size={16} /> : undefined}
+                    >
+                        Remove
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Dialog>
     );
 }

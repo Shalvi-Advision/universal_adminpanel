@@ -36,12 +36,14 @@ import { usePermissions } from 'src/contexts/permissions-context';
 import {
     getOrders,
     ORDER_STATUSES,
+    removeOrderItem,
     updateOrderStatus,
     getNextOrderStatus,
     updatePaymentStatus,
     ORDER_STATUS_LABELS,
     normalizeOrderStatus,
     getOrderStatusCounts,
+    updateOrderItemQuantity,
 } from 'src/services/orders';
 
 import { Scrollbar } from 'src/components/scrollbar';
@@ -231,6 +233,32 @@ export default function OrdersPage() {
             );
         },
         [applyStatus]
+    );
+
+    // Quantity/remove edits from inside the details view. Same in-place
+    // update as handleDetailStatusChange: the API's response is the full,
+    // freshly-recomputed order, so it replaces selectedOrder wholesale
+    // rather than trying to patch individual fields locally.
+    const handleUpdateItemQuantity = useCallback(
+        async (order: Order, pCode: string, quantity: number) => {
+            const response = await updateOrderItemQuantity(order._id, pCode, quantity);
+            setSelectedOrder((current) =>
+                current && current._id === order._id ? response.data : current
+            );
+            refresh();
+        },
+        [refresh]
+    );
+
+    const handleRemoveItem = useCallback(
+        async (order: Order, pCode: string) => {
+            const response = await removeOrderItem(order._id, pCode);
+            setSelectedOrder((current) =>
+                current && current._id === order._id ? response.data : current
+            );
+            refresh();
+        },
+        [refresh]
     );
 
     const handleUpdateStatus = async () => {
@@ -687,6 +715,8 @@ export default function OrdersPage() {
                 onClose={() => setDetailDialogOpen(false)}
                 onOpenHistory={() => setHistoryDialogOpen(true)}
                 onChangeStatus={handleDetailStatusChange}
+                onUpdateItemQuantity={handleUpdateItemQuantity}
+                onRemoveItem={handleRemoveItem}
             />
 
             <OrderHistoryDialog

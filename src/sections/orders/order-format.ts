@@ -97,15 +97,19 @@ export const getLineAmounts = (item: OrderItem) => {
     };
 };
 
+// Removed lines stay in the array (for the strikethrough row) but never
+// count toward totals — matches the API's own recomputeOrderSummary.
 export const getOrderTotals = (items: OrderItem[] = []) =>
-    items.reduce(
-        (acc, item) => {
-            const line = getLineAmounts(item);
-            return {
-                quantity: acc.quantity + line.quantity,
-                discount: acc.discount + line.discount,
-                net: acc.net + line.net,
-            };
-        },
-        { quantity: 0, discount: 0, net: 0 }
-    );
+    items
+        .filter((item) => !item.removed)
+        .reduce(
+            (acc, item) => {
+                const line = getLineAmounts(item);
+                return {
+                    quantity: acc.quantity + line.quantity,
+                    discount: acc.discount + line.discount,
+                    net: acc.net + line.net,
+                };
+            },
+            { quantity: 0, discount: 0, net: 0 }
+        );

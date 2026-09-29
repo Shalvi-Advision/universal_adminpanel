@@ -103,6 +103,14 @@ export interface OrderItem {
     brand_name?: string;
     pcode_img?: string;
     product_image?: string;
+    // Set by the API the first time an admin edits this line (models/Order.js)
+    // — the quantity the customer actually ordered, kept even after further
+    // edits so the pick list can always show the true original struck through.
+    original_quantity?: number;
+    // Soft-removed: still rendered (struck through), excluded from totals.
+    removed?: boolean;
+    edited_at?: string;
+    edited_by_name?: string;
 }
 
 // The eight buckets the Orders page exposes as tabs, in workflow order.
@@ -256,6 +264,29 @@ export async function updateOrder(
     data: Partial<Order>
 ): Promise<ApiResponse<Order>> {
     return apiClient.put<ApiResponse<Order>>(`/api/admin/orders/${id}`, data);
+}
+
+// Change one line's quantity on an already-placed order. Notifies the
+// customer (in-app + push) and recomputes order_summary server-side.
+export async function updateOrderItemQuantity(
+    id: string,
+    pCode: string,
+    quantity: number
+): Promise<ApiResponse<Order>> {
+    return apiClient.patch<ApiResponse<Order>>(
+        `/api/admin/orders/${id}/items/${encodeURIComponent(pCode)}/quantity`,
+        { quantity }
+    );
+}
+
+// Soft-removes one line from an already-placed order — kept on the order,
+// marked removed, never deleted. Notifies the customer and recomputes
+// order_summary server-side. Rejected if it's the last active line.
+export async function removeOrderItem(id: string, pCode: string): Promise<ApiResponse<Order>> {
+    return apiClient.patch<ApiResponse<Order>>(
+        `/api/admin/orders/${id}/items/${encodeURIComponent(pCode)}/remove`,
+        {}
+    );
 }
 
 // Delete order (only if placed or cancelled)
