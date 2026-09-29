@@ -1,6 +1,12 @@
 import type { SelectChangeEvent } from '@mui/material/Select';
 import type { MySubscriptionStatus } from 'src/services/subscriptions';
-import type { Product, Category, Department, Subcategory } from 'src/types/api';
+import type {
+  Product,
+  Category,
+  Department,
+  Subcategory,
+  ProductsByStoreStats,
+} from 'src/types/api';
 
 import { useState, useEffect, useCallback } from 'react';
 
@@ -69,6 +75,8 @@ export default function Page() {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [stats, setStats] = useState<ProductsByStoreStats | null>(null);
   const limit = 20;
 
   // Department -> Category -> Subcategory cascading filter
@@ -160,6 +168,8 @@ export default function Page() {
       if (response.success) {
         setProducts(response.data);
         setTotalPages(response.pagination.pages || response.pagination.totalPages || 1);
+        setTotalCount(response.pagination.total);
+        setStats(response.stats ?? null);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load products');
@@ -359,6 +369,25 @@ export default function Page() {
               </Stack>
             )}
           </Stack>
+
+          {storeCode && stats && (
+            <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+              <Chip label={`Total Products: ${stats.total_products}`} variant="outlined" />
+              {unclassifiedOnly ? (
+                <Chip
+                  label={`Active: ${stats.unclassified_active_count ?? 0} (of ${totalCount} unclassified)`}
+                  color="success"
+                  variant="outlined"
+                />
+              ) : (
+                <Chip
+                  label={`Inactive: ${stats.inactive_count ?? 0}`}
+                  color="default"
+                  variant="outlined"
+                />
+              )}
+            </Stack>
+          )}
 
           {!storeCode && (
             <Alert severity="warning">

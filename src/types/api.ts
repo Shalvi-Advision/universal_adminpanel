@@ -655,6 +655,22 @@ export interface ProductsQueryParams {
   unclassified_only?: boolean;
 }
 
+// Store-wide counters returned alongside the by-store product list —
+// deliberately ignore every filter (department/category/search/status) so
+// they read as a stable "how's this store doing overall" figure.
+export interface ProductsByStoreStats {
+  total_products: number;
+  // Store-wide inactive count — present only while Unclassified-only is off.
+  inactive_count: number | null;
+  // Active count among the unclassified set — present only while
+  // Unclassified-only is on.
+  unclassified_active_count: number | null;
+}
+
+export interface ProductsByStoreResponse extends PaginatedResponse<Product> {
+  stats: ProductsByStoreStats;
+}
+
 // ProductMaster payload for create/update
 export interface ProductMasterPayload {
   p_code: string;

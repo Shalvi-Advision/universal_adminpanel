@@ -1,9 +1,9 @@
 import type {
   Product,
   ApiResponse,
-  PaginatedResponse,
   ProductsQueryParams,
   ProductMasterPayload,
+  ProductsByStoreResponse,
   BulkProductCsvUpdateResult,
 } from 'src/types/api';
 
@@ -13,8 +13,8 @@ import { getSelectedProjectCode } from 'src/utils/project-code';
 // Get products by store code (POST endpoint)
 export async function getProductsByStore(
   params: ProductsQueryParams
-): Promise<PaginatedResponse<Product>> {
-  return apiClient.post<PaginatedResponse<Product>>('/api/admin/products/by-store', params);
+): Promise<ProductsByStoreResponse> {
+  return apiClient.post<ProductsByStoreResponse>('/api/admin/products/by-store', params);
 }
 
 export async function createProduct(data: ProductMasterPayload): Promise<ApiResponse<Product>> {
