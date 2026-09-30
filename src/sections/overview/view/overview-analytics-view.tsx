@@ -23,6 +23,7 @@ import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { DashboardContent } from 'src/layouts/dashboard';
+import { useStoreCode } from 'src/contexts/store-code-context';
 import { getRecentOrders, getDashboardOverview } from 'src/services/dashboard';
 
 import { Iconify } from 'src/components/iconify';
@@ -179,6 +180,7 @@ const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | '
 
 export function OverviewAnalyticsView() {
   const navigate = useNavigate();
+  const { storeCode, storeCodes } = useStoreCode();
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,8 +193,8 @@ export function OverviewAnalyticsView() {
         setError('');
 
         const [overviewResponse, ordersResponse] = await Promise.all([
-          getDashboardOverview(),
-          getRecentOrders(5)
+          getDashboardOverview(storeCode),
+          getRecentOrders(5, storeCode)
         ]);
 
         if (overviewResponse.success) {
@@ -209,7 +211,18 @@ export function OverviewAnalyticsView() {
     };
 
     fetchDashboardData();
-  }, []);
+    // Re-fetch whenever the branch picked in the sidebar's store switcher
+    // changes, so these KPIs stay in sync with every other store-scoped
+    // page in the panel instead of always showing the full tenant.
+  }, [storeCode]);
+
+  // Label for whichever store(s) currently selected, so it's clear at a
+  // glance whether "Total Orders" etc. means one branch or the whole
+  // tenant — a store-restricted admin's own store is applied server-side
+  // even before they pick anything here, so this also covers that case.
+  const activeStoreLabel = storeCode
+    ? storeCodes.find((s) => s.store_code === storeCode)?.store_name || storeCode
+    : null;
 
   const formatCurrency = (amount: number) => {
     if (amount >= 100000) return `₹${(amount / 100000).toFixed(2)}L`;
@@ -266,9 +279,15 @@ export function OverviewAnalyticsView() {
 
   return (
     <DashboardContent maxWidth="xl">
-      <Typography variant="h4" sx={{ mb: { xs: 3, md: 4 } }}>
-        Hi, Welcome back 👋
-      </Typography>
+      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: { xs: 3, md: 4 } }}>
+        <Typography variant="h4">Hi, Welcome back 👋</Typography>
+        <Chip
+          size="small"
+          label={activeStoreLabel ? `Showing: ${activeStoreLabel}` : 'Showing: All branches'}
+          color={activeStoreLabel ? 'primary' : 'default'}
+          variant="outlined"
+        />
+      </Stack>
 
       {/* Main Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
