@@ -573,9 +573,11 @@ export default function OrdersPage() {
                                                                 >
                                                                     Order Details &gt;&gt;
                                                                 </Button>
-                                                                <Typography variant="caption" color="text.secondary">
-                                                                    Note: {order.order_notes || ''}
-                                                                </Typography>
+                                                                {order.order_notes && (
+                                                                    <Typography variant="caption" color="text.secondary">
+                                                                        Note: {order.order_notes}
+                                                                    </Typography>
+                                                                )}
                                                             </Stack>
                                                         </TableCell>
 
