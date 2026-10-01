@@ -125,6 +125,17 @@ export function BulkUpdateProductsDialog({
               time)
             </Typography>
           </li>
+          {!!r.created_unclassified && (
+            <li>
+              <Typography variant="caption" color="warning.main">
+                {r.created_unclassified} of those have no department/category/subcategory anywhere
+                in the catalog to copy, so they were created unclassified — find them via the
+                Products page&apos;s &quot;Unclassified only&quot; filter to assign one:{' '}
+                {r.created_unclassified_details?.slice(0, 10).join(', ')}
+                {r.created_unclassified_details && r.created_unclassified_details.length > 10 ? ', …' : ''}
+              </Typography>
+            </li>
+          )}
           <li>
             <Typography variant="caption" color="warning.main">
               {r.deactivated ?? 0} product(s) deactivated (not in today&apos;s file for their store)
@@ -133,8 +144,8 @@ export function BulkUpdateProductsDialog({
           {!!r.unresolvable_pcodes?.length && (
             <li>
               <Typography variant="caption" color="error">
-                {r.unresolvable_pcodes.length} p_code(s) couldn&apos;t be created — no existing product
-                anywhere to copy a department/category/subcategory from: {r.unresolvable_pcodes.slice(0, 10).join(', ')}
+                {r.unresolvable_pcodes.length} p_code(s) couldn&apos;t be created at all (no package
+                size, product name, or price available): {r.unresolvable_pcodes.slice(0, 10).join(', ')}
                 {r.unresolvable_pcodes.length > 10 ? ', …' : ''}
               </Typography>
             </li>

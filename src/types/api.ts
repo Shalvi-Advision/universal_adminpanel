@@ -719,6 +719,14 @@ export interface BulkProductCsvUpdateResult {
   dry_run?: boolean;
   created?: number;
   created_details?: string[];
+  // Subset of `created` with no sibling anywhere to clone a real
+  // classification from — created anyway, deliberately left unclassified
+  // (shows up via the Products page's Unclassified-only filter).
+  created_unclassified?: number;
+  created_unclassified_details?: string[];
+  // p_codes that couldn't be created at all (no package size obtainable,
+  // no product name, or no price in the row) — a missing classification
+  // alone no longer lands here, see created_unclassified above.
   unresolvable_pcodes?: string[];
   deactivated?: number;
   deactivated_codes?: string[];
