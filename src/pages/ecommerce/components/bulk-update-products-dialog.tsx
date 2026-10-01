@@ -45,7 +45,15 @@ export function BulkUpdateProductsDialog({
   onDone,
 }: BulkUpdateProductsDialogProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [syncMode, setSyncMode] = useState(false);
+  // Defaults ON: every tenant's daily export seen so far only ever marks
+  // rows 'Y' (a product is simply absent once it's no longer stocked,
+  // never listed with an explicit 'N') — with this off, nothing is ever
+  // deactivated, so a product that drops out of the file silently stays
+  // active forever instead of going inactive until it reappears. That
+  // exact gap caused a real incident: a plain-mode upload reactivated
+  // ~1,300 products across 3 stores with no way to undo it short of a
+  // sync-mode run against a correct file.
+  const [syncMode, setSyncMode] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [result, setResult] = useState<BulkProductCsvUpdateResult | null>(null);
@@ -55,7 +63,7 @@ export function BulkUpdateProductsDialog({
   useEffect(() => {
     if (open) {
       setFile(null);
-      setSyncMode(false);
+      setSyncMode(true);
       setResult(null);
       setPreview(null);
       setError('');
@@ -202,10 +210,10 @@ export function BulkUpdateProductsDialog({
             control={<Switch checked={syncMode} onChange={(e) => setSyncMode(e.target.checked)} />}
             label="Full daily sync"
           />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5 }}>
+          <Typography variant="caption" color={syncMode ? 'text.secondary' : 'warning.main'} sx={{ mt: -1.5 }}>
             {syncMode
               ? "Also creates a product the first time a store carries it, and deactivates any product not in today's file for its store — for a sheet that always lists everything currently active."
-              : 'Off: only updates p_codes already in the catalog. Nothing is created or deactivated for being absent from the file.'}
+              : "Off: only updates p_codes already in the catalog — nothing is created or deactivated for being absent from the file. Only turn this off if your file can genuinely mark a row 'N'; if it only ever says 'Y' (the normal case), a product missing from today's file will stay active forever instead of going inactive."}
           </Typography>
 
           {error && <Alert severity="error">{error}</Alert>}
