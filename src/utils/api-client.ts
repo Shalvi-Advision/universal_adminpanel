@@ -137,8 +137,12 @@ export const apiClient = {
       body: body ? JSON.stringify(body) : undefined,
     }),
 
-  delete: <T>(endpoint: string, options?: RequestInit): Promise<T> =>
-    apiFetch<T>(endpoint, { ...options, method: 'DELETE' }),
+  delete: <T>(endpoint: string, body?: any, options?: RequestInit): Promise<T> =>
+    apiFetch<T>(endpoint, {
+      ...options,
+      method: 'DELETE',
+      body: body ? JSON.stringify(body) : undefined,
+    }),
 };
 
 export { ApiError };

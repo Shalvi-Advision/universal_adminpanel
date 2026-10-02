@@ -315,8 +315,9 @@ export default function Page() {
   };
 
   const handleDeleteConfirm = async () => {
+    if (!storeCode) return;
     try {
-      await deleteProduct(deleteId);
+      await deleteProduct(deleteId, storeCode);
       setOpenDeleteDialog(false);
       setDeleteId('');
       fetchProducts(); // Refresh list

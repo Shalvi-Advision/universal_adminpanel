@@ -25,8 +25,13 @@ export async function updateProduct(id: string, data: Partial<ProductMasterPaylo
   return apiClient.put<ApiResponse<Product>>(`/api/admin/products/master/${id}`, data);
 }
 
-export async function deleteProduct(id: string): Promise<ApiResponse<null>> {
-  return apiClient.delete<ApiResponse<null>>(`/api/admin/products/master/${id}`);
+// storeCode scopes the delete to removing this one store's listing — the
+// backend removes the whole product (every store) only when it's omitted,
+// which this call never does from the by-store list's own delete button
+// (that's always "remove from the store I'm looking at", never "remove
+// this product everywhere").
+export async function deleteProduct(id: string, storeCode: string): Promise<ApiResponse<null>> {
+  return apiClient.delete<ApiResponse<null>>(`/api/admin/products/master/${id}`, { store_code: storeCode });
 }
 
 // Multipart, so it bypasses apiClient (which always JSON-stringifies) and
