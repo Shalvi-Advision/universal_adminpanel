@@ -87,10 +87,9 @@ export default function Page() {
   const [deptId, setDeptId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [subCategoryId, setSubCategoryId] = useState('');
-  // Default 'all': the list (and search) used to hardcode active-only on
-  // the backend with no way to ask for anything else — an inactive product
-  // was simply unfindable, search included. 'all' matches that fix.
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  // Locked to 'active' for every role — no admin, including super admin,
+  // should be able to list/search all or inactive products from this page.
+  const statusFilter = 'active' as const;
   // Diagnostic view: products whose dept_id/category_id/sub_category_id
   // doesn't match any real department/category/subcategory — a free-typed
   // reference can point at nothing after a rename or deletion elsewhere.
@@ -177,7 +176,7 @@ export default function Page() {
     } finally {
       setLoading(false);
     }
-  }, [storeCode, page, searchQuery, deptId, categoryId, subCategoryId, statusFilter, unclassifiedOnly]);
+  }, [storeCode, page, searchQuery, deptId, categoryId, subCategoryId, unclassifiedOnly]);
 
   useEffect(() => {
     fetchProducts();
@@ -277,11 +276,6 @@ export default function Page() {
 
   const handleSubCategoryChange = (event: SelectChangeEvent) => {
     setSubCategoryId(event.target.value);
-    setPage(1);
-  };
-
-  const handleStatusChange = (event: SelectChangeEvent) => {
-    setStatusFilter(event.target.value as 'all' | 'active' | 'inactive');
     setPage(1);
   };
 
@@ -529,19 +523,6 @@ export default function Page() {
                       },
                     }}
                   />
-                  <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 } }}>
-                    <InputLabel id="product-filter-status-label">Status</InputLabel>
-                    <Select
-                      labelId="product-filter-status-label"
-                      label="Status"
-                      value={statusFilter}
-                      onChange={handleStatusChange}
-                    >
-                      <MenuItem value="all">All</MenuItem>
-                      <MenuItem value="active">Active only</MenuItem>
-                      <MenuItem value="inactive">Inactive only</MenuItem>
-                    </Select>
-                  </FormControl>
                   <Tooltip title="Products whose department, category, or subcategory doesn't match a real one anymore — e.g. after that department/category/subcategory was renamed to a new ID or deleted.">
                     <FormControlLabel
                       sx={{ whiteSpace: 'nowrap' }}
