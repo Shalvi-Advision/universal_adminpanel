@@ -67,6 +67,7 @@ export default function Page() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [successMessage, setSuccessMessage] = useState<string>('');
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openBulkUpdateDialog, setOpenBulkUpdateDialog] = useState(false);
@@ -332,9 +333,14 @@ export default function Page() {
     setSelectedProduct(null);
   };
 
-  const handleDialogSuccess = () => {
+  const handleDialogSuccess = (message?: string) => {
     setOpenDialog(false);
     setSelectedProduct(null);
+    // Surfaces the backend's own message — distinguishes "Product created
+    // successfully" from "Store listing added" when the typed Product Code
+    // already existed for another store, since those mean different things
+    // and the dialog itself has already closed by the time this shows.
+    if (message) setSuccessMessage(message);
     fetchProducts(); // Refresh list
   };
 
@@ -404,6 +410,12 @@ export default function Page() {
           {error && (
             <Alert severity="error" onClose={() => setError('')}>
               {error}
+            </Alert>
+          )}
+
+          {successMessage && (
+            <Alert severity="success" onClose={() => setSuccessMessage('')}>
+              {successMessage}
             </Alert>
           )}
 

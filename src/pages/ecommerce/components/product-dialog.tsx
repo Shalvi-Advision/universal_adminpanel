@@ -2,6 +2,7 @@ import type { Product, Category, Department, Subcategory, ProductMasterPayload }
 
 import { useState, useEffect } from 'react';
 
+import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
@@ -34,7 +35,11 @@ interface ProductDialogProps {
   open: boolean;
   product: Product | null;
   onClose: () => void;
-  onSuccess: () => void;
+  // Passes the backend's own success message through — "Product created
+  // successfully" vs "Store listing added" when the typed p_code turned
+  // out to already exist elsewhere (see handleSubmit) — so the list page
+  // can tell the admin which one actually happened.
+  onSuccess: (message?: string) => void;
 }
 
 export function ProductDialog({ open, product, onClose, onSuccess }: ProductDialogProps) {
@@ -42,6 +47,16 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // A product document is shared across every store it's listed at now —
+  // editing name/category/image here affects all of them, not just the
+  // one row this dialog was opened from. Default to editing just this
+  // store's price/stock/status (the common case, and the only thing the
+  // by-store list's own row context unambiguously means); this unlocks
+  // the identity fields only when explicitly asked for. Always true in
+  // create mode — a brand-new product has no "other stores" to affect yet.
+  const [editingIdentity, setEditingIdentity] = useState(false);
+  const isIdentityEditable = !product || editingIdentity;
 
   // Basic Info
   const [pCode, setPCode] = useState('');
@@ -133,6 +148,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
       setPcodeStatus('Y');
       setPcodeImg('');
     }
+    setEditingIdentity(false);
     setError('');
   }, [product, open, contextStoreCode]);
 
@@ -250,21 +266,8 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
       return false;
     }
 
-    if (!productName.trim()) {
-      setError('Product Name is required');
-      return false;
-    }
-
-    if (packageSize === '' || packageSize <= 0) {
-      setError('Package Size must be a positive number');
-      return false;
-    }
-
-    if (!packageUnit.trim()) {
-      setError('Package Unit is required');
-      return false;
-    }
-
+    // Price/stock/status apply every time — every submit touches at least
+    // this store's listing.
     if (productMrp === '' || productMrp <= 0) {
       setError('Product MRP must be a positive number');
       return false;
@@ -285,19 +288,39 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
       return false;
     }
 
-    if (!deptId.trim()) {
-      setError('Department ID is required');
-      return false;
-    }
+    // Identity fields only matter when they're actually being submitted —
+    // create mode, or an existing product with "edit product details"
+    // switched on.
+    if (isIdentityEditable) {
+      if (!productName.trim()) {
+        setError('Product Name is required');
+        return false;
+      }
 
-    if (!categoryId.trim()) {
-      setError('Category ID is required');
-      return false;
-    }
+      if (packageSize === '' || packageSize <= 0) {
+        setError('Package Size must be a positive number');
+        return false;
+      }
 
-    if (!subCategoryId.trim()) {
-      setError('Subcategory ID is required');
-      return false;
+      if (!packageUnit.trim()) {
+        setError('Package Unit is required');
+        return false;
+      }
+
+      if (!deptId.trim()) {
+        setError('Department ID is required');
+        return false;
+      }
+
+      if (!categoryId.trim()) {
+        setError('Category ID is required');
+        return false;
+      }
+
+      if (!subCategoryId.trim()) {
+        setError('Subcategory ID is required');
+        return false;
+      }
     }
 
     return true;
@@ -309,34 +332,53 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
     setLoading(true);
     setError('');
 
-    const payload: ProductMasterPayload = {
-      p_code: pCode.trim(),
-      product_name: productName.trim(),
-      package_size: Number(packageSize),
-      package_unit: packageUnit.trim(),
+    // Store-listing fields go every time — every submit touches at least
+    // this one store. Identity fields are only included when actually
+    // editable (create mode, or "edit product details" switched on in
+    // edit mode) — the backend treats their mere presence in the request
+    // as "update these for every store", so omitting them entirely (not
+    // just leaving them unchanged) is what keeps a plain price/stock edit
+    // scoped to one store.
+    const storeListingPayload = {
+      store_code: storeCode.trim(),
       product_mrp: Number(productMrp),
       our_price: Number(ourPrice),
-      store_code: storeCode.trim(),
-      dept_id: deptId.trim(),
-      category_id: categoryId.trim(),
-      sub_category_id: subCategoryId.trim(),
-      additional_sub_category_ids: additionalSubCategoryIds,
-      barcode: barcode.trim() || undefined,
-      product_description: productDescription.trim() || undefined,
-      brand_name: brandName.trim() || undefined,
       pcode_status: pcodeStatus as 'Y' | 'N',
       store_quantity: storeQuantity === '' ? 0 : Number(storeQuantity),
       max_quantity_allowed: maxQuantityAllowed === '' ? 10 : Number(maxQuantityAllowed),
-      pcode_img: pcodeImg.trim() || undefined,
     };
+    const identityPayload = isIdentityEditable
+      ? {
+          product_name: productName.trim(),
+          package_size: Number(packageSize),
+          package_unit: packageUnit.trim(),
+          dept_id: deptId.trim(),
+          category_id: categoryId.trim(),
+          sub_category_id: subCategoryId.trim(),
+          additional_sub_category_ids: additionalSubCategoryIds,
+          barcode: barcode.trim() || undefined,
+          product_description: productDescription.trim() || undefined,
+          brand_name: brandName.trim() || undefined,
+          pcode_img: pcodeImg.trim() || undefined,
+        }
+      : {};
 
     try {
       if (product) {
-        await updateProduct(product.id, payload);
+        await updateProduct(product.id, { ...storeListingPayload, ...identityPayload });
+        onSuccess();
       } else {
-        await createProduct(payload);
+        // isIdentityEditable is always true in create mode (no `product`
+        // yet to scope a toggle against), so identityPayload is always the
+        // full object here — this is just the complete flat payload.
+        const payload = { p_code: pCode.trim(), ...storeListingPayload, ...identityPayload } as ProductMasterPayload;
+        // The backend ignores product_name/category/etc above and just adds
+        // this store to the existing document when p_code already exists
+        // elsewhere — its own response message says which one happened, so
+        // that's what's shown rather than assuming "created".
+        const res = await createProduct(payload);
+        onSuccess(res.message);
       }
-      onSuccess();
     } catch (err: any) {
       if (err.message?.includes('unique') || err.message?.includes('duplicate')) {
         setError('This Product Code already exists');
@@ -363,11 +405,40 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>{product ? 'Edit Product' : 'Create Product'}</DialogTitle>
+      <DialogTitle>
+        {product ? `Edit Product — ${storeCode || 'this store'}` : 'Create Product'}
+      </DialogTitle>
 
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 2 }}>
           {error && <Alert severity="error">{error}</Alert>}
+
+          {product && !editingIdentity && (
+            <Alert
+              severity="info"
+              action={
+                <Button color="inherit" size="small" onClick={() => setEditingIdentity(true)}>
+                  Edit product details
+                </Button>
+              }
+            >
+              Editing price, stock and status for <strong>{storeCode}</strong> only. Name, barcode,
+              category and image are shared across every store this product is listed at.
+            </Alert>
+          )}
+          {product && editingIdentity && (
+            <Alert
+              severity="warning"
+              action={
+                <Button color="inherit" size="small" onClick={() => setEditingIdentity(false)}>
+                  Cancel
+                </Button>
+              }
+            >
+              Changes below apply to this product at <strong>every store</strong> it&apos;s listed
+              at, not just {storeCode}.
+            </Alert>
+          )}
 
           {/* Basic Info */}
           <Typography variant="subtitle2" sx={{ mb: 1, mt: 2 }}>
@@ -382,7 +453,9 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
             required
             disabled={!!product}
             helperText={
-              product ? 'Product Code cannot be changed when editing' : 'Unique product code'
+              product
+                ? 'Product Code cannot be changed when editing'
+                : 'Unique product code — if this already exists for another store, that product is used as-is and just added to the store below'
             }
           />
 
@@ -392,6 +465,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
             value={productName}
             onChange={(e) => setProductName(e.target.value)}
             required
+            disabled={!isIdentityEditable}
           />
 
           <TextField
@@ -401,6 +475,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
             onChange={(e) => setProductDescription(e.target.value)}
             multiline
             rows={3}
+            disabled={!isIdentityEditable}
           />
 
           <TextField
@@ -408,6 +483,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
             label="Brand Name"
             value={brandName}
             onChange={(e) => setBrandName(e.target.value)}
+            disabled={!isIdentityEditable}
           />
 
           <TextField
@@ -415,6 +491,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
             label="Barcode"
             value={barcode}
             onChange={(e) => setBarcode(e.target.value)}
+            disabled={!isIdentityEditable}
           />
 
           {/* Classification */}
@@ -430,6 +507,13 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
                 value={storeCode}
                 onChange={(e) => setStoreCode(e.target.value)}
                 required
+                // Fixed once a product is listed at a store — there's no
+                // "move this listing to another store" operation, only
+                // "add a new listing" (type an existing Product Code above
+                // in a fresh Create dialog) or "remove this one" (the list's
+                // own Delete action).
+                disabled={!!product}
+                helperText={product ? 'Which store this listing is for' : undefined}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -442,7 +526,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
                 value={departmentOptions.find((d) => d.department_id === deptId) ?? null}
                 onChange={(_event, newValue) => handleDeptChange(newValue?.department_id ?? '')}
                 loading={loadingDepartmentOptions}
-                disabled={!storeCode.trim()}
+                disabled={!storeCode.trim() || !isIdentityEditable}
                 renderInput={(params) => (
                   <TextField {...params} label="Department" required helperText="Search by name" />
                 )}
@@ -460,7 +544,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
                   handleCategoryChange(newValue?.idcategory_master ?? '')
                 }
                 loading={loadingCategoryOptions}
-                disabled={!deptId}
+                disabled={!deptId || !isIdentityEditable}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -489,7 +573,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
                   setSubCategoryId(newValue?.idsub_category_master ?? '')
                 }
                 loading={loadingPrimarySubcategoryOptions}
-                disabled={!categoryId}
+                disabled={!categoryId || !isIdentityEditable}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -519,6 +603,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
                   setAdditionalSubCategoryIds(newValue.map((s) => s.idsub_category_master))
                 }
                 loading={loadingSubcategoryOptions}
+                disabled={!isIdentityEditable}
                 renderTags={(value, getTagProps) =>
                   value.map((option, index) => (
                     <Chip
@@ -555,6 +640,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
                 onChange={handleNumberChange(setPackageSize)}
                 type="number"
                 required
+                disabled={!isIdentityEditable}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -565,6 +651,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
                 onChange={(e) => setPackageUnit(e.target.value)}
                 required
                 placeholder="e.g. kg, g, ml, L, pcs"
+                disabled={!isIdentityEditable}
               />
             </Grid>
           </Grid>
@@ -646,12 +733,17 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
             Image
           </Typography>
 
-          <ImageUpload
-            label="Product Image"
-            value={pcodeImg}
-            onChange={(url) => setPcodeImg(url)}
-            folder="products"
-          />
+          {/* ImageUpload has no disabled prop of its own (shared by several
+              other dialogs) — locked visually/functionally here instead,
+              since the image is identity-level, shared across every store. */}
+          <Box sx={!isIdentityEditable ? { opacity: 0.5, pointerEvents: 'none' } : undefined}>
+            <ImageUpload
+              label="Product Image"
+              value={pcodeImg}
+              onChange={(url) => setPcodeImg(url)}
+              folder="products"
+            />
+          </Box>
         </Stack>
       </DialogContent>
 

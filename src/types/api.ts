@@ -672,27 +672,45 @@ export interface ProductsByStoreResponse extends PaginatedResponse<Product> {
   stats: ProductsByStoreStats;
 }
 
-// ProductMaster payload for create/update
-export interface ProductMasterPayload {
-  p_code: string;
+// Fields that live once on the product (ProductMaster is one document per
+// p_code now — see models/ProductMaster.js) and are shared across every
+// store it's listed at. Submitting these in a PUT affects every store at
+// once, so the edit dialog only ever sends them when the admin has
+// explicitly opted into "edit product details" rather than just editing
+// one store's price/stock.
+export interface ProductIdentityPayload {
   product_name: string;
   package_size: number;
   package_unit: string;
-  product_mrp: number;
-  our_price: number;
-  store_code: string;
   dept_id: string;
   category_id: string;
   sub_category_id: string;
   barcode?: string;
   product_description?: string;
   brand_name?: string;
-  pcode_status?: 'Y' | 'N';
-  store_quantity?: number;
-  max_quantity_allowed?: number;
   pcode_img?: string;
   search_keyword?: string;
   additional_sub_category_ids?: string[];
+}
+
+// Fields that are genuinely per-store: one store's price/stock/active
+// status. Lives in ProductMaster.stores[] server-side.
+export interface ProductStoreListingPayload {
+  store_code: string;
+  our_price: number;
+  product_mrp: number;
+  pcode_status?: 'Y' | 'N';
+  store_quantity?: number;
+  max_quantity_allowed?: number;
+}
+
+// POST /api/admin/products/master body: identity fields plus exactly one
+// initial store listing. If p_code already exists for this tenant, the
+// backend ignores the identity fields (the existing document's already
+// correct) and instead adds store_code as a new listing on it — see that
+// route's own comment in routes/admin/products.js.
+export interface ProductMasterPayload extends ProductIdentityPayload, ProductStoreListingPayload {
+  p_code: string;
 }
 
 // Summary returned by POST /api/admin/products/bulk-update-csv — see
