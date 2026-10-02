@@ -1,7 +1,7 @@
-// Product photos must already be optimized .webp files of 40KB or less —
+// Product photos must already be optimized .webp files of 100KB or less —
 // enforced here on the client so a bad file never reaches the backend at
 // all, rather than relying on the server to catch or silently re-encode it.
-export const PRODUCT_IMAGE_MAX_BYTES = 40 * 1024;
+export const PRODUCT_IMAGE_MAX_BYTES = 100 * 1024;
 export const PRODUCT_IMAGE_ACCEPT = 'image/webp,.webp';
 
 // null means the file is acceptable; otherwise a user-facing reason.
@@ -11,7 +11,7 @@ export function validateProductImageFile(file: File): string | null {
     return `${file.name}: only .webp images are accepted`;
   }
   if (file.size > PRODUCT_IMAGE_MAX_BYTES) {
-    return `${file.name}: must be 40KB or smaller (this file is ${(file.size / 1024).toFixed(1)}KB)`;
+    return `${file.name}: must be 100KB or smaller (this file is ${(file.size / 1024).toFixed(1)}KB)`;
   }
   return null;
 }

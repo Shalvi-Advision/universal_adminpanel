@@ -28,7 +28,7 @@ interface ImageUploadProps {
   helperText?: string;
   folder?: string;
   // Product photos are the one case this component enforces the stricter
-  // .webp/40KB rule — every other consumer (categories, departments,
+  // .webp/100KB rule — every other consumer (categories, departments,
   // banners, etc.) keeps the original generic image/5MB check.
   requireWebp?: boolean;
 }
@@ -151,7 +151,7 @@ export function ImageUpload({
             )}
             {requireWebp && (
               <Typography variant="caption" color="text.secondary">
-                .webp only, 40KB max
+                .webp only, 100KB max
               </Typography>
             )}
           </Stack>

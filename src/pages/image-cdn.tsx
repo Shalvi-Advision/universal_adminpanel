@@ -204,7 +204,7 @@ function BulkPoolUploadCard() {
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               Restocks the shared image pool directly — not tied to this tenant. Files must already be
               named <code>&lt;barcode&gt;_1.webp</code> (or <code>_2</code>, or bare{' '}
-              <code>&lt;barcode&gt;.webp</code>), each 40KB or smaller. Run &quot;Sync now&quot;
+              <code>&lt;barcode&gt;.webp</code>), each 100KB or smaller. Run &quot;Sync now&quot;
               afterwards to pick up matches for this tenant.
             </Typography>
 
@@ -442,7 +442,7 @@ function BulkMissingUploadDialog({
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             Closes gaps in this tenant&apos;s list directly — files must be named{' '}
             <code>&lt;p_code&gt;_1.webp</code> (or <code>_2</code>, or bare{' '}
-            <code>&lt;p_code&gt;.webp</code>) using the P-Code column from the table below, each 40KB or
+            <code>&lt;p_code&gt;.webp</code>) using the P-Code column from the table below, each 100KB or
             smaller. Takes effect immediately, no sync needed.
           </Typography>
 
