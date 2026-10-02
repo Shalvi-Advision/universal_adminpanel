@@ -742,6 +742,7 @@ export function ProductDialog({ open, product, onClose, onSuccess }: ProductDial
               value={pcodeImg}
               onChange={(url) => setPcodeImg(url)}
               folder="products"
+              requireWebp
             />
           </Box>
         </Stack>

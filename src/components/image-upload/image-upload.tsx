@@ -11,6 +11,11 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import {
+  PRODUCT_IMAGE_ACCEPT,
+  validateProductImageFile,
+} from 'src/utils/product-image-validation';
+
 import { uploadImage } from 'src/services/upload';
 
 import { Iconify } from 'src/components/iconify';
@@ -22,6 +27,10 @@ interface ImageUploadProps {
   required?: boolean;
   helperText?: string;
   folder?: string;
+  // Product photos are the one case this component enforces the stricter
+  // .webp/40KB rule — every other consumer (categories, departments,
+  // banners, etc.) keeps the original generic image/5MB check.
+  requireWebp?: boolean;
 }
 
 export function ImageUpload({
@@ -31,6 +40,7 @@ export function ImageUpload({
   required = false,
   helperText,
   folder = 'ecommerce',
+  requireWebp = false,
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -40,16 +50,24 @@ export function ImageUpload({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Please select a valid image file');
-      return;
-    }
+    if (requireWebp) {
+      const validationError = validateProductImageFile(file);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+    } else {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select a valid image file');
+        return;
+      }
 
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB');
-      return;
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('File size must be less than 5MB');
+        return;
+      }
     }
 
     setUploading(true);
@@ -121,7 +139,7 @@ export function ImageUpload({
               <input
                 type="file"
                 hidden
-                accept="image/*"
+                accept={requireWebp ? PRODUCT_IMAGE_ACCEPT : 'image/*'}
                 onChange={handleFileChange}
                 disabled={uploading}
               />
@@ -129,6 +147,11 @@ export function ImageUpload({
             {helperText && (
               <Typography variant="caption" color="text.secondary">
                 {helperText}
+              </Typography>
+            )}
+            {requireWebp && (
+              <Typography variant="caption" color="text.secondary">
+                .webp only, 40KB max
               </Typography>
             )}
           </Stack>

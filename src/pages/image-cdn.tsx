@@ -28,6 +28,11 @@ import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { getSelectedProjectCode } from 'src/utils/project-code';
+import {
+  PRODUCT_IMAGE_ACCEPT,
+  validateProductImageFile,
+  partitionProductImageFiles,
+} from 'src/utils/product-image-validation';
 
 import { CONFIG } from 'src/config-global';
 import {
@@ -147,9 +152,10 @@ function BulkPoolUploadCard() {
   };
 
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFiles(Array.from(e.target.files ?? []));
+    const { valid, errors } = partitionProductImageFiles(Array.from(e.target.files ?? []));
+    setFiles(valid);
     setResult(null);
-    setError('');
+    setError(errors.length > 0 ? `${errors.length} file(s) rejected: ${errors.join('; ')}` : '');
   };
 
   const handleUpload = async () => {
@@ -197,9 +203,9 @@ function BulkPoolUploadCard() {
           <Stack spacing={2}>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               Restocks the shared image pool directly — not tied to this tenant. Files must already be
-              named <code>&lt;barcode&gt;_1.jpg</code> (or <code>_2</code>, or bare{' '}
-              <code>&lt;barcode&gt;.jpg</code>). Run &quot;Sync now&quot; afterwards to pick up matches
-              for this tenant.
+              named <code>&lt;barcode&gt;_1.webp</code> (or <code>_2</code>, or bare{' '}
+              <code>&lt;barcode&gt;.webp</code>), each 40KB or smaller. Run &quot;Sync now&quot;
+              afterwards to pick up matches for this tenant.
             </Typography>
 
             {error && <Alert severity="error">{error}</Alert>}
@@ -207,7 +213,13 @@ function BulkPoolUploadCard() {
             <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
               <Button component="label" variant="outlined" startIcon={<Iconify icon="mingcute:add-line" />}>
                 {files.length > 0 ? `${files.length} file(s) selected` : 'Choose photos'}
-                <input type="file" accept="image/*" multiple hidden onChange={handleFilesSelected} />
+                <input
+                  type="file"
+                  accept={PRODUCT_IMAGE_ACCEPT}
+                  multiple
+                  hidden
+                  onChange={handleFilesSelected}
+                />
               </Button>
               <Button
                 variant="contained"
@@ -338,9 +350,20 @@ function UploadDialog({
             {file ? file.name : 'Choose photo'}
             <input
               type="file"
-              accept="image/*"
+              accept={PRODUCT_IMAGE_ACCEPT}
               hidden
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                const picked = e.target.files?.[0] ?? null;
+                if (!picked) return;
+                const validationError = validateProductImageFile(picked);
+                if (validationError) {
+                  setError(validationError);
+                  setFile(null);
+                  return;
+                }
+                setError('');
+                setFile(picked);
+              }}
             />
           </Button>
         </Stack>
@@ -386,9 +409,10 @@ function BulkMissingUploadDialog({
   }, [open]);
 
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFiles(Array.from(e.target.files ?? []));
+    const { valid, errors } = partitionProductImageFiles(Array.from(e.target.files ?? []));
+    setFiles(valid);
     setResult(null);
-    setError('');
+    setError(errors.length > 0 ? `${errors.length} file(s) rejected: ${errors.join('; ')}` : '');
   };
 
   const handleUpload = async () => {
@@ -417,8 +441,9 @@ function BulkMissingUploadDialog({
         <Stack spacing={2} sx={{ pt: 1 }}>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             Closes gaps in this tenant&apos;s list directly — files must be named{' '}
-            <code>&lt;p_code&gt;_1.jpg</code> (or <code>_2</code>, or bare <code>&lt;p_code&gt;.jpg</code>)
-            using the P-Code column from the table below. Takes effect immediately, no sync needed.
+            <code>&lt;p_code&gt;_1.webp</code> (or <code>_2</code>, or bare{' '}
+            <code>&lt;p_code&gt;.webp</code>) using the P-Code column from the table below, each 40KB or
+            smaller. Takes effect immediately, no sync needed.
           </Typography>
 
           {error && <Alert severity="error">{error}</Alert>}
@@ -426,7 +451,13 @@ function BulkMissingUploadDialog({
           <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
             <Button component="label" variant="outlined" startIcon={<Iconify icon="mingcute:add-line" />}>
               {files.length > 0 ? `${files.length} file(s) selected` : 'Choose photos'}
-              <input type="file" accept="image/*" multiple hidden onChange={handleFilesSelected} />
+              <input
+                type="file"
+                accept={PRODUCT_IMAGE_ACCEPT}
+                multiple
+                hidden
+                onChange={handleFilesSelected}
+              />
             </Button>
           </Stack>
 
