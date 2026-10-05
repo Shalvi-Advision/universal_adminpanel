@@ -439,9 +439,13 @@ export interface Pincode {
   idpincode_master: number;
   pincode: string;
   is_enabled: 'Enabled' | 'Disabled';
-  // Which store serves this pincode. One store maps to many pincodes; null
-  // means enabled but not yet assigned to a store (see models/Pincode.js).
+  // Legacy single-store field — superseded by store_codes below. Kept only
+  // so stale cached data still types correctly; never written by this panel.
   store_code?: string | null;
+  // Which store(s) serve this pincode — a pincode can now be served by more
+  // than one store, with the customer choosing at checkout. Empty/absent
+  // means enabled but not yet assigned (see models/Pincode.js).
+  store_codes?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -461,7 +465,7 @@ export interface PincodePayload {
   idpincode_master: number;
   pincode: string;
   is_enabled: 'Enabled' | 'Disabled';
-  store_code?: string | null;
+  store_codes: string[];
 }
 
 // Distance slab for per-km delivery pricing

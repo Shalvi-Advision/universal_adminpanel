@@ -2,6 +2,7 @@ import type { Pincode, StoreCode, PincodePayload } from 'src/types/api';
 
 import { useState, useEffect } from 'react';
 
+import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
@@ -12,6 +13,7 @@ import TextField from '@mui/material/TextField';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 import DialogTitle from '@mui/material/DialogTitle';
+import Autocomplete from '@mui/material/Autocomplete';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -34,16 +36,16 @@ export function PincodeDialog({ open, pincode, onClose, onSuccess }: PincodeDial
   const [idPincodeMaster, setIdPincodeMaster] = useState<number | ''>('');
   const [pincodeValue, setPincodeValue] = useState('');
   const [isEnabled, setIsEnabled] = useState<'Enabled' | 'Disabled'>('Enabled');
-  const [storeCode, setStoreCode] = useState('');
-  const [storeCodes, setStoreCodes] = useState<StoreCode[]>([]);
+  const [selectedStoreCodes, setSelectedStoreCodes] = useState<string[]>([]);
+  const [availableStores, setAvailableStores] = useState<StoreCode[]>([]);
 
   // Store options for the assignment dropdown — loaded once per dialog open,
   // not per keystroke, since the list rarely changes.
   useEffect(() => {
     if (!open) return;
     getAllStoreCodes()
-      .then((response) => setStoreCodes(response.data || []))
-      .catch(() => setStoreCodes([]));
+      .then((response) => setAvailableStores(response.data || []))
+      .catch(() => setAvailableStores([]));
   }, [open]);
 
   // Load data when editing
@@ -52,13 +54,13 @@ export function PincodeDialog({ open, pincode, onClose, onSuccess }: PincodeDial
       setIdPincodeMaster(pincode.idpincode_master);
       setPincodeValue(pincode.pincode);
       setIsEnabled(pincode.is_enabled);
-      setStoreCode(pincode.store_code || '');
+      setSelectedStoreCodes(pincode.store_codes || []);
     } else {
       // Reset form for create
       setIdPincodeMaster('');
       setPincodeValue('');
       setIsEnabled('Enabled');
-      setStoreCode('');
+      setSelectedStoreCodes([]);
     }
     setError('');
   }, [pincode, open]);
@@ -95,7 +97,7 @@ export function PincodeDialog({ open, pincode, onClose, onSuccess }: PincodeDial
       idpincode_master: Number(idPincodeMaster),
       pincode: pincodeValue.trim(),
       is_enabled: isEnabled,
-      store_code: storeCode || null,
+      store_codes: selectedStoreCodes,
     };
 
     try {
@@ -187,24 +189,27 @@ export function PincodeDialog({ open, pincode, onClose, onSuccess }: PincodeDial
             </Select>
           </FormControl>
 
-          <FormControl fullWidth>
-            <InputLabel>Assign Store</InputLabel>
-            <Select
-              value={storeCode}
-              label="Assign Store"
-              onChange={(e) => setStoreCode(e.target.value)}
-              displayEmpty
-            >
-              <MenuItem value="">
-                <em>Not assigned</em>
-              </MenuItem>
-              {storeCodes.map((store) => (
-                <MenuItem key={store.store_code} value={store.store_code}>
-                  {store.store_name} ({store.store_code})
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Autocomplete
+            multiple
+            options={availableStores}
+            getOptionLabel={(option) => `${option.store_name} (${option.store_code})`}
+            isOptionEqualToValue={(option, value) => option.store_code === value.store_code}
+            value={availableStores.filter((store) => selectedStoreCodes.includes(store.store_code))}
+            onChange={(_e, value) => setSelectedStoreCodes(value.map((store) => store.store_code))}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip label={option.store_code} size="small" {...getTagProps({ index })} key={option.store_code} />
+              ))
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Assign Store(s)"
+                placeholder="Select stores..."
+                helperText="A pincode can be served by more than one store — the customer picks one at checkout."
+              />
+            )}
+          />
         </Stack>
       </DialogContent>
 

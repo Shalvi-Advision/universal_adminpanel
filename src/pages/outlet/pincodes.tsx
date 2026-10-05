@@ -216,8 +216,12 @@ export default function Page() {
                             />
                           </TableCell>
                           <TableCell>
-                            {item.store_code ? (
-                              <Chip label={item.store_code} size="small" variant="outlined" />
+                            {item.store_codes && item.store_codes.length > 0 ? (
+                              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                                {item.store_codes.map((code) => (
+                                  <Chip key={code} label={code} size="small" variant="outlined" />
+                                ))}
+                              </Stack>
                             ) : (
                               <Typography variant="caption" color="text.secondary">
                                 Not assigned
