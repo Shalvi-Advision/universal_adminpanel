@@ -73,6 +73,11 @@ export interface IntegrationValues {
   razorpay_key_id: string;
   currency: string;
   google_maps_api_key: string;
+  // SHALVI PICKER (warehouse picking + rider delivery) integration.
+  // 'true' | 'false' | '' — stored as a string like other toggle fields
+  // here (see home_feed_enabled above).
+  picker_integration_enabled: string;
+  picker_webhook_url: string;
 }
 
 export interface IntegrationsResponse {

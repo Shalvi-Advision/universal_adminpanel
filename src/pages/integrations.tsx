@@ -8,11 +8,13 @@ import Grid from '@mui/material/Grid';
 import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Button from '@mui/material/Button';
 import Snackbar from '@mui/material/Snackbar';
 import Container from '@mui/material/Container';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { getIntegrations, updateSecrets, updateIntegrations } from 'src/services/project-settings';
@@ -31,6 +33,11 @@ const SECRET_FIELDS = [
     key: 'sms_api_key',
     label: 'SMS API Key',
     hint: 'Used server-side to send login OTPs.',
+  },
+  {
+    key: 'picker_webhook_secret',
+    label: 'Picker Webhook Secret',
+    hint: 'Sent as X-Webhook-Secret on every order handed off to SHALVI PICKER, and required on status updates it sends back.',
   },
 ];
 
@@ -71,6 +78,9 @@ export default function Page() {
 
   const setValue = (key: keyof IntegrationValues) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setValues((prev) => ({ ...prev, [key]: e.target.value.trim() }));
+
+  const setPickerEnabled = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setValues((prev) => ({ ...prev, picker_integration_enabled: e.target.checked ? 'true' : 'false' }));
 
   const handleSavePublishable = async () => {
     try {
@@ -288,6 +298,40 @@ export default function Page() {
                   </Button>
                 </Stack>
               </Stack>
+            </Stack>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12 }}>
+          <Card sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 0.5 }}>
+              SHALVI PICKER
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+              Warehouse picking + rider delivery. When enabled, an order is handed off the moment a
+              store accepts it, and Picker reports picking/delivery progress back here automatically.
+              Set the webhook URL and secret (below, under Server Secrets) first, confirm with a pilot
+              order, then turn this on.
+            </Typography>
+            <Stack spacing={3}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={values.picker_integration_enabled === 'true'}
+                    onChange={setPickerEnabled}
+                  />
+                }
+                label="Enable SHALVI PICKER integration"
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="Picker Webhook URL"
+                placeholder="https://pickerapi.shalviadvision.com"
+                helperText="Base URL of the Picker backend — orders are POSTed to <this>/api/webhook/order"
+                value={values.picker_webhook_url ?? ''}
+                onChange={setValue('picker_webhook_url')}
+              />
             </Stack>
           </Card>
         </Grid>
