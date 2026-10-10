@@ -246,6 +246,12 @@ export const navData: NavItem[] = [
         icon: iconify('solar:settings-bold-duotone'),
       },
       {
+        title: 'Promo Page',
+        path: '/promo-page',
+        icon: iconify('solar:gift-bold-duotone'),
+        permissionSection: 'promoPage',
+      },
+      {
         title: 'Integrations',
         path: '/integrations',
         icon: iconify('solar:key-bold-duotone'),

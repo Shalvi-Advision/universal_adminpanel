@@ -76,6 +76,8 @@ export const IntegrationsPage = lazyWithRetry(() => import('src/pages/integratio
 export const ImageCdnPage = lazyWithRetry(() => import('src/pages/image-cdn'));
 export const DigitalCartPage = lazyWithRetry(() => import('src/pages/digital-cart'));
 export const DigitalCartUiPage = lazyWithRetry(() => import('src/pages/digital-cart-ui'));
+export const PromoPagePage = lazyWithRetry(() => import('src/pages/promo-page'));
+export const PublicPromoPage = lazyWithRetry(() => import('src/pages/public-promo-page'));
 export const Page404 = lazyWithRetry(() => import('src/pages/page-not-found'));
 
 const renderFallback = () => (
@@ -448,6 +450,14 @@ export const routesSection: RouteObject[] = [
         ),
       },
       {
+        path: 'promo-page',
+        element: (
+          <PermissionGuard section="promoPage">
+            <PromoPagePage />
+          </PermissionGuard>
+        ),
+      },
+      {
         path: 'admin-permissions',
         element: (
           <SuperAdminGuard>
@@ -479,6 +489,13 @@ export const routesSection: RouteObject[] = [
   {
     path: '404',
     element: <Page404 />,
+  },
+  // Public, unauthenticated promo/download landing page — must stay a
+  // top-level sibling (not inside ProtectedRoute/DashboardLayout/AuthLayout)
+  // and last among real routes so it only matches when nothing else does.
+  {
+    path: ':projectCode',
+    element: <PublicPromoPage />,
   },
   { path: '*', element: <Page404 /> },
 ];
