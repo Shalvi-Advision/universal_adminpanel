@@ -310,8 +310,8 @@ export default function Page() {
                 onChange={setColorField('headline_color')}
               />
               <ColorField
-                label="Download Button"
-                hint="Background color of the 'Download the App Now' button"
+                label="Download Highlight"
+                hint="Highlight color behind the 'Download the App Now!' text"
                 value={values.button_color}
                 onChange={setColorField('button_color')}
               />

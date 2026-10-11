@@ -5,7 +5,6 @@ import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
 import Avatar from '@mui/material/Avatar';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
@@ -174,58 +173,104 @@ export default function PublicPromoPage() {
             )}
 
             {primaryUrl && (
-              <Button
-                size="large"
-                variant="contained"
+              <Box
                 component="a"
                 href={primaryUrl}
                 target="_blank"
                 rel="noopener"
-                endIcon={<Iconify icon={'solar:arrow-right-bold' as any} />}
                 sx={{
-                  borderRadius: 999,
+                  position: 'relative',
+                  display: 'inline-block',
+                  textDecoration: 'none',
                   px: 4,
-                  py: 1.5,
-                  fontWeight: 700,
-                  ...(promo.button_color && {
-                    bgcolor: promo.button_color,
-                    '&:hover': { bgcolor: promo.button_color, filter: 'brightness(0.92)' }
-                  })
+                  py: 2
                 }}
               >
-                Download the App Now
-              </Button>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    bgcolor: promo.button_color || '#FDE68A',
+                    borderRadius: '16px 60px 16px 60px / 40px 16px 40px 16px',
+                    transform: 'rotate(-1.5deg)',
+                    boxShadow: 1
+                  }}
+                />
+                <Typography
+                  variant="h5"
+                  sx={{
+                    position: 'relative',
+                    fontWeight: 800,
+                    lineHeight: 1.15,
+                    color: 'grey.900',
+                    textAlign: 'center'
+                  }}
+                >
+                  Download
+                  <br />
+                  the App Now!
+                </Typography>
+              </Box>
             )}
 
             {(promo.android_url || promo.ios_url) && (
-              <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap">
+              <Stack
+                direction="row"
+                sx={{
+                  bgcolor: 'common.black',
+                  borderRadius: 2,
+                  overflow: 'hidden'
+                }}
+              >
                 {promo.android_url && (
-                  <Button
-                    variant="contained"
-                    color="inherit"
+                  <Stack
                     component="a"
                     href={promo.android_url}
                     target="_blank"
                     rel="noopener"
-                    startIcon={<Iconify icon={'logos:google-play-icon' as any} />}
-                    sx={{ bgcolor: 'common.black', color: 'common.white', '&:hover': { bgcolor: 'grey.900' } }}
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    sx={{
+                      px: 2.5,
+                      py: 1,
+                      textDecoration: 'none',
+                      borderRight: promo.ios_url ? '1px solid' : 'none',
+                      borderColor: 'grey.700'
+                    }}
                   >
-                    Get it on Google Play
-                  </Button>
+                    <Iconify icon={'logos:google-play-icon' as any} width={26} />
+                    <Stack sx={{ textAlign: 'left' }}>
+                      <Typography variant="caption" sx={{ color: 'grey.300', lineHeight: 1 }}>
+                        GET IT ON
+                      </Typography>
+                      <Typography variant="subtitle1" sx={{ color: 'common.white', fontWeight: 700, lineHeight: 1.2 }}>
+                        Google Play
+                      </Typography>
+                    </Stack>
+                  </Stack>
                 )}
                 {promo.ios_url && (
-                  <Button
-                    variant="contained"
-                    color="inherit"
+                  <Stack
                     component="a"
                     href={promo.ios_url}
                     target="_blank"
                     rel="noopener"
-                    startIcon={<Iconify icon={'logos:apple' as any} />}
-                    sx={{ bgcolor: 'common.black', color: 'common.white', '&:hover': { bgcolor: 'grey.900' } }}
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    sx={{ px: 2.5, py: 1, textDecoration: 'none' }}
                   >
-                    Download on the App Store
-                  </Button>
+                    <Iconify icon={'logos:apple' as any} width={22} sx={{ color: 'common.white' }} />
+                    <Stack sx={{ textAlign: 'left' }}>
+                      <Typography variant="caption" sx={{ color: 'grey.300', lineHeight: 1 }}>
+                        Download on the
+                      </Typography>
+                      <Typography variant="subtitle1" sx={{ color: 'common.white', fontWeight: 700, lineHeight: 1.2 }}>
+                        App Store
+                      </Typography>
+                    </Stack>
+                  </Stack>
                 )}
               </Stack>
             )}
