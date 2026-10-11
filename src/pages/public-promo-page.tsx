@@ -126,6 +126,31 @@ export default function PublicPromoPage() {
   const { promo, categories, products } = data;
   const primaryUrl = smartDownloadUrl(promo.android_url, promo.ios_url);
 
+  // Try the app first (if it's installed and this domain is verified as an
+  // Android App Link / iOS Universal Link, the OS opens the app and this
+  // page never navigates away), then fall back to the right store after a
+  // beat if nothing intercepted it. `?dl=1` forces a genuinely new URL —
+  // assigning location.href to the page's own current URL is a no-op in
+  // most browsers, so without this the OS never even gets a navigation to
+  // intercept. The query string doesn't affect App Link path matching.
+  const handleDownloadClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!primaryUrl) return;
+
+    const deepLinkUrl = `${window.location.origin}${window.location.pathname}?dl=1`;
+    const anchor = document.createElement('a');
+    anchor.href = deepLinkUrl;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+
+    setTimeout(() => {
+      if (document.visibilityState === 'visible') {
+        window.location.href = primaryUrl;
+      }
+    }, 1500);
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* Full-width banner — first thing on the page */}
@@ -176,8 +201,7 @@ export default function PublicPromoPage() {
               <Box
                 component="a"
                 href={primaryUrl}
-                target="_blank"
-                rel="noopener"
+                onClick={handleDownloadClick}
                 sx={{
                   position: 'relative',
                   display: 'inline-block',

@@ -1,0 +1,22 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.myneedmart.androidapp",
+      "sha256_cert_fingerprints": [
+        "39:A9:50:9B:F6:2C:42:FB:A4:17:8C:69:B8:93:F4:67:37:D6:02:3F:07:3E:75:6F:80:E8:97:90:A5:7C:BE:D1"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.shreemegamart.androidapp",
+      "sha256_cert_fingerprints": [
+        "43:3C:55:82:1C:26:EE:C4:12:50:98:7A:77:E0:CF:33:92:F0:82:2A:73:35:F4:EB:05:DB:6A:F1:1E:71:3D:35"
+      ]
+    }
+  }
+]
