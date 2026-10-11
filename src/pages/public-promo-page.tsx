@@ -28,6 +28,9 @@ type PromoPageData = {
     headline: string;
     subheadline: string;
     hero_image_url: string;
+    background_color: string;
+    headline_color: string;
+    button_color: string;
     bullets: { icon: PromoBulletIcon; title: string; subtitle: string }[];
     android_url: string;
     ios_url: string;
@@ -121,51 +124,63 @@ export default function PublicPromoPage() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* Hero text + CTA */}
-      <Container maxWidth="sm" sx={{ pt: { xs: 5, md: 8 }, pb: { xs: 3, md: 4 }, textAlign: 'center' }}>
-        <Stack spacing={2.5} alignItems="center">
-          {promo.top_tags.length > 0 && (
-            <Stack spacing={0.25}>
-              {promo.top_tags.map((tag, index) => (
-                // eslint-disable-next-line react/no-array-index-key
-                <Typography
-                  key={index}
-                  variant="subtitle2"
-                  sx={{ color: 'text.secondary', fontWeight: 600 }}
-                >
-                  {tag}
-                </Typography>
-              ))}
-            </Stack>
-          )}
+      <Box sx={{ bgcolor: promo.background_color || 'background.default' }}>
+        <Container maxWidth="sm" sx={{ pt: { xs: 5, md: 8 }, pb: { xs: 3, md: 4 }, textAlign: 'center' }}>
+          <Stack spacing={2.5} alignItems="center">
+            {promo.top_tags.length > 0 && (
+              <Stack spacing={0.25}>
+                {promo.top_tags.map((tag, index) => (
+                  // eslint-disable-next-line react/no-array-index-key
+                  <Typography
+                    key={index}
+                    variant="subtitle2"
+                    sx={{ color: 'text.secondary', fontWeight: 600 }}
+                  >
+                    {tag}
+                  </Typography>
+                ))}
+              </Stack>
+            )}
 
-          <Typography variant="h3" sx={{ fontWeight: 800, color: 'primary.main', lineHeight: 1.2 }}>
-            {promo.headline || project.app_name}
-          </Typography>
-
-          {promo.subheadline && (
-            <Typography variant="subtitle1" sx={{ color: 'text.secondary' }}>
-              {promo.subheadline}
-            </Typography>
-          )}
-
-          {primaryUrl && (
-            <Button
-              size="large"
-              variant="contained"
-              color="primary"
-              component="a"
-              href={primaryUrl}
-              target="_blank"
-              rel="noopener"
-              endIcon={<Iconify icon={'solar:arrow-right-bold' as any} />}
-              sx={{ borderRadius: 999, px: 4, py: 1.5, fontWeight: 700 }}
+            <Typography
+              variant="h3"
+              sx={{ fontWeight: 800, color: promo.headline_color || 'primary.main', lineHeight: 1.2 }}
             >
-              Download the App Now
-            </Button>
-          )}
+              {promo.headline || project.app_name}
+            </Typography>
 
-        </Stack>
-      </Container>
+            {promo.subheadline && (
+              <Typography variant="subtitle1" sx={{ color: 'text.secondary' }}>
+                {promo.subheadline}
+              </Typography>
+            )}
+
+            {primaryUrl && (
+              <Button
+                size="large"
+                variant="contained"
+                component="a"
+                href={primaryUrl}
+                target="_blank"
+                rel="noopener"
+                endIcon={<Iconify icon={'solar:arrow-right-bold' as any} />}
+                sx={{
+                  borderRadius: 999,
+                  px: 4,
+                  py: 1.5,
+                  fontWeight: 700,
+                  ...(promo.button_color && {
+                    bgcolor: promo.button_color,
+                    '&:hover': { bgcolor: promo.button_color, filter: 'brightness(0.92)' }
+                  })
+                }}
+              >
+                Download the App Now
+              </Button>
+            )}
+          </Stack>
+        </Container>
+      </Box>
 
       {/* Full-width banner */}
       {promo.hero_image_url && (

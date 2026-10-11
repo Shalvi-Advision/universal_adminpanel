@@ -17,6 +17,9 @@ export interface PromoPageValues {
   headline: string;
   subheadline: string;
   hero_image_url: string;
+  background_color: string;
+  headline_color: string;
+  button_color: string;
   bullets: PromoBullet[];
   android_url: string;
   ios_url: string;

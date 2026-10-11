@@ -26,6 +26,7 @@ import { PROMO_BULLET_ICON_META } from 'src/utils/promo-bullet-icons';
 import { getPromoPage, updatePromoPage, PROMO_BULLET_ICONS } from 'src/services/promo-page';
 
 import { Iconify } from 'src/components/iconify';
+import { ColorField } from 'src/components/project-settings/color-field';
 import { ImageField } from 'src/components/project-settings/image-field';
 
 // ----------------------------------------------------------------------
@@ -41,6 +42,9 @@ const defaultValues: PromoPageValues = {
   headline: '',
   subheadline: '',
   hero_image_url: '',
+  background_color: '',
+  headline_color: '',
+  button_color: '',
   bullets: [],
   android_url: '',
   ios_url: ''
@@ -76,6 +80,10 @@ export default function Page() {
     (key: keyof Omit<PromoPageValues, 'is_enabled' | 'bullets' | 'top_tags'>) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setValues((prev) => ({ ...prev, [key]: e.target.value }));
+
+  const setColorField =
+    (key: 'background_color' | 'headline_color' | 'button_color') => (value: string) =>
+      setValues((prev) => ({ ...prev, [key]: value }));
 
   const setEnabled = (e: React.ChangeEvent<HTMLInputElement>) =>
     setValues((prev) => ({ ...prev, is_enabled: e.target.checked }));
@@ -257,6 +265,37 @@ export default function Page() {
                 placeholder="Your premium shopping destination"
                 value={values.subheadline}
                 onChange={setField('subheadline')}
+              />
+            </Stack>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 0.5 }}>
+              Colors
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+              Leave any of these blank to use the page&apos;s built-in default.
+            </Typography>
+            <Stack spacing={3}>
+              <ColorField
+                label="Page Background"
+                hint="Background behind the headline/button section"
+                value={values.background_color}
+                onChange={setColorField('background_color')}
+              />
+              <ColorField
+                label="Headline Text"
+                hint="Color of the big headline text"
+                value={values.headline_color}
+                onChange={setColorField('headline_color')}
+              />
+              <ColorField
+                label="Download Button"
+                hint="Background color of the 'Download the App Now' button"
+                value={values.button_color}
+                onChange={setColorField('button_color')}
               />
             </Stack>
           </Card>
