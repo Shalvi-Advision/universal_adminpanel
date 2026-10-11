@@ -53,6 +53,18 @@ function smartDownloadUrl(androidUrl: string, iosUrl: string): string {
   return androidUrl || iosUrl;
 }
 
+// Mirrors universal_mobile_app/android/app/build.gradle.kts's productFlavors
+// applicationIds — needed to build an intent:// URI (see handleDownloadClick
+// below). These are native build constants, not admin-editable data.
+const ANDROID_PACKAGE_BY_PROJECT_CODE: Record<string, string> = {
+  RET5677: 'com.patelrmart.app', // pagariya
+  RET6978: 'com.myneedmart.androidapp',
+  RET9575: 'com.grahakpeth.androidapp',
+  RET6602: 'com.sansarpariwar.androidapp',
+  RET2690: 'com.shreemegamart.androidapp',
+  RET0001: 'com.universaldemo.androidapp'
+};
+
 // Public, unauthenticated page — deliberately a plain fetch rather than
 // apiClient, which attaches a bearer token / X-Project-Code from the signed-
 // in session and force-redirects to /sign-in on 401. Neither applies here;
@@ -126,17 +138,41 @@ export default function PublicPromoPage() {
   const { promo, categories, products } = data;
   const primaryUrl = smartDownloadUrl(promo.android_url, promo.ios_url);
 
-  // Try the app first (if it's installed and this domain is verified as an
-  // Android App Link / iOS Universal Link, the OS opens the app and this
-  // page never navigates away), then fall back to the right store after a
-  // beat if nothing intercepted it. `?dl=1` forces a genuinely new URL —
-  // assigning location.href to the page's own current URL is a no-op in
-  // most browsers, so without this the OS never even gets a navigation to
-  // intercept. The query string doesn't affect App Link path matching.
+  // Try the app first, then fall back to the right store if it's not
+  // installed. Android and iOS need genuinely different techniques here —
+  // confirmed by live testing: an `adb shell am start -a VIEW` on this exact
+  // URL opens the app fine (verified via assetlinks.json), but a plain
+  // <a href> click to this SAME page's own URL, from a page already loaded
+  // on this domain, does NOT — Chrome deliberately suppresses the "open in
+  // app" handoff for a same-origin in-page link click, to avoid yanking
+  // users who are just browsing the site into the app on every internal
+  // link. An external am start / a link from another domain isn't
+  // same-origin, so it's unaffected — only this exact "click a link to
+  // yourself" case is.
   const handleDownloadClick = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!primaryUrl) return;
 
+    const isAndroid = /android/i.test(navigator.userAgent);
+    const androidPackage = projectCode ? ANDROID_PACKAGE_BY_PROJECT_CODE[projectCode] : undefined;
+
+    if (isAndroid && androidPackage) {
+      // intent:// is Chrome's own app-launch URI, not a page navigation, so
+      // the same-origin suppression above doesn't apply to it — and
+      // S.browser_fallback_url gives it a native Play Store fallback with
+      // no JS timer needed.
+      const fallback = encodeURIComponent(promo.android_url || primaryUrl);
+      window.location.href =
+        `intent://${window.location.host}${window.location.pathname}` +
+        `#Intent;scheme=https;package=${androidPackage};S.browser_fallback_url=${fallback};end`;
+      return;
+    }
+
+    // iOS: Universal Links don't have this same-origin quirk — Safari
+    // intercepts a same-page link click fine — so a plain link + a short
+    // fallback timer (for "not installed") is enough. `?dl=1` just forces a
+    // genuinely new URL, since assigning location.href to the page's own
+    // current URL is a no-op in most browsers with nothing to intercept.
     const deepLinkUrl = `${window.location.origin}${window.location.pathname}?dl=1`;
     const anchor = document.createElement('a');
     anchor.href = deepLinkUrl;
