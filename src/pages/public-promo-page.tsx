@@ -24,6 +24,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5008
 type PromoPageData = {
   project: { project_code: string; app_name: string; logo_url: string };
   promo: {
+    top_tags: string[];
     headline: string;
     subheadline: string;
     hero_image_url: string;
@@ -34,6 +35,15 @@ type PromoPageData = {
   categories: { name: string; image: string }[];
   products: { p_code: string; product_name: string; image: string; price: number | null; mrp: number | null }[];
 };
+
+// Picks whichever store link matches the visiting device, falling back to
+// whichever one is actually set. Used for the single primary CTA button —
+// the two store badges below it always link to their own specific store.
+function smartDownloadUrl(androidUrl: string, iosUrl: string): string {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (isIOS) return iosUrl || androidUrl;
+  return androidUrl || iosUrl;
+}
 
 // Public, unauthenticated page — deliberately a plain fetch rather than
 // apiClient, which attaches a bearer token / X-Project-Code from the signed-
@@ -106,74 +116,96 @@ export default function PublicPromoPage() {
   }
 
   const { project, promo, categories, products } = data;
+  const primaryUrl = smartDownloadUrl(promo.android_url, promo.ios_url);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      {/* Hero */}
-      <Box
-        sx={{
-          background: (theme) =>
-            `linear-gradient(135deg, ${theme.vars.palette.primary.dark}, ${theme.vars.palette.primary.main})`,
-          color: 'common.white',
-          py: { xs: 6, md: 10 }
-        }}
-      >
-        <Container maxWidth="md">
-          <Stack spacing={3} alignItems="center" textAlign="center">
-            {project.logo_url && (
-              <Avatar src={project.logo_url} alt={project.app_name} sx={{ width: 72, height: 72 }} />
-            )}
-            {promo.hero_image_url && (
-              <Box
-                component="img"
-                src={promo.hero_image_url}
-                alt={promo.headline || project.app_name}
-                sx={{ maxWidth: '100%', maxHeight: 360, borderRadius: 2, boxShadow: 6 }}
-              />
-            )}
-            <Typography variant="h3" sx={{ fontWeight: 800 }}>
-              {promo.headline || project.app_name}
-            </Typography>
-            {promo.subheadline && (
-              <Typography variant="h6" sx={{ opacity: 0.9, fontWeight: 400 }}>
-                {promo.subheadline}
-              </Typography>
-            )}
-            <Stack direction="row" spacing={2} flexWrap="wrap" justifyContent="center">
-              {promo.android_url && (
-                <Button
-                  size="large"
-                  variant="contained"
-                  color="inherit"
-                  component="a"
-                  href={promo.android_url}
-                  target="_blank"
-                  rel="noopener"
-                  startIcon={<Iconify icon={'logos:google-play-icon' as any} />}
-                  sx={{ color: 'primary.main' }}
+      {/* Hero text + CTA */}
+      <Container maxWidth="sm" sx={{ pt: { xs: 5, md: 8 }, pb: { xs: 3, md: 4 }, textAlign: 'center' }}>
+        <Stack spacing={2.5} alignItems="center">
+          {promo.top_tags.length > 0 && (
+            <Stack spacing={0.25}>
+              {promo.top_tags.map((tag, index) => (
+                // eslint-disable-next-line react/no-array-index-key
+                <Typography
+                  key={index}
+                  variant="subtitle2"
+                  sx={{ color: 'text.secondary', fontWeight: 600 }}
                 >
-                  Get it on Google Play
-                </Button>
-              )}
-              {promo.ios_url && (
-                <Button
-                  size="large"
-                  variant="contained"
-                  color="inherit"
-                  component="a"
-                  href={promo.ios_url}
-                  target="_blank"
-                  rel="noopener"
-                  startIcon={<Iconify icon={'logos:apple' as any} />}
-                  sx={{ color: 'primary.main' }}
-                >
-                  Download on the App Store
-                </Button>
-              )}
+                  {tag}
+                </Typography>
+              ))}
             </Stack>
+          )}
+
+          <Typography variant="h3" sx={{ fontWeight: 800, color: 'primary.main', lineHeight: 1.2 }}>
+            {promo.headline || project.app_name}
+          </Typography>
+
+          {promo.subheadline && (
+            <Typography variant="subtitle1" sx={{ color: 'text.secondary' }}>
+              {promo.subheadline}
+            </Typography>
+          )}
+
+          {primaryUrl && (
+            <Button
+              size="large"
+              variant="contained"
+              color="primary"
+              component="a"
+              href={primaryUrl}
+              target="_blank"
+              rel="noopener"
+              endIcon={<Iconify icon={'solar:arrow-right-bold' as any} />}
+              sx={{ borderRadius: 999, px: 4, py: 1.5, fontWeight: 700 }}
+            >
+              Download the App Now
+            </Button>
+          )}
+
+          <Stack direction="row" spacing={1.5} justifyContent="center">
+            {promo.android_url && (
+              <Button
+                variant="contained"
+                color="inherit"
+                component="a"
+                href={promo.android_url}
+                target="_blank"
+                rel="noopener"
+                startIcon={<Iconify icon={'logos:google-play-icon' as any} />}
+                sx={{ bgcolor: 'common.black', color: 'common.white', '&:hover': { bgcolor: 'grey.900' } }}
+              >
+                Get it on Google Play
+              </Button>
+            )}
+            {promo.ios_url && (
+              <Button
+                variant="contained"
+                color="inherit"
+                component="a"
+                href={promo.ios_url}
+                target="_blank"
+                rel="noopener"
+                startIcon={<Iconify icon={'logos:apple' as any} />}
+                sx={{ bgcolor: 'common.black', color: 'common.white', '&:hover': { bgcolor: 'grey.900' } }}
+              >
+                Download on the App Store
+              </Button>
+            )}
           </Stack>
-        </Container>
-      </Box>
+        </Stack>
+      </Container>
+
+      {/* Full-width banner */}
+      {promo.hero_image_url && (
+        <Box
+          component="img"
+          src={promo.hero_image_url}
+          alt={promo.headline || project.app_name}
+          sx={{ width: '100%', display: 'block' }}
+        />
+      )}
 
       {/* Highlights */}
       {promo.bullets.length > 0 && (
@@ -182,7 +214,7 @@ export default function PublicPromoPage() {
             {promo.bullets.map((bullet, index) => {
               const meta = PROMO_BULLET_ICON_META[bullet.icon] ?? PROMO_BULLET_ICON_META.star;
               return (
-                 
+                // eslint-disable-next-line react/no-array-index-key
                 <Grid key={index} size={{ xs: 12, sm: 6 }}>
                   <Stack direction="row" spacing={2} alignItems="flex-start">
                     <Avatar sx={{ bgcolor: 'primary.lighter', color: 'primary.main' }}>
@@ -206,98 +238,66 @@ export default function PublicPromoPage() {
         </Container>
       )}
 
-      {/* Live storefront preview */}
-      {(categories.length > 0 || products.length > 0) && (
-        <Box sx={{ bgcolor: 'background.neutral', py: { xs: 5, md: 8 } }}>
-          <Container maxWidth="md">
-            {categories.length > 0 && (
-              <Box sx={{ mb: 5 }}>
-                <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>
-                  Popular Categories
-                </Typography>
-                <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                  {categories.map((cat) => (
-                    <Stack key={cat.name} spacing={1} alignItems="center" sx={{ width: 96 }}>
-                      <Avatar src={cat.image || undefined} variant="rounded" sx={{ width: 64, height: 64 }}>
-                        {cat.name.charAt(0)}
-                      </Avatar>
-                      <Typography variant="caption" textAlign="center" noWrap sx={{ maxWidth: 96 }}>
-                        {cat.name}
-                      </Typography>
-                    </Stack>
-                  ))}
-                </Stack>
-              </Box>
-            )}
+      {/* Today's Special Picks — active bestsellers */}
+      {products.length > 0 && (
+        <Container maxWidth="md" sx={{ py: { xs: 4, md: 5 } }}>
+          <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>
+            Today&apos;s Special Picks
+          </Typography>
+          <Grid container spacing={2}>
+            {products.map((product) => (
+              <Grid key={product.p_code} size={{ xs: 6, sm: 4, md: 3 }}>
+                <Card sx={{ p: 1.5, textAlign: 'center' }}>
+                  <Avatar
+                    src={product.image || undefined}
+                    variant="rounded"
+                    sx={{ width: '100%', height: 100, mx: 'auto', mb: 1 }}
+                  >
+                    <Iconify icon={'solar:box-bold-duotone' as any} width={32} />
+                  </Avatar>
+                  <Typography variant="caption" noWrap sx={{ display: 'block' }}>
+                    {product.product_name}
+                  </Typography>
+                  {product.price != null && (
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      ₹{product.price}
+                    </Typography>
+                  )}
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      )}
 
-            {products.length > 0 && (
-              <Box>
-                <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>
-                  Trending Products
-                </Typography>
-                <Grid container spacing={2}>
-                  {products.map((product) => (
-                    <Grid key={product.p_code} size={{ xs: 6, sm: 4, md: 2 }}>
-                      <Card sx={{ p: 1.5, textAlign: 'center' }}>
-                        <Avatar
-                          src={product.image || undefined}
-                          variant="rounded"
-                          sx={{ width: '100%', height: 80, mx: 'auto', mb: 1 }}
-                        >
-                          <Iconify icon={'solar:box-bold-duotone' as any} width={32} />
-                        </Avatar>
-                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>
-                          {product.product_name}
-                        </Typography>
-                        {product.price != null && (
-                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                            ₹{product.price}
-                          </Typography>
-                        )}
-                      </Card>
-                    </Grid>
-                  ))}
+      {/* Shop by Category — active seasonal categories */}
+      {categories.length > 0 && (
+        <Box sx={{ bgcolor: 'background.neutral', py: { xs: 4, md: 5 } }}>
+          <Container maxWidth="md">
+            <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>
+              Shop by Category
+            </Typography>
+            <Grid container spacing={2}>
+              {categories.map((cat) => (
+                <Grid key={cat.name} size={{ xs: 6, sm: 4, md: 3 }}>
+                  <Card sx={{ p: 1.5, textAlign: 'center' }}>
+                    <Avatar
+                      src={cat.image || undefined}
+                      variant="rounded"
+                      sx={{ width: '100%', height: 100, mx: 'auto', mb: 1 }}
+                    >
+                      {cat.name.charAt(0)}
+                    </Avatar>
+                    <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+                      {cat.name}
+                    </Typography>
+                  </Card>
                 </Grid>
-              </Box>
-            )}
+              ))}
+            </Grid>
           </Container>
         </Box>
       )}
-
-      {/* Footer CTA */}
-      <Box sx={{ py: { xs: 5, md: 7 }, textAlign: 'center' }}>
-        <Typography variant="h5" sx={{ mb: 3, fontWeight: 700 }}>
-          Click to Download
-        </Typography>
-        <Stack direction="row" spacing={2} justifyContent="center" flexWrap="wrap">
-          {promo.android_url && (
-            <Button
-              size="large"
-              variant="outlined"
-              component="a"
-              href={promo.android_url}
-              target="_blank"
-              rel="noopener"
-              startIcon={<Iconify icon={'logos:google-play-icon' as any} />}
-            >
-              Google Play
-            </Button>
-          )}
-          {promo.ios_url && (
-            <Button
-              size="large"
-              variant="outlined"
-              component="a"
-              href={promo.ios_url}
-              target="_blank"
-              rel="noopener"
-              startIcon={<Iconify icon={'logos:apple' as any} />}
-            >
-              App Store
-            </Button>
-          )}
-        </Stack>
-      </Box>
     </Box>
   );
 }

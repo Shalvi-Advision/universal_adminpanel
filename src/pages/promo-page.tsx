@@ -31,11 +31,13 @@ import { ImageField } from 'src/components/project-settings/image-field';
 // ----------------------------------------------------------------------
 
 const MAX_BULLETS = 4;
+const MAX_TOP_TAGS = 4;
 
 const emptyBullet = (): PromoBullet => ({ icon: 'star', title: '', subtitle: '' });
 
 const defaultValues: PromoPageValues = {
   is_enabled: false,
+  top_tags: [],
   headline: '',
   subheadline: '',
   hero_image_url: '',
@@ -71,12 +73,24 @@ export default function Page() {
   }, [fetchPromoPage]);
 
   const setField =
-    (key: keyof Omit<PromoPageValues, 'is_enabled' | 'bullets'>) =>
+    (key: keyof Omit<PromoPageValues, 'is_enabled' | 'bullets' | 'top_tags'>) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setValues((prev) => ({ ...prev, [key]: e.target.value }));
 
   const setEnabled = (e: React.ChangeEvent<HTMLInputElement>) =>
     setValues((prev) => ({ ...prev, is_enabled: e.target.checked }));
+
+  const updateTopTag = (index: number, value: string) =>
+    setValues((prev) => {
+      const top_tags = [...prev.top_tags];
+      top_tags[index] = value;
+      return { ...prev, top_tags };
+    });
+
+  const addTopTag = () => setValues((prev) => ({ ...prev, top_tags: [...prev.top_tags, ''] }));
+
+  const removeTopTag = (index: number) =>
+    setValues((prev) => ({ ...prev, top_tags: prev.top_tags.filter((_, i) => i !== index) }));
 
   const updateBullet = (index: number, patch: Partial<PromoBullet>) =>
     setValues((prev) => {
@@ -169,6 +183,47 @@ export default function Page() {
             <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
               When off, /{projectCode || '<project>'} shows &quot;Page not found&quot; to visitors.
             </Typography>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12 }}>
+          <Card sx={{ p: 3 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+              <Typography variant="h6">Top Tags</Typography>
+              <Button
+                size="small"
+                disabled={values.top_tags.length >= MAX_TOP_TAGS}
+                onClick={addTopTag}
+                startIcon={<Iconify icon={'solar:add-circle-bold' as any} />}
+              >
+                Add line ({values.top_tags.length}/{MAX_TOP_TAGS})
+              </Button>
+            </Stack>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+              Short lines shown above the headline, e.g. &quot;Grocery • Daily Essentials&quot;.
+            </Typography>
+            <Stack spacing={1.5}>
+              {values.top_tags.map((tag, index) => (
+                // eslint-disable-next-line react/no-array-index-key
+                <Stack key={index} direction="row" spacing={1} alignItems="center">
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Grocery • Daily Essentials"
+                    value={tag}
+                    onChange={(e) => updateTopTag(index, e.target.value)}
+                  />
+                  <Button size="small" color="inherit" onClick={() => removeTopTag(index)}>
+                    Remove
+                  </Button>
+                </Stack>
+              ))}
+              {values.top_tags.length === 0 && (
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  No top tags yet — add up to {MAX_TOP_TAGS}.
+                </Typography>
+              )}
+            </Stack>
           </Card>
         </Grid>
 

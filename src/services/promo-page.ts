@@ -13,6 +13,7 @@ export interface PromoBullet {
 
 export interface PromoPageValues {
   is_enabled: boolean;
+  top_tags: string[];
   headline: string;
   subheadline: string;
   hero_image_url: string;
