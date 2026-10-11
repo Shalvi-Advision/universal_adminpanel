@@ -232,8 +232,8 @@ export default function PublicPromoPage() {
                     spacing={1}
                     alignItems="center"
                     sx={{
-                      px: 2.5,
-                      py: 1,
+                      px: 3.5,
+                      py: 1.5,
                       textDecoration: 'none',
                       borderRight: promo.ios_url ? '1px solid' : 'none',
                       borderColor: 'grey.700'
@@ -259,9 +259,9 @@ export default function PublicPromoPage() {
                     direction="row"
                     spacing={1}
                     alignItems="center"
-                    sx={{ px: 2.5, py: 1, textDecoration: 'none' }}
+                    sx={{ px: 3.5, py: 1.5, textDecoration: 'none' }}
                   >
-                    <Iconify icon={'logos:apple' as any} width={22} sx={{ color: 'common.white' }} />
+                    <Iconify icon={'mdi:apple' as any} width={26} sx={{ color: 'common.white' }} />
                     <Stack sx={{ textAlign: 'left' }}>
                       <Typography variant="caption" sx={{ color: 'grey.300', lineHeight: 1 }}>
                         Download on the
