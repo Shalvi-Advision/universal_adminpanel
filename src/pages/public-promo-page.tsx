@@ -123,7 +123,17 @@ export default function PublicPromoPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      {/* Hero text + CTA */}
+      {/* Full-width banner — first thing on the page */}
+      {promo.hero_image_url && (
+        <Box
+          component="img"
+          src={promo.hero_image_url}
+          alt={promo.headline || project.app_name}
+          sx={{ width: '100%', display: 'block' }}
+        />
+      )}
+
+      {/* Headline + CTA + store badges */}
       <Box sx={{ bgcolor: promo.background_color || 'background.default' }}>
         <Container maxWidth="sm" sx={{ pt: { xs: 5, md: 8 }, pb: { xs: 3, md: 4 }, textAlign: 'center' }}>
           <Stack spacing={2.5} alignItems="center">
@@ -178,54 +188,42 @@ export default function PublicPromoPage() {
                 Download the App Now
               </Button>
             )}
+
+            {(promo.android_url || promo.ios_url) && (
+              <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap">
+                {promo.android_url && (
+                  <Button
+                    variant="contained"
+                    color="inherit"
+                    component="a"
+                    href={promo.android_url}
+                    target="_blank"
+                    rel="noopener"
+                    startIcon={<Iconify icon={'logos:google-play-icon' as any} />}
+                    sx={{ bgcolor: 'common.black', color: 'common.white', '&:hover': { bgcolor: 'grey.900' } }}
+                  >
+                    Get it on Google Play
+                  </Button>
+                )}
+                {promo.ios_url && (
+                  <Button
+                    variant="contained"
+                    color="inherit"
+                    component="a"
+                    href={promo.ios_url}
+                    target="_blank"
+                    rel="noopener"
+                    startIcon={<Iconify icon={'logos:apple' as any} />}
+                    sx={{ bgcolor: 'common.black', color: 'common.white', '&:hover': { bgcolor: 'grey.900' } }}
+                  >
+                    Download on the App Store
+                  </Button>
+                )}
+              </Stack>
+            )}
           </Stack>
         </Container>
       </Box>
-
-      {/* Full-width banner */}
-      {promo.hero_image_url && (
-        <Box
-          component="img"
-          src={promo.hero_image_url}
-          alt={promo.headline || project.app_name}
-          sx={{ width: '100%', display: 'block' }}
-        />
-      )}
-
-      {(promo.android_url || promo.ios_url) && (
-        <Container maxWidth="sm" sx={{ pt: { xs: 3, md: 4 } }}>
-          <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap">
-            {promo.android_url && (
-              <Button
-                variant="contained"
-                color="inherit"
-                component="a"
-                href={promo.android_url}
-                target="_blank"
-                rel="noopener"
-                startIcon={<Iconify icon={'logos:google-play-icon' as any} />}
-                sx={{ bgcolor: 'common.black', color: 'common.white', '&:hover': { bgcolor: 'grey.900' } }}
-              >
-                Get it on Google Play
-              </Button>
-            )}
-            {promo.ios_url && (
-              <Button
-                variant="contained"
-                color="inherit"
-                component="a"
-                href={promo.ios_url}
-                target="_blank"
-                rel="noopener"
-                startIcon={<Iconify icon={'logos:apple' as any} />}
-                sx={{ bgcolor: 'common.black', color: 'common.white', '&:hover': { bgcolor: 'grey.900' } }}
-              >
-                Download on the App Store
-              </Button>
-            )}
-          </Stack>
-        </Container>
-      )}
 
       {/* Highlights */}
       {promo.bullets.length > 0 && (

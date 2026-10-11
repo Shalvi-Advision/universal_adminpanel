@@ -281,7 +281,7 @@ export default function Page() {
             <Stack spacing={3}>
               <ColorField
                 label="Page Background"
-                hint="Background behind the headline/button section"
+                hint="Background behind the headline/button/store-badges section, below the hero image"
                 value={values.background_color}
                 onChange={setColorField('background_color')}
               />
