@@ -31,6 +31,12 @@ type PromoPageData = {
     background_color: string;
     headline_color: string;
     button_color: string;
+    highlights_bg_color: string;
+    highlights_title_color: string;
+    highlights_subtitle_color: string;
+    picks_bg_color: string;
+    category_bg_color: string;
+    card_bg_color: string;
     bullets: { icon: PromoBulletIcon; title: string; subtitle: string }[];
     android_url: string;
     ios_url: string;
@@ -227,70 +233,80 @@ export default function PublicPromoPage() {
 
       {/* Highlights */}
       {promo.bullets.length > 0 && (
-        <Container maxWidth="md" sx={{ py: { xs: 5, md: 8 } }}>
-          <Grid container spacing={3}>
-            {promo.bullets.map((bullet, index) => {
-              const meta = PROMO_BULLET_ICON_META[bullet.icon] ?? PROMO_BULLET_ICON_META.star;
-              return (
-                // eslint-disable-next-line react/no-array-index-key
-                <Grid key={index} size={{ xs: 12, sm: 6 }}>
-                  <Stack direction="row" spacing={2} alignItems="flex-start">
-                    <Avatar sx={{ bgcolor: 'primary.lighter', color: 'primary.main' }}>
-                      <Iconify icon={meta.iconify as any} width={22} />
-                    </Avatar>
-                    <Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                        {bullet.title}
-                      </Typography>
-                      {bullet.subtitle && (
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          {bullet.subtitle}
+        <Box sx={{ bgcolor: promo.highlights_bg_color || 'background.default' }}>
+          <Container maxWidth="md" sx={{ py: { xs: 5, md: 8 } }}>
+            <Grid container spacing={3}>
+              {promo.bullets.map((bullet, index) => {
+                const meta = PROMO_BULLET_ICON_META[bullet.icon] ?? PROMO_BULLET_ICON_META.star;
+                return (
+                  // eslint-disable-next-line react/no-array-index-key
+                  <Grid key={index} size={{ xs: 12, sm: 6 }}>
+                    <Stack direction="row" spacing={2} alignItems="flex-start">
+                      <Avatar sx={{ bgcolor: 'primary.lighter', color: 'primary.main' }}>
+                        <Iconify icon={meta.iconify as any} width={22} />
+                      </Avatar>
+                      <Box>
+                        <Typography
+                          variant="subtitle1"
+                          sx={{ fontWeight: 700, color: promo.highlights_title_color || 'text.primary' }}
+                        >
+                          {bullet.title}
                         </Typography>
-                      )}
-                    </Box>
-                  </Stack>
-                </Grid>
-              );
-            })}
-          </Grid>
-        </Container>
+                        {bullet.subtitle && (
+                          <Typography
+                            variant="body2"
+                            sx={{ color: promo.highlights_subtitle_color || 'text.secondary' }}
+                          >
+                            {bullet.subtitle}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Stack>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </Container>
+        </Box>
       )}
 
       {/* Today's Special Picks — active bestsellers */}
       {products.length > 0 && (
-        <Container maxWidth="md" sx={{ py: { xs: 4, md: 5 } }}>
-          <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>
-            Today&apos;s Special Picks
-          </Typography>
-          <Grid container spacing={2}>
-            {products.map((product) => (
-              <Grid key={product.p_code} size={{ xs: 6, sm: 4, md: 3 }}>
-                <Card sx={{ p: 1.5, textAlign: 'center' }}>
-                  <Avatar
-                    src={product.image || undefined}
-                    variant="rounded"
-                    sx={{ width: '100%', height: 100, mx: 'auto', mb: 1 }}
-                  >
-                    <Iconify icon={'solar:box-bold-duotone' as any} width={32} />
-                  </Avatar>
-                  <Typography variant="caption" noWrap sx={{ display: 'block' }}>
-                    {product.product_name}
-                  </Typography>
-                  {product.price != null && (
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                      ₹{product.price}
+        <Box sx={{ bgcolor: promo.picks_bg_color || 'background.default' }}>
+          <Container maxWidth="md" sx={{ py: { xs: 4, md: 5 } }}>
+            <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>
+              Today&apos;s Special Picks
+            </Typography>
+            <Grid container spacing={2}>
+              {products.map((product) => (
+                <Grid key={product.p_code} size={{ xs: 6, sm: 4, md: 3 }}>
+                  <Card sx={{ p: 1.5, textAlign: 'center', ...(promo.card_bg_color && { bgcolor: promo.card_bg_color }) }}>
+                    <Avatar
+                      src={product.image || undefined}
+                      variant="rounded"
+                      sx={{ width: '100%', height: 100, mx: 'auto', mb: 1 }}
+                    >
+                      <Iconify icon={'solar:box-bold-duotone' as any} width={32} />
+                    </Avatar>
+                    <Typography variant="caption" noWrap sx={{ display: 'block' }}>
+                      {product.product_name}
                     </Typography>
-                  )}
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
+                    {product.price != null && (
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        ₹{product.price}
+                      </Typography>
+                    )}
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Container>
+        </Box>
       )}
 
       {/* Shop by Category — active seasonal categories */}
       {categories.length > 0 && (
-        <Box sx={{ bgcolor: 'background.neutral', py: { xs: 4, md: 5 } }}>
+        <Box sx={{ bgcolor: promo.category_bg_color || 'background.neutral', py: { xs: 4, md: 5 } }}>
           <Container maxWidth="md">
             <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>
               Shop by Category
@@ -298,7 +314,7 @@ export default function PublicPromoPage() {
             <Grid container spacing={2}>
               {categories.map((cat) => (
                 <Grid key={cat.name} size={{ xs: 6, sm: 4, md: 3 }}>
-                  <Card sx={{ p: 1.5, textAlign: 'center' }}>
+                  <Card sx={{ p: 1.5, textAlign: 'center', ...(promo.card_bg_color && { bgcolor: promo.card_bg_color }) }}>
                     <Avatar
                       src={cat.image || undefined}
                       variant="rounded"

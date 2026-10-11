@@ -20,6 +20,12 @@ export interface PromoPageValues {
   background_color: string;
   headline_color: string;
   button_color: string;
+  highlights_bg_color: string;
+  highlights_title_color: string;
+  highlights_subtitle_color: string;
+  picks_bg_color: string;
+  category_bg_color: string;
+  card_bg_color: string;
   bullets: PromoBullet[];
   android_url: string;
   ios_url: string;

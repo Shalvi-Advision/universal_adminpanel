@@ -45,6 +45,12 @@ const defaultValues: PromoPageValues = {
   background_color: '',
   headline_color: '',
   button_color: '',
+  highlights_bg_color: '',
+  highlights_title_color: '',
+  highlights_subtitle_color: '',
+  picks_bg_color: '',
+  category_bg_color: '',
+  card_bg_color: '',
   bullets: [],
   android_url: '',
   ios_url: ''
@@ -82,7 +88,19 @@ export default function Page() {
       setValues((prev) => ({ ...prev, [key]: e.target.value }));
 
   const setColorField =
-    (key: 'background_color' | 'headline_color' | 'button_color') => (value: string) =>
+    (
+      key:
+        | 'background_color'
+        | 'headline_color'
+        | 'button_color'
+        | 'highlights_bg_color'
+        | 'highlights_title_color'
+        | 'highlights_subtitle_color'
+        | 'picks_bg_color'
+        | 'category_bg_color'
+        | 'card_bg_color'
+    ) =>
+    (value: string) =>
       setValues((prev) => ({ ...prev, [key]: value }));
 
   const setEnabled = (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -326,6 +344,68 @@ export default function Page() {
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 Leave either blank to hide that store&apos;s download button on the page.
               </Typography>
+            </Stack>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 0.5 }}>
+              Highlights Colors
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+              Applies to the Highlights section below.
+            </Typography>
+            <Stack spacing={3}>
+              <ColorField
+                label="Section Background"
+                hint="Background of the Highlights section"
+                value={values.highlights_bg_color}
+                onChange={setColorField('highlights_bg_color')}
+              />
+              <ColorField
+                label="Title Text"
+                hint="Color of each highlight's title"
+                value={values.highlights_title_color}
+                onChange={setColorField('highlights_title_color')}
+              />
+              <ColorField
+                label="Subtitle Text"
+                hint="Color of each highlight's subtitle"
+                value={values.highlights_subtitle_color}
+                onChange={setColorField('highlights_subtitle_color')}
+              />
+            </Stack>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 0.5 }}>
+              Picks &amp; Category Colors
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+              Applies to the Today&apos;s Special Picks and Shop by Category sections.
+            </Typography>
+            <Stack spacing={3}>
+              <ColorField
+                label="Special Picks Background"
+                hint="Background of the Today's Special Picks section"
+                value={values.picks_bg_color}
+                onChange={setColorField('picks_bg_color')}
+              />
+              <ColorField
+                label="Shop by Category Background"
+                hint="Background of the Shop by Category section"
+                value={values.category_bg_color}
+                onChange={setColorField('category_bg_color')}
+              />
+              <ColorField
+                label="Card Background"
+                hint="Background of each product/category card in both sections"
+                value={values.card_bg_color}
+                onChange={setColorField('card_bg_color')}
+              />
             </Stack>
           </Card>
         </Grid>
