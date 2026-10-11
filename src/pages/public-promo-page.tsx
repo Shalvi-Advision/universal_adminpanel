@@ -164,7 +164,22 @@ export default function PublicPromoPage() {
             </Button>
           )}
 
-          <Stack direction="row" spacing={1.5} justifyContent="center">
+        </Stack>
+      </Container>
+
+      {/* Full-width banner */}
+      {promo.hero_image_url && (
+        <Box
+          component="img"
+          src={promo.hero_image_url}
+          alt={promo.headline || project.app_name}
+          sx={{ width: '100%', display: 'block' }}
+        />
+      )}
+
+      {(promo.android_url || promo.ios_url) && (
+        <Container maxWidth="sm" sx={{ pt: { xs: 3, md: 4 } }}>
+          <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap">
             {promo.android_url && (
               <Button
                 variant="contained"
@@ -194,17 +209,7 @@ export default function PublicPromoPage() {
               </Button>
             )}
           </Stack>
-        </Stack>
-      </Container>
-
-      {/* Full-width banner */}
-      {promo.hero_image_url && (
-        <Box
-          component="img"
-          src={promo.hero_image_url}
-          alt={promo.headline || project.app_name}
-          sx={{ width: '100%', display: 'block' }}
-        />
+        </Container>
       )}
 
       {/* Highlights */}
