@@ -124,7 +124,7 @@ export default function PublicPromoPage() {
     );
   }
 
-  const { project, promo, categories, products } = data;
+  const { promo, categories, products } = data;
   const primaryUrl = smartDownloadUrl(promo.android_url, promo.ios_url);
 
   return (
@@ -134,7 +134,7 @@ export default function PublicPromoPage() {
         <Box
           component="img"
           src={promo.hero_image_url}
-          alt={promo.headline || project.app_name}
+          alt={promo.headline || ''}
           sx={{ width: '100%', display: 'block' }}
         />
       )}
@@ -158,12 +158,14 @@ export default function PublicPromoPage() {
               </Stack>
             )}
 
-            <Typography
-              variant="h3"
-              sx={{ fontWeight: 800, color: promo.headline_color || 'primary.main', lineHeight: 1.2 }}
-            >
-              {promo.headline || project.app_name}
-            </Typography>
+            {promo.headline && (
+              <Typography
+                variant="h3"
+                sx={{ fontWeight: 800, color: promo.headline_color || 'primary.main', lineHeight: 1.2 }}
+              >
+                {promo.headline}
+              </Typography>
+            )}
 
             {promo.subheadline && (
               <Typography variant="subtitle1" sx={{ color: 'text.secondary' }}>
