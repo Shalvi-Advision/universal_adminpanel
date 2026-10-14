@@ -62,6 +62,16 @@ const printStyles = (
                     boxShadow: 'none',
                 },
                 '.no-print': { display: 'none !important' },
+                // On screen the table scrolls sideways at a 900px minimum, and
+                // the dialog body scrolls too. A printed page is narrower, so
+                // both would clip the right-hand columns (amounts, delivery
+                // charges, final amount): let everything shrink to the page.
+                '.order-print-area, .order-print-table': {
+                    overflow: 'visible !important',
+                    maxHeight: 'none !important',
+                },
+                '.order-print-table .MuiTable-root': { minWidth: '0 !important', width: '100%' },
+                '.order-print-table .MuiTableCell-root': { padding: '4px 6px', fontSize: 11 },
             },
         }}
     />
@@ -320,7 +330,7 @@ export function OrderDetailsDialog({
                     </Alert>
                 )}
 
-                <Box sx={{ mt: 3, overflowX: 'auto' }}>
+                <Box className="order-print-table" sx={{ mt: 3, overflowX: 'auto' }}>
                     <Table size="small" sx={{ minWidth: 900 }}>
                         <TableHead>
                             <TableRow>
@@ -482,7 +492,7 @@ export function OrderDetailsDialog({
                                 <TableCell sx={headCellSx}>Total</TableCell>
                                 <TableCell sx={cellSx} />
                                 <TableCell sx={headCellSx}>{totals.quantity}</TableCell>
-                                <TableCell sx={cellSx} />
+                                <TableCell sx={headCellSx}>{formatAmount(totals.mrp)}</TableCell>
                                 <TableCell sx={headCellSx}>{formatAmount(totals.net)}</TableCell>
                                 <TableCell sx={headCellSx}>{formatAmount(totals.discount)}</TableCell>
                                 <TableCell sx={headCellSx}>{formatAmount(totals.net)}</TableCell>

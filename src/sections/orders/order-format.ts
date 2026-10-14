@@ -92,6 +92,7 @@ export const getLineAmounts = (item: OrderItem) => {
         sellingPrice,
         hasMrp,
         mrp: hasMrp ? (item.mrp as number) : null,
+        gross,
         discount: Math.max(0, gross - net),
         net,
     };
@@ -107,9 +108,12 @@ export const getOrderTotals = (items: OrderItem[] = []) =>
                 const line = getLineAmounts(item);
                 return {
                     quantity: acc.quantity + line.quantity,
+                    // MRP × qty, or the line total when there's no MRP — so
+                    // mrp − discount always equals net.
+                    mrp: acc.mrp + line.gross,
                     discount: acc.discount + line.discount,
                     net: acc.net + line.net,
                 };
             },
-            { quantity: 0, discount: 0, net: 0 }
+            { quantity: 0, mrp: 0, discount: 0, net: 0 }
         );
