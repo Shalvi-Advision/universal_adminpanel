@@ -83,7 +83,10 @@ export function PaymentRecoveryCaseDialog({ open, caseId, canEdit, onClose, onCh
       setDetail(response.data);
 
       // Pre-fill sane defaults — admin can override before submitting.
-      const defaultStore = suggestions.stores.length === 1 ? suggestions.stores[0] : suggestions.stores[0];
+      // Prefer the store the cart snapshot was actually taken at, if any.
+      const snapshotStoreCode = response.data.case.cart_snapshot?.store_code;
+      const defaultStore =
+        suggestions.stores.find((s) => s.store_code === snapshotStoreCode) ?? suggestions.stores[0];
       if (defaultStore) {
         setStoreCode(defaultStore.store_code);
         setSlotId(defaultStore.slots.length ? defaultStore.slots[0].iddelivery_slot : '');
@@ -213,13 +216,27 @@ export function PaymentRecoveryCaseDialog({ open, caseId, canEdit, onClose, onCh
                 <strong>Captured:</strong>{' '}
                 {activeCase.captured_at ? new Date(activeCase.captured_at).toLocaleString() : '—'}
               </Typography>
-              {suggestions && (
-                <Typography variant="body2" color={suggestions.cart_item_count ? 'text.primary' : 'error'}>
-                  <strong>Customer&apos;s cart now:</strong>{' '}
-                  {suggestions.cart_item_count
-                    ? `${suggestions.cart_item_count} item(s), ₹${suggestions.cart_subtotal}`
-                    : 'empty — cannot restore from an empty cart'}
-                </Typography>
+              {activeCase.cart_snapshot?.items?.length ? (
+                <Stack spacing={0.25}>
+                  <Typography variant="body2">
+                    <strong>What was paid for</strong> (frozen at payment time — immune to cart changes since):
+                  </Typography>
+                  {activeCase.cart_snapshot.items.map((item) => (
+                    <Typography key={item.p_code} variant="caption" color="text.secondary">
+                      {item.quantity} × {item.product_name || item.p_code}
+                      {item.total_price != null ? ` — ₹${item.total_price}` : ''}
+                    </Typography>
+                  ))}
+                </Stack>
+              ) : (
+                suggestions && (
+                  <Typography variant="body2" color={suggestions.cart_item_count ? 'text.primary' : 'error'}>
+                    <strong>Customer&apos;s cart now:</strong>{' '}
+                    {suggestions.cart_item_count
+                      ? `${suggestions.cart_item_count} item(s), ₹${suggestions.cart_subtotal}`
+                      : 'empty, and no cart snapshot was taken for this payment — cannot restore'}
+                  </Typography>
+                )
               )}
             </Stack>
 
@@ -376,7 +393,7 @@ export function PaymentRecoveryCaseDialog({ open, caseId, canEdit, onClose, onCh
                 !deliveryDate ||
                 !paymentModeId ||
                 !addressId ||
-                !suggestions?.cart_item_count
+                !(activeCase.cart_snapshot?.items?.length || suggestions?.cart_item_count)
               }
               onClick={handleRestore}
             >

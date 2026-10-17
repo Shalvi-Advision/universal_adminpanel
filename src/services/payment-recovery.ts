@@ -29,6 +29,13 @@ export interface PaymentRecoveryCase {
   mobile_no?: string;
   customer_name?: string;
   temp_order_id?: string;
+  // Frozen at Razorpay-order-creation time, before payment — what's actually
+  // being restored, immune to the customer having since changed their live
+  // cart. Absent on cases whose Razorpay order predates this feature.
+  cart_snapshot?: {
+    store_code?: string;
+    items: { p_code: string; product_name?: string; quantity: number; unit_price?: number; total_price?: number; store_code: string }[];
+  };
   source: PaymentRecoverySource;
   status: PaymentRecoveryStatus;
   resolution?: PaymentRecoveryResolution;
