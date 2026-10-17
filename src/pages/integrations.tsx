@@ -30,6 +30,11 @@ const SECRET_FIELDS = [
     hint: 'Used server-side to create and verify payments. Never sent to the app.',
   },
   {
+    key: 'razorpay_webhook_secret',
+    label: 'Razorpay Webhook Secret',
+    hint: 'Shown by Razorpay when the payment.captured webhook is created (Dashboard → Account & Settings → Webhooks). Verifies that payment-recovery alerts really came from Razorpay — a separate value from the Key Secret above.',
+  },
+  {
     key: 'sms_api_key',
     label: 'SMS API Key',
     hint: 'Used server-side to send login OTPs.',

@@ -20,6 +20,7 @@ export const DashboardPage = lazyWithRetry(() => import('src/pages/dashboard'));
 export const SignInPage = lazyWithRetry(() => import('src/pages/sign-in'));
 export const UsersPage = lazyWithRetry(() => import('src/pages/users'));
 export const OrdersPage = lazyWithRetry(() => import('src/pages/orders'));
+export const PaymentRecoveryPage = lazyWithRetry(() => import('src/pages/payment-recovery'));
 export const NotificationsPage = lazyWithRetry(() => import('src/pages/notifications'));
 export const EcommerceDepartmentsPage = lazyWithRetry(
   () => import('src/pages/ecommerce/departments')
@@ -149,6 +150,14 @@ export const routesSection: RouteObject[] = [
         element: (
           <PermissionGuard section="orders">
             <OrdersPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'payment-recovery',
+        element: (
+          <PermissionGuard section="paymentRecovery">
+            <PaymentRecoveryPage />
           </PermissionGuard>
         ),
       },

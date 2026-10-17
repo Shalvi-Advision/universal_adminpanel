@@ -34,6 +34,12 @@ export const navData: NavItem[] = [
     permissionSection: 'orders',
   },
   {
+    title: 'Payment Recovery',
+    path: '/payment-recovery',
+    icon: iconify('solar:wallet-money-bold-duotone'),
+    permissionSection: 'paymentRecovery',
+  },
+  {
     title: 'Users',
     path: '/users',
     icon: icon('ic-user'),

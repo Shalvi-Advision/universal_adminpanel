@@ -60,6 +60,10 @@ const SECTIONS: { key: PermissionSection; label: string; actions: string[] }[] =
   { key: 'digitalCart', label: 'Digital Cart', actions: ['view', 'create', 'edit', 'delete'] },
   { key: 'reports', label: 'Reports', actions: ['view', 'create', 'edit', 'delete'] },
   { key: 'loyalty', label: 'Loyalty', actions: ['view', 'create', 'edit', 'delete'] },
+  // No 'create'/'delete' here on purpose: a case is only ever flagged by the
+  // webhook/reconciliation job, never created by an admin, and never deleted
+  // — just resolved (restored/refunded) or dismissed, both 'edit'.
+  { key: 'paymentRecovery', label: 'Payment Recovery', actions: ['view', 'edit'] },
 ];
 
 const ALL_ACTIONS = ['view', 'create', 'edit', 'delete'];

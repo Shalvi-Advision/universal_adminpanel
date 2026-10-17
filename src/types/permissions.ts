@@ -12,7 +12,8 @@ export type PermissionSection =
   | 'digitalCart'
   | 'reports'
   | 'loyalty'
-  | 'promoPage';
+  | 'promoPage'
+  | 'paymentRecovery';
 
 export type SectionPermissions = {
   view?: boolean;
