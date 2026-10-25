@@ -104,6 +104,12 @@ type Props = {
     open: boolean;
     order: Order | null;
     canEdit: boolean;
+    // Whether this tenant's fulfillment is ERP/SAP-integrated — threaded
+    // through to getNextOrderStatus below. Doesn't change what shows here
+    // today (only the Accept step appears in this dialog, and that step is
+    // identical either way), but keeps this call site correct if the dialog
+    // ever grows more steps.
+    isErpIntegrated: boolean;
     busy?: boolean;
     onClose: () => void;
     onOpenHistory: () => void;
@@ -116,6 +122,7 @@ export function OrderDetailsDialog({
     open,
     order,
     canEdit,
+    isErpIntegrated,
     busy = false,
     onClose,
     onOpenHistory,
@@ -145,7 +152,7 @@ export function OrderDetailsDialog({
     // column, not from inside this dialog. Showing every subsequent stage's
     // button here too just meant clicking one instantly relabelled itself
     // to the next stage, with no way to tell the two apart.
-    const nextStep = canEdit && status === 'pending' ? getNextOrderStatus(status) : null;
+    const nextStep = canEdit && status === 'pending' ? getNextOrderStatus(status, isErpIntegrated) : null;
     const canCancel = canEdit && status !== 'cancelled' && status !== 'delivered';
 
     // Editing individual lines only makes sense while the order is still

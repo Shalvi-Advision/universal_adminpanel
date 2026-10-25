@@ -87,6 +87,9 @@ export default function Page() {
   const setPickerEnabled = (e: React.ChangeEvent<HTMLInputElement>) =>
     setValues((prev) => ({ ...prev, picker_integration_enabled: e.target.checked ? 'true' : 'false' }));
 
+  const setErpIntegrated = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setValues((prev) => ({ ...prev, erp_integrated: e.target.checked ? 'true' : 'false' }));
+
   const handleSavePublishable = async () => {
     try {
       setSaving(true);
@@ -307,7 +310,28 @@ export default function Page() {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 0.5 }}>
+              ERP / SAP Integration
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+              Turn this on only if this tenant&apos;s fulfillment status is managed by their own
+              external ERP or SAP system — it controls whether Accepted By Store and In Packaging
+              appear as order-status tabs and choices in the Orders page. Unrelated to SHALVI
+              PICKER below: a tenant can be ERP-integrated with no Picker involvement, or vice
+              versa.
+            </Typography>
+            <FormControlLabel
+              control={
+                <Switch checked={values.erp_integrated === 'true'} onChange={setErpIntegrated} />
+              }
+              label="This tenant's fulfillment is ERP/SAP-integrated"
+            />
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ mb: 0.5 }}>
               SHALVI PICKER

@@ -78,6 +78,11 @@ export interface IntegrationValues {
   // here (see home_feed_enabled above).
   picker_integration_enabled: string;
   picker_webhook_url: string;
+  // Does this tenant's fulfillment status come from an external ERP/SAP
+  // system (so the Orders page shows Accepted By Store / In Packaging), or
+  // does this admin panel run fulfillment end to end? 'true' | 'false' | ''.
+  // Independent of picker_integration_enabled above.
+  erp_integrated: string;
 }
 
 export interface IntegrationsResponse {

@@ -41,6 +41,7 @@ import {
     getNextOrderStatus,
     updatePaymentStatus,
     ORDER_STATUS_LABELS,
+    getOrderStatusesFor,
     normalizeOrderStatus,
     getOrderStatusCounts,
     updateOrderItemQuantity,
@@ -82,6 +83,12 @@ export default function OrdersPage() {
 
     const [orders, setOrders] = useState<Order[]>([]);
     const [counts, setCounts] = useState<StatusCounts>(EMPTY_COUNTS);
+    // Whether this tenant's fulfillment is ERP/SAP-integrated — controls
+    // whether Accepted By Store / In Packaging appear at all. Comes from the
+    // orders endpoints' own `meta`, not a separate project-settings call (see
+    // OrderStatusMeta in src/services/orders.ts for why).
+    const [isErpIntegrated, setIsErpIntegrated] = useState(false);
+    const visibleStatuses = useMemo(() => getOrderStatusesFor(isErpIntegrated), [isErpIntegrated]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>('');
     const [successMessage, setSuccessMessage] = useState<string>('');
@@ -126,6 +133,7 @@ export default function OrdersPage() {
             if (response.success) {
                 setOrders(response.data);
                 setTotalCount(response.pagination.total);
+                setIsErpIntegrated(response.meta?.erp_integrated ?? false);
             }
         } catch (err: any) {
             setError(err.message || 'Failed to load orders');
@@ -139,6 +147,7 @@ export default function OrdersPage() {
             const response = await getOrderStatusCounts({ search: search || undefined });
             if (response.success) {
                 setCounts({ ...EMPTY_COUNTS, ...response.data.counts });
+                setIsErpIntegrated(response.meta?.erp_integrated ?? false);
             }
         } catch {
             // A failed badge count must not blank out the table.
@@ -153,6 +162,18 @@ export default function OrdersPage() {
     useEffect(() => {
         fetchCounts();
     }, [fetchCounts]);
+
+    // If the tenant's integration status changes mid-session (or the flag's
+    // first real value arrives after mount, when statusFilter still has its
+    // 'pending' default) and the active tab is no longer in the vocabulary,
+    // fall back to Pending rather than leaving the filter on a tab that no
+    // longer exists.
+    useEffect(() => {
+        if (!visibleStatuses.includes(statusFilter)) {
+            setStatusFilter('pending');
+            setPage(0);
+        }
+    }, [visibleStatuses, statusFilter]);
 
     const refresh = useCallback(() => {
         fetchOrders();
@@ -299,6 +320,17 @@ export default function OrdersPage() {
 
     const activeColor = useMemo(() => STATUS_COLORS[statusFilter], [statusFilter]);
 
+    // The "Update Order Status" dialog's own choice list. Usually just
+    // visibleStatuses, but an order can already be sitting in an ERP-only
+    // status this tenant's vocabulary no longer includes (integration turned
+    // off after the order was placed) — in that case the dropdown must still
+    // offer that status so the dialog can be closed/re-saved without being
+    // forced into a different one. Keeps ORDER_STATUSES' canonical order.
+    const dialogStatuses = useMemo(
+        () => ORDER_STATUSES.filter((status) => visibleStatuses.includes(status) || status === newStatus),
+        [visibleStatuses, newStatus]
+    );
+
     // Order Status (what the order currently is) and the actions that move it
     // forward are rendered as two separate cells — they used to be stacked in
     // one "Order Status" column, which read as if Pending/Accept/Cancel were
@@ -330,7 +362,7 @@ export default function OrdersPage() {
         // One button per step of the workflow rather than an Accept that only
         // appeared on Pending: the admin walks an order all the way to
         // Delivered from this column, each click naming the tab it moves to.
-        const nextStep = getNextOrderStatus(status);
+        const nextStep = getNextOrderStatus(status, isErpIntegrated);
 
         return (
             <Stack spacing={0.75} alignItems="flex-start">
@@ -395,7 +427,7 @@ export default function OrdersPage() {
                                 '& .MuiTabs-indicator': { backgroundColor: activeColor, height: 3 },
                             }}
                         >
-                            {ORDER_STATUSES.map((status) => (
+                            {visibleStatuses.map((status) => (
                                 <Tab
                                     key={status}
                                     value={status}
@@ -682,7 +714,7 @@ export default function OrdersPage() {
                             label="Status"
                             onChange={(e) => setNewStatus(e.target.value as OrderStatus)}
                         >
-                            {ORDER_STATUSES.map((status) => (
+                            {dialogStatuses.map((status) => (
                                 <MenuItem key={status} value={status}>
                                     {ORDER_STATUS_LABELS[status]}
                                 </MenuItem>
@@ -729,6 +761,7 @@ export default function OrdersPage() {
                 open={detailDialogOpen}
                 order={selectedOrder}
                 canEdit={canEditOrders}
+                isErpIntegrated={isErpIntegrated}
                 busy={updating}
                 onClose={() => setDetailDialogOpen(false)}
                 onOpenHistory={() => setHistoryDialogOpen(true)}

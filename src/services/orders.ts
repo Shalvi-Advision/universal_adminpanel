@@ -127,6 +127,22 @@ export const ORDER_STATUSES = [
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+// Only meaningful for a tenant whose fulfillment is managed by an external
+// ERP/SAP system (Project.config.erp_integrated) — a tenant that runs
+// fulfillment entirely through this panel has no "store accepted it" / "it's
+// being packed" signal of its own. Mirrors constants/orderStatus.js#ERP_ONLY_STATUSES.
+export const ERP_ONLY_STATUSES: OrderStatus[] = ['accepted_by_store', 'in_packaging'];
+
+// The tab/dropdown vocabulary for one tenant. ORDER_STATUSES itself stays the
+// full list — orders written while a tenant was integrated must stay
+// resolvable even after the flag is later turned off (see orderStatusLabel,
+// the status-colour map, etc., none of which should ever not recognise a
+// status an order might actually carry).
+export function getOrderStatusesFor(isErpIntegrated: boolean): OrderStatus[] {
+    if (isErpIntegrated) return [...ORDER_STATUSES];
+    return ORDER_STATUSES.filter((status) => !ERP_ONLY_STATUSES.includes(status));
+}
+
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     pending: 'Pending',
     accepted: 'Accepted',
@@ -170,13 +186,16 @@ export function orderStatusLabel(raw?: string): string {
 // this panel and the legacy one have always used there, and it reads as an
 // action rather than as a state.
 //
-// The backend does not enforce a transition graph — PATCH /:id/status accepts
-// any value in the vocabulary — so this map is the only thing defining the
-// happy path. Deliberately forward-only: correcting a mistake means going
-// through the status dialog on the chip, which still allows any status.
-export const NEXT_ORDER_STATUS: Partial<
-    Record<OrderStatus, { status: OrderStatus; label: string }>
-> = {
+// The backend does not enforce a transition graph beyond the ERP-only gate
+// added alongside this map (see routes/admin/orders.js) — so this map is the
+// only thing defining the happy path. Deliberately forward-only: correcting a
+// mistake means going through the status dialog on the chip, which still
+// allows any status this tenant's vocabulary includes.
+//
+// Two variants: a tenant whose fulfillment is ERP-integrated gets the full
+// 5-hop path; everyone else skips straight from Accepted to Out for Delivery,
+// since Accepted By Store / In Packaging don't mean anything for them.
+const NEXT_ORDER_STATUS_ERP: Partial<Record<OrderStatus, { status: OrderStatus; label: string }>> = {
     pending: { status: 'accepted', label: 'Accept' },
     accepted: { status: 'accepted_by_store', label: 'Accepted By Store' },
     accepted_by_store: { status: 'in_packaging', label: 'In Packaging' },
@@ -184,14 +203,36 @@ export const NEXT_ORDER_STATUS: Partial<
     out_for_delivery: { status: 'delivered', label: 'Delivered' },
 };
 
+const NEXT_ORDER_STATUS_BASIC: Partial<Record<OrderStatus, { status: OrderStatus; label: string }>> = {
+    pending: { status: 'accepted', label: 'Accept' },
+    accepted: { status: 'out_for_delivery', label: 'Out for Delivery' },
+    out_for_delivery: { status: 'delivered', label: 'Delivered' },
+};
+
+// Kept for any caller that genuinely wants the full-workflow map regardless
+// of tenant (e.g. displaying "what would the next step be if this tenant were
+// integrated"); normal callers should use getNextOrderStatus below.
+export const NEXT_ORDER_STATUS = NEXT_ORDER_STATUS_ERP;
+
 // The step an order can be advanced to, or null once it has reached the end of
-// the workflow. Folds legacy spellings on the way in.
+// the workflow (or there is no next step in this tenant's vocabulary). Folds
+// legacy spellings on the way in.
 export function getNextOrderStatus(
-    raw?: string
+    raw: string | undefined,
+    isErpIntegrated: boolean
 ): { status: OrderStatus; label: string } | null {
-    return NEXT_ORDER_STATUS[normalizeOrderStatus(raw)] ?? null;
+    const map = isErpIntegrated ? NEXT_ORDER_STATUS_ERP : NEXT_ORDER_STATUS_BASIC;
+    return map[normalizeOrderStatus(raw)] ?? null;
 }
 export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+
+// Tenant-level flags the Orders page needs that aren't per-order — piggybacked
+// onto the two endpoints the page already calls (see routes/admin/orders.js),
+// rather than a second request to /api/admin/project-settings, which needs a
+// different permission (dynamicSection:view vs. this page's orders:view).
+export interface OrderStatusMeta {
+    erp_integrated: boolean;
+}
 
 export interface OrdersQueryParams {
     page?: number;
@@ -208,7 +249,7 @@ export interface OrdersQueryParams {
 // Get all orders with filtering and pagination
 export async function getOrders(
     params: OrdersQueryParams = {}
-): Promise<PaginatedResponse<Order>> {
+): Promise<PaginatedResponse<Order> & { meta: OrderStatusMeta }> {
     const queryParams = new URLSearchParams();
 
     if (params.page) queryParams.append('page', params.page.toString());
@@ -224,7 +265,7 @@ export async function getOrders(
     const queryString = queryParams.toString();
     const url = `/api/admin/orders${queryString ? `?${queryString}` : ''}`;
 
-    return apiClient.get<PaginatedResponse<Order>>(url);
+    return apiClient.get<PaginatedResponse<Order> & { meta: OrderStatusMeta }>(url);
 }
 
 // Get single order by ID
@@ -300,16 +341,18 @@ export async function getOrderStatusCounts(params: {
     search?: string;
     startDate?: string;
     endDate?: string;
-} = {}): Promise<ApiResponse<{ total: number; counts: Record<OrderStatus, number> }>> {
+} = {}): Promise<
+    ApiResponse<{ total: number; counts: Record<OrderStatus, number> }> & { meta: OrderStatusMeta }
+> {
     const queryParams = new URLSearchParams();
     if (params.search) queryParams.append('search', params.search);
     if (params.startDate) queryParams.append('startDate', params.startDate);
     if (params.endDate) queryParams.append('endDate', params.endDate);
 
     const queryString = queryParams.toString();
-    return apiClient.get<ApiResponse<{ total: number; counts: Record<OrderStatus, number> }>>(
-        `/api/admin/orders/stats/status-counts${queryString ? `?${queryString}` : ''}`
-    );
+    return apiClient.get<
+        ApiResponse<{ total: number; counts: Record<OrderStatus, number> }> & { meta: OrderStatusMeta }
+    >(`/api/admin/orders/stats/status-counts${queryString ? `?${queryString}` : ''}`);
 }
 
 // Bulk update order status
