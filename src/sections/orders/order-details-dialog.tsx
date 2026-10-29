@@ -331,6 +331,87 @@ export function OrderDetailsDialog({
                     </Stack>
                 </Box>
 
+                {order.delivery_tracking && (
+                    <>
+                        <Divider sx={{ my: 2 }} />
+                        <Box
+                            className="no-print"
+                            sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
+                        >
+                            <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                                Delivery Tracking
+                            </Typography>
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gap: 1,
+                                    gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                                }}
+                            >
+                                <Stack spacing={0.75}>
+                                    {labelledValue(
+                                        'Rider',
+                                        order.delivery_tracking.rider?.name
+                                            ? `${order.delivery_tracking.rider.name}${
+                                                  order.delivery_tracking.rider.phone
+                                                      ? ` · ${order.delivery_tracking.rider.phone}`
+                                                      : ''
+                                              }`
+                                            : '—'
+                                    )}
+                                    {labelledValue('Assigned', formatDateTime(order.delivery_tracking.assigned_at))}
+                                    {labelledValue('Started', formatDateTime(order.delivery_tracking.started_at))}
+                                    {labelledValue('Delivered', formatDateTime(order.delivery_tracking.delivered_at))}
+                                    {order.delivery_tracking.failed_reason &&
+                                        labelledValue('Failed Reason', order.delivery_tracking.failed_reason)}
+                                </Stack>
+
+                                <Stack spacing={0.75}>
+                                    <Typography variant="body2" fontWeight={700}>
+                                        Proof of Delivery
+                                    </Typography>
+                                    {order.delivery_tracking.proof_of_delivery ? (
+                                        <>
+                                            {order.delivery_tracking.proof_of_delivery.recipient_name &&
+                                                labelledValue(
+                                                    'Received By',
+                                                    order.delivery_tracking.proof_of_delivery.recipient_name
+                                                )}
+                                            {order.delivery_tracking.proof_of_delivery.notes &&
+                                                labelledValue(
+                                                    'Notes',
+                                                    order.delivery_tracking.proof_of_delivery.notes
+                                                )}
+                                            {!!order.delivery_tracking.proof_of_delivery.photo_urls?.length && (
+                                                <Stack direction="row" spacing={1} flexWrap="wrap">
+                                                    {order.delivery_tracking.proof_of_delivery.photo_urls.map(
+                                                        (url, index) => (
+                                                            <Button
+                                                                key={url}
+                                                                size="small"
+                                                                variant="outlined"
+                                                                href={url}
+                                                                target="_blank"
+                                                                rel="noopener"
+                                                            >
+                                                                Photo {index + 1}
+                                                            </Button>
+                                                        )
+                                                    )}
+                                                </Stack>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <Typography variant="body2" color="text.secondary">
+                                            Not yet available
+                                        </Typography>
+                                    )}
+                                </Stack>
+                            </Box>
+                        </Box>
+                    </>
+                )}
+
                 {itemError && (
                     <Alert severity="error" className="no-print" sx={{ mt: 2 }} onClose={() => setItemError('')}>
                         {itemError}

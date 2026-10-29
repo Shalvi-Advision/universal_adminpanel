@@ -65,6 +65,33 @@ export interface Order {
     store_name?: string;
     project_code?: string;
     status_history?: OrderStatusHistoryEntry[];
+    // Only present for tenants with picker_integration_enabled, and only once
+    // the matching Picker event has actually arrived — absence means "no
+    // delivery data to show yet", not an error.
+    delivery_tracking?: OrderDeliveryTracking;
+}
+
+export interface OrderDeliveryTracking {
+    rider?: {
+        id?: string;
+        name?: string;
+        phone?: string;
+    };
+    assigned_at?: string;
+    started_at?: string;
+    delivered_at?: string;
+    failed_reason?: string;
+    proof_of_delivery?: {
+        photo_urls?: string[];
+        signature_url?: string;
+        recipient_name?: string;
+        notes?: string;
+        latitude?: string;
+        longitude?: string;
+        distance_to_customer_m?: number;
+        out_of_geofence?: boolean;
+        captured_at?: string;
+    };
 }
 
 // One step of the order's status timeline (API: utils/orderStatusHistory.js).
