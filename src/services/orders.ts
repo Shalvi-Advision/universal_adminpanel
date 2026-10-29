@@ -138,6 +138,12 @@ export interface OrderItem {
     removed?: boolean;
     edited_at?: string;
     edited_by_name?: string;
+    // Set from Picker's 'picking_completed' webhook event, matched onto this
+    // line by p_code. Absent for non-picker tenants or before picking is done.
+    picker_status?: 'pending' | 'picked' | 'not_available' | 'expired' | 'damaged';
+    picked_quantity?: number;
+    picker_remark?: string;
+    picker_photo_url?: string;
 }
 
 // The eight buckets the Orders page exposes as tabs, in workflow order.

@@ -161,6 +161,20 @@ export function OrderDetailsDialog({
         canEdit && !!onUpdateItemQuantity && !!onRemoveItem && status !== 'delivered' && status !== 'cancelled';
     const activeItemCount = items.filter((item) => !item.removed).length;
 
+    // Only present once Picker's 'picking_completed' event has landed for
+    // this order — absent entirely for non-picker tenants and for orders
+    // still being picked, so the column doesn't appear with nothing in it.
+    const hasPickerStatus = items.some((item) => !!item.picker_status);
+    const itemColumnCount = 8 + (hasPickerStatus ? 1 : 0) + (canEditItems ? 1 : 0);
+
+    const PICKER_STATUS_COLOR: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
+        picked: 'success',
+        pending: 'default',
+        not_available: 'warning',
+        expired: 'error',
+        damaged: 'error',
+    };
+
     const storeName = order.store_name || order.store_code;
 
     const startEdit = (item: OrderItem) => {
@@ -430,6 +444,7 @@ export function OrderDetailsDialog({
                                 <TableCell sx={headCellSx}>Selling Price</TableCell>
                                 <TableCell sx={headCellSx}>Discount</TableCell>
                                 <TableCell sx={headCellSx}>Discounted Rate</TableCell>
+                                {hasPickerStatus && <TableCell sx={headCellSx}>Picker Status</TableCell>}
                                 {canEditItems && (
                                     <TableCell sx={{ ...headCellSx }} className="no-print">
                                         Actions
@@ -509,6 +524,32 @@ export function OrderDetailsDialog({
                                         <TableCell sx={{ ...cellSx, ...strike }}>
                                             {formatAmount(line.net)}
                                         </TableCell>
+                                        {hasPickerStatus && (
+                                            <TableCell sx={cellSx}>
+                                                {item.picker_status ? (
+                                                    <Stack spacing={0.25}>
+                                                        <Chip
+                                                            size="small"
+                                                            label={item.picker_status.replace('_', ' ')}
+                                                            color={PICKER_STATUS_COLOR[item.picker_status] ?? 'default'}
+                                                            sx={{ textTransform: 'capitalize', width: 'fit-content' }}
+                                                        />
+                                                        {item.picked_quantity !== undefined && (
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Picked: {item.picked_quantity}
+                                                            </Typography>
+                                                        )}
+                                                        {item.picker_remark && (
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {item.picker_remark}
+                                                            </Typography>
+                                                        )}
+                                                    </Stack>
+                                                ) : (
+                                                    '—'
+                                                )}
+                                            </TableCell>
+                                        )}
                                         {canEditItems && (
                                             <TableCell sx={cellSx} className="no-print">
                                                 {item.removed ? null : isEditingThis ? (
@@ -569,7 +610,7 @@ export function OrderDetailsDialog({
 
                             {items.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={canEditItems ? 9 : 8} align="center" sx={cellSx}>
+                                    <TableCell colSpan={itemColumnCount} align="center" sx={cellSx}>
                                         No items on this order
                                     </TableCell>
                                 </TableRow>
@@ -584,6 +625,7 @@ export function OrderDetailsDialog({
                                 <TableCell sx={headCellSx}>{formatAmount(totals.net)}</TableCell>
                                 <TableCell sx={headCellSx}>{formatAmount(totals.discount)}</TableCell>
                                 <TableCell sx={headCellSx}>{formatAmount(totals.net)}</TableCell>
+                                {hasPickerStatus && <TableCell sx={cellSx} />}
                                 {canEditItems && <TableCell sx={cellSx} className="no-print" />}
                             </TableRow>
 
@@ -592,6 +634,7 @@ export function OrderDetailsDialog({
                                 <TableCell sx={headCellSx}>Delivery Charges +</TableCell>
                                 {spacerCells}
                                 <TableCell sx={headCellSx}>{formatAmount(deliveryCharges)}</TableCell>
+                                {hasPickerStatus && <TableCell sx={cellSx} />}
                                 {canEditItems && <TableCell sx={cellSx} className="no-print" />}
                             </TableRow>
 
@@ -602,6 +645,7 @@ export function OrderDetailsDialog({
                                 <TableCell sx={headCellSx}>
                                     {formatAmount(order.order_summary?.total_amount ?? 0)}
                                 </TableCell>
+                                {hasPickerStatus && <TableCell sx={cellSx} />}
                                 {canEditItems && <TableCell sx={cellSx} className="no-print" />}
                             </TableRow>
                         </TableBody>
