@@ -88,6 +88,21 @@ const labelledValue = (label: string, value: React.ReactNode) => (
     </Stack>
 );
 
+// Picker's proof_of_delivery stores lat/long as strings (GPS reads come
+// straight off the rider's device) — validate before doing any map math.
+const parseCoord = (value?: string): number | null => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+// No Google Maps API key needed for a static embed — OpenStreetMap's own
+// embed endpoint takes a bounding box + marker and needs no key or billing.
+const buildOsmEmbedUrl = (lat: number, lon: number) => {
+    const delta = 0.002; // ~200m box around the point
+    const bbox = [lon - delta, lat - delta, lon + delta, lat + delta].join(',');
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${lat}%2C${lon}`;
+};
+
 // The pick list is a printed grid, so every cell is boxed — including the
 // empty ones in the totals rows, which keep the column edges unbroken all the
 // way down.
@@ -363,6 +378,33 @@ export function OrderDetailsDialog({
                                 }}
                             >
                                 <Stack spacing={0.75}>
+                                    <Typography variant="body2" fontWeight={700}>
+                                        Picker
+                                    </Typography>
+                                    {labelledValue(
+                                        'Picked By',
+                                        order.delivery_tracking.picker?.name
+                                            ? `${order.delivery_tracking.picker.name}${
+                                                  order.delivery_tracking.picker.phone
+                                                      ? ` · ${order.delivery_tracking.picker.phone}`
+                                                      : ''
+                                              }`
+                                            : '—'
+                                    )}
+                                    {labelledValue(
+                                        'Assigned',
+                                        formatDateTime(order.delivery_tracking.picking_assigned_at)
+                                    )}
+                                    {labelledValue(
+                                        'Completed',
+                                        formatDateTime(order.delivery_tracking.picking_completed_at)
+                                    )}
+                                </Stack>
+
+                                <Stack spacing={0.75}>
+                                    <Typography variant="body2" fontWeight={700}>
+                                        Rider
+                                    </Typography>
                                     {labelledValue(
                                         'Rider',
                                         order.delivery_tracking.rider?.name
@@ -379,7 +421,17 @@ export function OrderDetailsDialog({
                                     {order.delivery_tracking.failed_reason &&
                                         labelledValue('Failed Reason', order.delivery_tracking.failed_reason)}
                                 </Stack>
+                            </Box>
 
+                            <Divider sx={{ my: 1.5 }} />
+
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gap: 1,
+                                    gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                                }}
+                            >
                                 <Stack spacing={0.75}>
                                     <Typography variant="body2" fontWeight={700}>
                                         Proof of Delivery
@@ -421,6 +473,58 @@ export function OrderDetailsDialog({
                                         </Typography>
                                     )}
                                 </Stack>
+
+                                {(() => {
+                                    const pod = order.delivery_tracking?.proof_of_delivery;
+                                    const lat = parseCoord(pod?.latitude);
+                                    const lon = parseCoord(pod?.longitude);
+                                    if (lat === null || lon === null) return null;
+
+                                    return (
+                                        <Stack spacing={0.75}>
+                                            <Typography variant="body2" fontWeight={700}>
+                                                Delivery Location
+                                            </Typography>
+                                            <Box
+                                                sx={{
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                    borderRadius: 1,
+                                                    overflow: 'hidden',
+                                                    height: 180,
+                                                }}
+                                            >
+                                                <iframe
+                                                    title="Delivery location map"
+                                                    width="100%"
+                                                    height="100%"
+                                                    style={{ border: 0 }}
+                                                    loading="lazy"
+                                                    src={buildOsmEmbedUrl(lat, lon)}
+                                                />
+                                            </Box>
+                                            <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                                                <Button
+                                                    size="small"
+                                                    variant="text"
+                                                    href={`https://www.google.com/maps?q=${lat},${lon}`}
+                                                    target="_blank"
+                                                    rel="noopener"
+                                                >
+                                                    Open in Google Maps
+                                                </Button>
+                                                {pod?.distance_to_customer_m != null && (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {Math.round(pod.distance_to_customer_m)}m from saved address
+                                                    </Typography>
+                                                )}
+                                                {pod?.out_of_geofence && (
+                                                    <Chip size="small" color="warning" label="Outside geofence" />
+                                                )}
+                                            </Stack>
+                                        </Stack>
+                                    );
+                                })()}
                             </Box>
                         </Box>
                     </>

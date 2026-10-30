@@ -72,6 +72,13 @@ export interface Order {
 }
 
 export interface OrderDeliveryTracking {
+    picker?: {
+        id?: string;
+        name?: string;
+        phone?: string;
+    };
+    picking_assigned_at?: string;
+    picking_completed_at?: string;
     rider?: {
         id?: string;
         name?: string;
