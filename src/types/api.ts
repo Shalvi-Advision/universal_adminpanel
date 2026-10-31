@@ -1140,37 +1140,61 @@ export interface DealProduct {
   max_quantity: number;
 }
 
-export interface Offer {
+export type OfferType = 'cart_discount' | 'category_discount' | 'buy_x_get_y' | 'product_deal' | 'free_delivery';
+
+export type CustomerEligibility = 'all' | 'order_number' | 'new_user';
+
+// Shared by Offer and OfferPayload — see models/Offer.js on the backend.
+interface OfferRuleFields {
+  coupon_code?: string | null;
+  target_p_codes?: string[];
+  target_brands?: string[];
+  target_dept_ids?: string[];
+  target_category_ids?: string[];
+  target_sub_category_ids?: string[];
+  buy_quantity?: number | null;
+  get_quantity?: number | null;
+  get_discount_percent?: number;
+  customer_eligibility?: CustomerEligibility;
+  eligible_order_numbers?: number[];
+  new_user_within_days?: number | null;
+  usage_limit_per_user?: number | null;
+  usage_limit_total?: number | null;
+}
+
+export interface Offer extends OfferRuleFields {
   _id: string;
-  offer_type?: 'cart_discount' | 'product_deal';
+  offer_type?: OfferType;
   title: string;
   discount_amount: number;
   discount_type: 'flat' | 'percentage';
   min_cart_value: number;
-  max_discount?: number;
+  max_discount?: number | null;
   deal_products?: DealProduct[];
   store_codes?: string[];
   is_active: boolean;
   valid_from: string;
-  valid_until?: string;
+  valid_until?: string | null;
   priority: number;
   description?: string;
+  // Non-cancelled orders that used this offer (list endpoint only).
+  usage_count?: number;
   createdAt?: string;
   updatedAt?: string;
 }
 
-export interface OfferPayload {
-  offer_type?: 'cart_discount' | 'product_deal';
+export interface OfferPayload extends OfferRuleFields {
+  offer_type?: OfferType;
   title: string;
   discount_amount?: number;
   discount_type?: 'flat' | 'percentage';
   min_cart_value: number;
-  max_discount?: number;
+  max_discount?: number | null;
   deal_products?: DealProduct[];
   store_codes?: string[];
   is_active?: boolean;
   valid_from?: string;
-  valid_until?: string;
+  valid_until?: string | null;
   priority?: number;
   description?: string;
 }

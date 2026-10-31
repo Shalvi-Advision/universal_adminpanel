@@ -29,6 +29,13 @@ import { PermissionButton } from 'src/components/permission-button/permission-bu
 
 import { OfferDialog } from './offers/components/offer-dialog';
 import { DeleteConfirmDialog } from './dynamic/components/delete-confirm-dialog';
+import {
+  offerTypeOf,
+  benefitLabel,
+  offerTypeLabel,
+  eligibilityLabel,
+  OFFER_TYPE_COLORS,
+} from './offers/offer-labels';
 
 export default function Page() {
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -113,14 +120,7 @@ export default function Page() {
     setPage(value);
   };
 
-  const formatDiscount = (item: Offer) => {
-    if (item.discount_type === 'flat') {
-      return `₹${item.discount_amount}`;
-    }
-    return `${item.discount_amount}%`;
-  };
-
-  const formatDate = (dateStr?: string) => {
+  const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return 'No Expiry';
     return new Date(dateStr).toLocaleDateString('en-IN');
   };
@@ -158,8 +158,10 @@ export default function Page() {
                     <TableRow>
                       <TableCell>Title</TableCell>
                       <TableCell>Type</TableCell>
-                      <TableCell>Discount</TableCell>
+                      <TableCell>Benefit</TableCell>
                       <TableCell>Min Cart Value</TableCell>
+                      <TableCell>Customers</TableCell>
+                      <TableCell>Used</TableCell>
                       <TableCell>Store Code</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell>Valid Until</TableCell>
@@ -170,13 +172,13 @@ export default function Page() {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
+                        <TableCell colSpan={11} align="center" sx={{ py: 8 }}>
                           <CircularProgress />
                         </TableCell>
                       </TableRow>
                     ) : offers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
+                        <TableCell colSpan={11} align="center" sx={{ py: 8 }}>
                           <Typography variant="body2" color="text.secondary">
                             No offers found
                           </Typography>
@@ -203,26 +205,39 @@ export default function Page() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Chip
-                              label={(item.offer_type || 'cart_discount') === 'product_deal' ? 'Product Deal' : 'Cart Discount'}
-                              color={(item.offer_type || 'cart_discount') === 'product_deal' ? 'warning' : 'primary'}
-                              size="small"
-                              variant="outlined"
-                            />
+                            <Stack spacing={0.5} alignItems="flex-start">
+                              <Chip
+                                label={offerTypeLabel(offerTypeOf(item))}
+                                color={OFFER_TYPE_COLORS[offerTypeOf(item)]}
+                                size="small"
+                                variant="outlined"
+                              />
+                              {item.coupon_code && (
+                                <Chip label={`Code: ${item.coupon_code}`} size="small" />
+                              )}
+                            </Stack>
                           </TableCell>
                           <TableCell>
-                            {(item.offer_type || 'cart_discount') === 'product_deal' ? (
-                              <Typography variant="body2" color="text.secondary">
-                                {item.deal_products?.length || 0} product(s)
-                              </Typography>
-                            ) : (
-                              <Typography variant="body2">{formatDiscount(item)}</Typography>
-                            )}
+                            <Typography variant="body2">{benefitLabel(item)}</Typography>
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2">
                               ₹{item.min_cart_value.toLocaleString('en-IN')}
                             </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">{eligibilityLabel(item)}</Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {item.usage_count ?? 0}
+                              {item.usage_limit_total ? ` / ${item.usage_limit_total}` : ''}
+                            </Typography>
+                            {item.usage_limit_per_user && (
+                              <Typography variant="caption" color="text.secondary">
+                                {item.usage_limit_per_user}× per customer
+                              </Typography>
+                            )}
                           </TableCell>
                           <TableCell>
                             {item.store_codes?.length ? (
