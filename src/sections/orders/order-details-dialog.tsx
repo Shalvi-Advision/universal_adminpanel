@@ -115,6 +115,68 @@ const spacerCells = ['size', 'qty', 'mrp', 'selling', 'discount'].map((column) =
     <TableCell key={column} sx={cellSx} />
 ));
 
+// A totals row: label (with an optional second line saying which offer /
+// voucher it was) and the amount in the last column.
+function SummaryRow({
+    label,
+    detail,
+    amount,
+    color,
+    trailingCells,
+}: {
+    label: string;
+    detail?: string | false;
+    amount: string;
+    color?: string;
+    trailingCells: React.ReactNode;
+}) {
+    return (
+        <TableRow>
+            <TableCell sx={cellSx} />
+            <TableCell sx={headCellSx}>
+                {label}
+                {detail && (
+                    <Typography
+                        variant="caption"
+                        component="div"
+                        sx={{ color: 'text.secondary', fontWeight: 400, whiteSpace: 'normal' }}
+                    >
+                        {detail}
+                    </Typography>
+                )}
+            </TableCell>
+            {spacerCells}
+            <TableCell sx={{ ...headCellSx, ...(color && { color }) }}>{amount}</TableCell>
+            {trailingCells}
+        </TableRow>
+    );
+}
+
+// What reduced (or added to) the bill below the item total, in the order the
+// server applies them: offer, loyalty voucher, then delivery and packing.
+const getSummaryAdjustments = (order: Order) => {
+    const summary = order.order_summary ?? ({} as Order['order_summary']);
+    const offer = summary.applied_offer;
+    const loyalty = summary.applied_loyalty_redemption;
+    const offerDiscount = offer?.discount_amount ?? 0;
+    const loyaltyDiscount = loyalty?.discount_amount ?? 0;
+    // Orders placed before the breakdown was stored only carry the total.
+    const otherDiscount = Math.max(
+        0,
+        Math.round(((summary.discount_amount ?? 0) - offerDiscount - loyaltyDiscount) * 100) / 100
+    );
+    return {
+        offer: offerDiscount > 0 ? offer : undefined,
+        offerDiscount,
+        loyalty: loyaltyDiscount > 0 ? loyalty : undefined,
+        loyaltyDiscount,
+        otherDiscount,
+        freeDelivery: (summary.free_delivery_offer?.waived_amount ?? 0) > 0 ? summary.free_delivery_offer : undefined,
+        packingFee: summary.packing_fee ?? 0,
+        dealSavings: summary.deal_savings ?? 0,
+    };
+};
+
 type Props = {
     open: boolean;
     order: Order | null;
@@ -160,6 +222,7 @@ export function OrderDetailsDialog({
     const items = order.order_items ?? [];
     const totals = getOrderTotals(items);
     const deliveryCharges = order.order_summary?.delivery_charges ?? 0;
+    const adjustments = getSummaryAdjustments(order);
 
     // Only the very first step (Accept) shows here — once an order is
     // accepted, the rest of the workflow (Accepted By Store, In Packaging,
@@ -181,6 +244,12 @@ export function OrderDetailsDialog({
     // still being picked, so the column doesn't appear with nothing in it.
     const hasPickerStatus = items.some((item) => !!item.picker_status);
     const itemColumnCount = 8 + (hasPickerStatus ? 1 : 0) + (canEditItems ? 1 : 0);
+    const trailingCells = (
+        <>
+            {hasPickerStatus && <TableCell sx={cellSx} />}
+            {canEditItems && <TableCell sx={cellSx} className="no-print" />}
+        </>
+    );
 
     const PICKER_STATUS_COLOR: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
         picked: 'success',
@@ -733,14 +802,72 @@ export function OrderDetailsDialog({
                                 {canEditItems && <TableCell sx={cellSx} className="no-print" />}
                             </TableRow>
 
-                            <TableRow>
-                                <TableCell sx={cellSx} />
-                                <TableCell sx={headCellSx}>Delivery Charges +</TableCell>
-                                {spacerCells}
-                                <TableCell sx={headCellSx}>{formatAmount(deliveryCharges)}</TableCell>
-                                {hasPickerStatus && <TableCell sx={cellSx} />}
-                                {canEditItems && <TableCell sx={cellSx} className="no-print" />}
-                            </TableRow>
+                            {adjustments.dealSavings > 0 && (
+                                <SummaryRow
+                                    label="Deal Savings"
+                                    detail="Already included in the item prices above"
+                                    amount={formatAmount(adjustments.dealSavings)}
+                                    trailingCells={trailingCells}
+                                />
+                            )}
+
+                            {adjustments.offer && (
+                                <SummaryRow
+                                    label="Offer Discount −"
+                                    detail={[
+                                        adjustments.offer.title,
+                                        adjustments.offer.coupon_code && `Code: ${adjustments.offer.coupon_code}`,
+                                    ]
+                                        .filter(Boolean)
+                                        .join(' · ')}
+                                    amount={`− ${formatAmount(adjustments.offerDiscount)}`}
+                                    color="success.main"
+                                    trailingCells={trailingCells}
+                                />
+                            )}
+
+                            {adjustments.loyalty && (
+                                <SummaryRow
+                                    label="Loyalty Voucher −"
+                                    detail={adjustments.loyalty.reward_name}
+                                    amount={`− ${formatAmount(adjustments.loyaltyDiscount)}`}
+                                    color="success.main"
+                                    trailingCells={trailingCells}
+                                />
+                            )}
+
+                            {adjustments.otherDiscount > 0 && (
+                                <SummaryRow
+                                    label="Discount −"
+                                    amount={`− ${formatAmount(adjustments.otherDiscount)}`}
+                                    color="success.main"
+                                    trailingCells={trailingCells}
+                                />
+                            )}
+
+                            <SummaryRow
+                                label="Delivery Charges +"
+                                detail={
+                                    adjustments.freeDelivery &&
+                                    `${formatAmount(adjustments.freeDelivery.waived_amount ?? 0)} waived · ${[
+                                        adjustments.freeDelivery.title,
+                                        adjustments.freeDelivery.coupon_code &&
+                                            `Code: ${adjustments.freeDelivery.coupon_code}`,
+                                    ]
+                                        .filter(Boolean)
+                                        .join(' · ')}`
+                                }
+                                amount={formatAmount(deliveryCharges)}
+                                trailingCells={trailingCells}
+                            />
+
+                            {adjustments.packingFee > 0 && (
+                                <SummaryRow
+                                    label="Packing Fee +"
+                                    amount={formatAmount(adjustments.packingFee)}
+                                    trailingCells={trailingCells}
+                                />
+                            )}
 
                             <TableRow>
                                 <TableCell sx={cellSx} />

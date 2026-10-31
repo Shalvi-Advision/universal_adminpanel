@@ -37,6 +37,27 @@ export interface Order {
         tax_amount?: number;
         discount_amount?: number;
         total_amount: number;
+        packing_fee?: number;
+        applied_offer?: {
+            offer_id?: string;
+            title?: string;
+            offer_type?: string;
+            coupon_code?: string;
+            discount_type?: string;
+            discount_amount?: number;
+        };
+        free_delivery_offer?: {
+            offer_id?: string;
+            title?: string;
+            coupon_code?: string;
+            waived_amount?: number;
+        };
+        applied_loyalty_redemption?: {
+            redemption_id?: string;
+            reward_name?: string;
+            discount_amount?: number;
+        };
+        deal_savings?: number;
     };
     order_status: OrderStatus;
     fulfillment_type?: 'delivery' | 'pickup';
