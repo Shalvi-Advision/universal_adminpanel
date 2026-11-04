@@ -106,6 +106,23 @@ export async function updateIntegrations(
   return apiClient.put<IntegrationsResponse>('/api/admin/project-settings/integrations', values);
 }
 
+/**
+ * Mints a new access key for the ERP partner order APIs, replacing any
+ * previous one. The key comes back this once; only its hash is stored.
+ */
+export async function generateErpAccessKey(): Promise<{
+  success: boolean;
+  message?: string;
+  data: { access_key: string };
+}> {
+  return apiClient.post('/api/admin/project-settings/erp-access-key', {});
+}
+
+/** Revokes the ERP partner access key. */
+export async function revokeErpAccessKey(): Promise<{ success: boolean; message?: string }> {
+  return apiClient.delete('/api/admin/project-settings/erp-access-key');
+}
+
 /** Write-only: nothing is echoed back. Sending '' clears a secret. */
 export async function updateSecrets(
   secrets: Record<string, string>

@@ -76,6 +76,10 @@ export interface Order {
     };
     order_notes?: string;
     cancel_reason?: string;
+    // Set by the ERP partner APIs: when the ERP pulled the order, and the
+    // bill link it sent with its status update.
+    erp_synced_at?: string | null;
+    invoice_url?: string;
     cancelled_at?: string;
     estimated_delivery_date?: string;
     order_placed_at: string;

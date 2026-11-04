@@ -378,6 +378,17 @@ export function OrderDetailsDialog({
                             />
                         </Stack>
 
+                        {order.erp_synced_at && labelledValue('Sent to ERP', formatDateTime(order.erp_synced_at))}
+
+                        {order.invoice_url &&
+                            /^https?:\/\//i.test(order.invoice_url) &&
+                            labelledValue(
+                                'Invoice',
+                                <a href={order.invoice_url} target="_blank" rel="noopener noreferrer">
+                                    View invoice
+                                </a>
+                            )}
+
                         <Box>
                             <Button
                                 className="no-print"

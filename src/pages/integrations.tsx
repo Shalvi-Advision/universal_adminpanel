@@ -17,7 +17,14 @@ import Typography from '@mui/material/Typography';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { getIntegrations, updateSecrets, updateIntegrations } from 'src/services/project-settings';
+import { CONFIG } from 'src/config-global';
+import {
+  updateSecrets,
+  getIntegrations,
+  revokeErpAccessKey,
+  updateIntegrations,
+  generateErpAccessKey,
+} from 'src/services/project-settings';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -59,6 +66,8 @@ export default function Page() {
   const [toast, setToast] = useState('');
   const [firebaseFileName, setFirebaseFileName] = useState('');
   const [firebaseFileError, setFirebaseFileError] = useState('');
+  // Shown once, right after generating — the server keeps only its hash.
+  const [newErpKey, setNewErpKey] = useState('');
 
   const fetchIntegrations = useCallback(async () => {
     try {
@@ -105,6 +114,55 @@ export default function Page() {
       setError(err.message || 'Failed to save integrations');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleGenerateErpKey = async () => {
+    if (
+      secretsSet.erp_access_key &&
+      !window.confirm(
+        'Generate a new key? The current key stops working immediately and the ERP partner must switch to the new one.'
+      )
+    ) {
+      return;
+    }
+    try {
+      setSaving(true);
+      setError('');
+      const response = await generateErpAccessKey();
+      setNewErpKey(response.data.access_key);
+      setSecretsSet((prev) => ({ ...prev, erp_access_key: true }));
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate access key');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRevokeErpKey = async () => {
+    if (!window.confirm('Revoke the ERP access key? The ERP partner will no longer be able to pull or update orders.')) {
+      return;
+    }
+    try {
+      setSaving(true);
+      setError('');
+      await revokeErpAccessKey();
+      setNewErpKey('');
+      setSecretsSet((prev) => ({ ...prev, erp_access_key: false }));
+      setToast('ERP access key revoked');
+    } catch (err: any) {
+      setError(err.message || 'Failed to revoke access key');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const copyErpKey = async () => {
+    try {
+      await navigator.clipboard.writeText(newErpKey);
+      setToast('Access key copied');
+    } catch {
+      setToast('Copy failed — select the key and copy it manually');
     }
   };
 
@@ -328,6 +386,62 @@ export default function Page() {
               }
               label="This tenant's fulfillment is ERP/SAP-integrated"
             />
+
+            {values.erp_integrated === 'true' && (
+              <Box sx={{ mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                  <Typography variant="subtitle1">ERP Partner API</Typography>
+                  <Chip
+                    size="small"
+                    color={secretsSet.erp_access_key ? 'success' : 'default'}
+                    label={secretsSet.erp_access_key ? 'Key set' : 'No key'}
+                  />
+                </Stack>
+                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                  The ERP partner pulls orders and marks them Accepted By Store / In Packaging with
+                  this access key. Save the switch above first — the APIs only work while it is on.
+                </Typography>
+
+                <Stack spacing={0.5} sx={{ mb: 2 }}>
+                  {['push_order_api', 'update_order_status_api'].map((path) => (
+                    <Typography key={path} variant="caption" sx={{ fontFamily: 'monospace' }}>
+                      POST {CONFIG.apiBaseUrl}/{path}
+                    </Typography>
+                  ))}
+                </Stack>
+
+                {newErpKey && (
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Copy this key now and share it with the ERP partner securely. It will not be
+                      shown again.
+                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <TextField
+                        fullWidth
+                        size="small"
+                        value={newErpKey}
+                        slotProps={{ input: { readOnly: true, sx: { fontFamily: 'monospace' } } }}
+                      />
+                      <Button variant="contained" onClick={copyErpKey}>
+                        Copy
+                      </Button>
+                    </Stack>
+                  </Alert>
+                )}
+
+                <Stack direction="row" spacing={1}>
+                  <Button variant="contained" disabled={saving} onClick={handleGenerateErpKey}>
+                    {secretsSet.erp_access_key ? 'Regenerate key' : 'Generate key'}
+                  </Button>
+                  {secretsSet.erp_access_key && (
+                    <Button color="error" disabled={saving} onClick={handleRevokeErpKey}>
+                      Revoke
+                    </Button>
+                  )}
+                </Stack>
+              </Box>
+            )}
           </Card>
         </Grid>
 
